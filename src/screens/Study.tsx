@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { go } from '../App'
+import { Daruma } from '../components/Daruma'
 import { Icon } from '../components/Icon'
 import { AiExplain } from '../components/WordSheet'
 import { levelOf, meaning, useLevel } from '../data'
-import { answer, breakdowns, buildQueue, previewIntervals, Rating, restore, snapshot, unlockMoreNew, type Grade, type Snapshot } from '../srs'
+import { answer, breakdowns, buildQueue, previewIntervals, Rating, restore, snapshot, streak, unlockMoreNew, type Grade, type Snapshot } from '../srs'
 import { toggleMark, useStore } from '../store'
-import { speak } from '../util'
+import { dayKey, speak } from '../util'
 
 const KIND_LABEL = { new: '새 단어', learning: '외우는 중', review: '복습' } as const
 
@@ -16,6 +17,7 @@ export function Study() {
   const [showAi, setShowAi] = useState(false)
   const [answered, setAnswered] = useState(0)
   const [last, setLast] = useState<string | undefined>()
+  const [pop, setPop] = useState<{ key: number; xp: number } | null>(null)
   const undo = useRef<Snapshot | null>(null)
 
   // Recomputed after every answer; `now` is taken then so waiting cards become due as time passes.
@@ -43,7 +45,8 @@ export function Study() {
     (grade: Grade) => {
       if (!id) return
       undo.current = snapshot()
-      answer(id, grade)
+      const xp = answer(id, grade)
+      setPop({ key: Date.now(), xp })
       setLast(id)
       setAnswered((n) => n + 1)
     },
@@ -75,23 +78,47 @@ export function Study() {
 
   if (!q.next) {
     const moreNew = breakdowns(s)[s.settings.target].new > 0
+    const log = s.log[dayKey(now)]
+    const cleared = q.waiting === 0
     return (
       <div className="study done-screen">
-        <div className="done-art" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
-        <h1>오늘 분량 끝!</h1>
+        {cleared && (
+          <div className="confetti" aria-hidden="true">
+            {Array.from({ length: 18 }, (_, i) => (
+              <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s` }} className={`cf${i % 4}`} />
+            ))}
+          </div>
+        )}
+        <Daruma eyes={cleared ? 2 : 1} mood={cleared ? 'cheer' : 'idle'} size={150} />
+        <h1>{cleared ? '오늘 목표 달성!' : '잠깐 쉬어 가요'}</h1>
         <p className="muted">
-          {answered > 0 && <>이번에 카드 {answered}장을 넘겼어요. </>}
-          {q.waiting > 0
-            ? `외우는 중인 ${q.waiting}개는 조금 뒤에 다시 나와요.`
-            : '기억이 흐려질 때쯤 알아서 다시 가져올게요.'}
+          {cleared
+            ? '다루마의 두 눈을 다 그렸어요. 기억이 흐려질 때쯤 다시 가져올게요.'
+            : `외우는 중인 ${q.waiting}개는 조금 뒤에 다시 나와요.`}
         </p>
+        <div className="result-tiles">
+          <div className="t-xp">
+            <span>오늘 XP</span>
+            <b>
+              <Icon name="bolt" size={20} fill />
+              {log?.xp ?? 0}
+            </b>
+          </div>
+          <div className="t-streak">
+            <span>연속 학습</span>
+            <b>
+              <Icon name="flame" size={20} fill />
+              {streak(s.log, now)}일
+            </b>
+          </div>
+          <div className="t-cards">
+            <span>넘긴 카드</span>
+            <b>{log?.c ?? 0}장</b>
+          </div>
+        </div>
         <div className="done-actions">
           <button className="btn primary big" onClick={() => go('/')}>
-            홈으로
+            계속하기
           </button>
           {moreNew && (
             <button className="btn ghost big" onClick={() => unlockMoreNew(10)}>
@@ -112,14 +139,18 @@ export function Study() {
         <button className="icon-btn" onClick={() => go('/')} aria-label="나가기 (진행 상황은 저장돼요)">
           <Icon name="close" />
         </button>
-        <div className="study-title">
-          <b>오늘의 학습</b>
-          <div className="counts">
-            <span className="c-review">복습 {q.review}</span>
-            <span className="c-learning">외우는 중 {q.learning}</span>
-            <span className="c-new">새 단어 {q.fresh}</span>
-          </div>
+        <div className="bar fat grow">
+          <i style={{ width: `${(answered / (answered + left)) * 100}%` }} />
         </div>
+        <span className="hud-item xp">
+          <Icon name="bolt" size={18} fill />
+          {s.log[dayKey(now)]?.xp ?? 0}
+          {pop && (
+            <em className="xp-pop" key={pop.key}>
+              +{pop.xp}
+            </em>
+          )}
+        </span>
         <button
           className="icon-btn"
           disabled={!undo.current}
@@ -129,14 +160,17 @@ export function Study() {
             undo.current = null
             setLast(undefined)
             setAnswered((n) => Math.max(0, n - 1))
+            setPop(null)
           }}
           aria-label="방금 선택 되돌리기"
         >
           <Icon name="undo" />
         </button>
       </header>
-      <div className="bar thin">
-        <i style={{ width: `${(answered / (answered + left)) * 100}%` }} />
+      <div className="counts study-counts">
+        <span className="c-review">복습 {q.review}</span>
+        <span className="c-learning">외우는 중 {q.learning}</span>
+        <span className="c-new">새 단어 {q.fresh}</span>
       </div>
 
       <div className="card-area">

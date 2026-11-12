@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Daruma } from '../components/Daruma'
 import { LEVELS, type Level } from '../data'
 import { update } from '../store'
 import { formatDay, upcomingExams } from '../util'
@@ -11,11 +12,7 @@ export function Onboarding() {
 
   return (
     <div className="onboard">
-      <div className="done-art" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-      </div>
+      <Daruma eyes={0} size={120} />
       <p className="eyebrow">카사네 · 重ね</p>
       <h1>잊기 전에 한 겹 더, JLPT 단어</h1>
       <ol className="how">
@@ -28,8 +25,8 @@ export function Onboarding() {
           <span>기억할수록 며칠 → 몇 주 → 몇 달로 간격이 벌어져요. 모르면 금방 돌아와요.</span>
         </li>
         <li>
-          <b>하루 분량만 하면 끝</b>
-          <span>오늘 나온 복습과 새 단어만 넘기면 돼요. 중간에 나가도 그대로 이어져요.</span>
+          <b>하루 분량을 끝내면 다루마의 눈을</b>
+          <span>시작하면 한쪽 눈, 오늘 분량을 끝내면 나머지 눈을 그려요. XP와 연속 학습도 쌓여요.</span>
         </li>
       </ol>
 

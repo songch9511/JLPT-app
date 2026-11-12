@@ -20,8 +20,8 @@ export default defineConfig({
         lang: 'ko',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#f6f3ec',
-        theme_color: '#f6f3ec',
+        background_color: '#fbfaff',
+        theme_color: '#fbfaff',
         start_url: '.',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },

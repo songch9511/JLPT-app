@@ -28,6 +28,10 @@ export interface DayLog {
   p: number
   /** extra new words unlocked for this day on top of the daily limit */
   x?: number
+  /** XP earned this day */
+  xp?: number
+  /** quests already rewarded this day (bitmask by quest index) */
+  q?: number
 }
 
 export interface State {
@@ -44,6 +48,7 @@ export interface State {
   cards: Record<string, SCard>
   log: Record<string, DayLog>
   marks: string[]
+  xp: number
 }
 
 const KEY = 'kasane.state.v2'
@@ -56,6 +61,7 @@ function initial(): State {
     cards: {},
     log: {},
     marks: [],
+    xp: 0,
   }
 }
 

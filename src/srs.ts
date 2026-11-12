@@ -102,7 +102,9 @@ export function buildQueue(s: State, now: Date, avoid?: string): Queue {
 
 // ── answering ───────────────────────────────────────────────────────────────
 
-export function answer(id: string, grade: Grade, now = new Date()) {
+/** Returns the XP earned by this answer (card XP plus any quest it completed). */
+export function answer(id: string, grade: Grade, now = new Date()): number {
+  let gained = 0
   update((d) => {
     const prev = d.cards[id]
     const card = prev ? toCard(prev) : createEmptyCard(now)
@@ -117,15 +119,27 @@ export function answer(id: string, grade: Grade, now = new Date()) {
       if (grade !== Rating.Again) log.p++
     }
     d.log = { ...d.log, [key]: log }
+
+    gained = XP_PER_CARD
+    quests(d, now).forEach((q, i) => {
+      if (q.done && !((log.q ?? 0) & (1 << i))) {
+        log.q = (log.q ?? 0) | (1 << i)
+        gained += q.xp
+      }
+    })
+    log.xp = (log.xp ?? 0) + gained
+    d.xp += gained
   })
+  return gained
 }
 
-export type Snapshot = Pick<State, 'cards' | 'log'>
-export const snapshot = (): Snapshot => ({ cards: getState().cards, log: getState().log })
+export type Snapshot = Pick<State, 'cards' | 'log' | 'xp'>
+export const snapshot = (): Snapshot => ({ cards: getState().cards, log: getState().log, xp: getState().xp })
 export function restore(s: Snapshot) {
   update((d) => {
     d.cards = s.cards
     d.log = s.log
+    d.xp = s.xp
   })
 }
 
@@ -224,4 +238,45 @@ export function leechIds(cards: State['cards'], limit = 40): string[] {
     .sort((a, b) => b[1].lapses - a[1].lapses)
     .slice(0, limit)
     .map(([id]) => id)
+}
+
+// ── game layer ──────────────────────────────────────────────────────────────
+
+// XP is paid per card answered, whatever the answer, so honesty never costs points.
+export const XP_PER_CARD = 10
+const XP_LEVEL_STEP = 150
+
+/** Level n starts at 150 · n(n−1)/2 XP: each level takes one more step than the last. */
+export function levelInfo(xp: number): { level: number; into: number; span: number } {
+  const level = Math.floor((1 + Math.sqrt(1 + (8 * xp) / XP_LEVEL_STEP)) / 2)
+  const base = (XP_LEVEL_STEP * level * (level - 1)) / 2
+  return { level, into: xp - base, span: XP_LEVEL_STEP * level }
+}
+
+export interface Quest {
+  title: string
+  have: number
+  need: number
+  xp: number
+  done: boolean
+}
+
+export function quests(s: State, now: Date): Quest[] {
+  const log = s.log[dayKey(now)] ?? emptyLog()
+  const q = buildQueue(s, now)
+  const newGoal = Math.min(10, s.settings.dailyNew)
+  const cleared = log.c > 0 && !q.next && q.waiting === 0
+  return [
+    { title: '카드 20장 넘기기', have: Math.min(log.c, 20), need: 20, xp: 20 },
+    { title: `새 단어 ${newGoal}개 만나기`, have: Math.min(log.n, newGoal), need: newGoal, xp: 20 },
+    { title: '오늘 분량 모두 끝내기', have: cleared ? 1 : 0, need: 1, xp: 50 },
+  ].map((x) => ({ ...x, done: x.have >= x.need }))
+}
+
+/** Sun..Sat of the current week: whether the user studied that day. */
+export function weekDays(log: State['log'], today: Date): { done: boolean; today: boolean; future: boolean }[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = addDays(today, i - today.getDay())
+    return { done: !!log[dayKey(d)]?.c, today: i === today.getDay(), future: i > today.getDay() }
+  })
 }
