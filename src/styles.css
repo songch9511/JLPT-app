@@ -1,76 +1,89 @@
 /* Kasane — game-style UI: chunky pressable surfaces, bright accents, rounded type. */
 :root {
-  --bg: #fbfaff;
-  --surface: #ffffff;
-  --surface-2: #f0eef8;
-  --line: #e4e1f0;
-  --text: #2a2742;
-  --muted: #7d7a96;
-  --accent: #5b5bf0;
-  --accent-deep: #4141c4;
-  --accent-soft: #e9e9ff;
+  /* Colour system drawn from traditional Japanese colours (伝統色), kept low in saturation. */
+  --bg: #fbfaf5; /* 生成り kinari — unbleached cloth */
+  --surface: #fffefb; /* 胡粉 gofun — shell white */
+  --surface-2: #f1ede3; /* 白練 shironeri */
+  --line: #e3ded2; /* 灰白 kaihaku */
+  --text: #2d2a26; /* 墨 sumi — ink */
+  --muted: #7d786e; /* 利休鼠 rikyū-nezumi */
+  --accent: #165e83; /* 藍 ai — indigo */
+  --accent-deep: #0f3f5c; /* 紺 kon */
+  --accent-soft: #e1ecf1; /* 白藍 shiraai */
   --on-accent: #ffffff;
-  --know: #17b890;
-  --know-deep: #0f8f6f;
-  --know-soft: #dbf6ee;
-  --again: #ff6b57;
-  --again-deep: #dd4a37;
-  --again-soft: #ffe7e2;
-  --young: #58a6ff;
-  --learning: #ffb020;
-  --gold: #ffb020;
-  --gold-deep: #dd8f00;
-  --gold-soft: #fff1d1;
-  --flame: #ff8a1f;
-  --flame-soft: #ffe8d2;
+  --know: #47885e; /* 緑青 rokushō — patina green */
+  --know-deep: #2f6b48; /* 常磐 tokiwa */
+  --know-soft: #e3eee3; /* 白緑 byakuroku */
+  --again: #c4553b; /* 朱 shu — vermilion */
+  --again-deep: #9c3b26; /* 弁柄 bengara */
+  --again-soft: #f6e4dc; /* 桜 sakura */
+  --young: #4d9aa6; /* 浅葱 asagi */
+  --learning: #c89932; /* 山吹茶 yamabuki-cha */
+  --gold: #c89932;
+  --gold-deep: #9a7420; /* 黄土 ōdo */
+  --gold-soft: #f6ecd0; /* 鳥の子 torinoko */
+  --flame: #d9743f; /* 柿 kaki — persimmon */
+  --flame-soft: #f8e4d5;
   --depth: 4px;
-  --ja: 'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif;
+  --ja: 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif;
+  --ja-serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif;
   --round: ui-rounded, 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', -apple-system, BlinkMacSystemFont, 'Pretendard',
     'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   color-scheme: light;
 }
+/* Dark: 墨 ink ground with lighter 藍 / 緑青 / 朱 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #15142b;
-    --surface: #1f1e3a;
-    --surface-2: #2b2a4c;
-    --line: #37365c;
-    --text: #f1f0fb;
-    --muted: #a09dc0;
-    --accent: #8484ff;
-    --accent-deep: #5a5ad6;
-    --accent-soft: #2c2b5e;
-    --on-accent: #12112a;
-    --know: #2fd3a8;
-    --know-deep: #1da382;
-    --know-soft: #173f3a;
-    --again: #ff8371;
-    --again-deep: #d85a48;
-    --again-soft: #4a2530;
-    --gold-soft: #45361a;
-    --flame-soft: #4a2e1c;
+    --bg: #1b1a18;
+    --surface: #252321;
+    --surface-2: #32302c;
+    --line: #403c36;
+    --text: #ece7db;
+    --muted: #a39d90;
+    --accent: #86aecf;
+    --accent-deep: #5c86aa;
+    --accent-soft: #24323f;
+    --on-accent: #10171d;
+    --know: #7fb996;
+    --know-deep: #5b9674;
+    --know-soft: #22332a;
+    --again: #e08c74;
+    --again-deep: #b9664f;
+    --again-soft: #40271f;
+    --young: #6fb3bd;
+    --learning: #d9b45a;
+    --gold: #d9b45a;
+    --gold-deep: #b38f3a;
+    --gold-soft: #3b3220;
+    --flame: #e08a55;
+    --flame-soft: #40291b;
     color-scheme: dark;
   }
 }
 :root[data-theme='dark'] {
-  --bg: #15142b;
-  --surface: #1f1e3a;
-  --surface-2: #2b2a4c;
-  --line: #37365c;
-  --text: #f1f0fb;
-  --muted: #a09dc0;
-  --accent: #8484ff;
-  --accent-deep: #5a5ad6;
-  --accent-soft: #2c2b5e;
-  --on-accent: #12112a;
-  --know: #2fd3a8;
-  --know-deep: #1da382;
-  --know-soft: #173f3a;
-  --again: #ff8371;
-  --again-deep: #d85a48;
-  --again-soft: #4a2530;
-  --gold-soft: #45361a;
-  --flame-soft: #4a2e1c;
+  --bg: #1b1a18;
+  --surface: #252321;
+  --surface-2: #32302c;
+  --line: #403c36;
+  --text: #ece7db;
+  --muted: #a39d90;
+  --accent: #86aecf;
+  --accent-deep: #5c86aa;
+  --accent-soft: #24323f;
+  --on-accent: #10171d;
+  --know: #7fb996;
+  --know-deep: #5b9674;
+  --know-soft: #22332a;
+  --again: #e08c74;
+  --again-deep: #b9664f;
+  --again-soft: #40271f;
+  --young: #6fb3bd;
+  --learning: #d9b45a;
+  --gold: #d9b45a;
+  --gold-deep: #b38f3a;
+  --gold-soft: #3b3220;
+  --flame: #e08a55;
+  --flame-soft: #40291b;
   color-scheme: dark;
 }
 
@@ -171,9 +184,19 @@ button:disabled { cursor: default; opacity: 0.4; }
 
 /* hero + mascot */
 .hero {
+  position: relative; overflow: hidden;
   display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 24px;
-  background: var(--accent-soft); border: 2px solid color-mix(in srgb, var(--accent) 25%, var(--accent-soft));
+  background: var(--accent-soft); border: 2px solid color-mix(in srgb, var(--accent) 22%, var(--accent-soft));
   border-bottom-width: var(--depth);
+}
+/* 青海波 seigaiha — the wave pattern, as a faint watermark */
+.hero::before {
+  content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0.07; pointer-events: none;
+  -webkit-mask: var(--seigaiha) 0 0 / 44px 22px; mask: var(--seigaiha) 0 0 / 44px 22px;
+}
+.hero > * { position: relative; }
+:root {
+  --seigaiha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 22' fill='none' stroke='%23000' stroke-width='1.6'%3E%3Cpath d='M0 22a22 22 0 0 1 44 0M6 22a16 16 0 0 1 32 0M12 22a10 10 0 0 1 20 0M-22 11a22 22 0 0 1 44 0M22 11a22 22 0 0 1 44 0M-16 11a16 16 0 0 1 32 0M28 11a16 16 0 0 1 32 0M-10 11a10 10 0 0 1 20 0M34 11a10 10 0 0 1 20 0'/%3E%3C/svg%3E");
 }
 .hero-top { display: flex; align-items: center; gap: 6px; }
 .bubble {
@@ -325,7 +348,7 @@ button:disabled { cursor: default; opacity: 0.4; }
 @keyframes card-in { from { opacity: 0; transform: translateX(24px) rotate(1.5deg); } }
 .flash-head { display: flex; align-items: center; gap: 2px; padding-left: 8px; }
 .flash-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 8px 12px 28px; text-align: center; }
-.flash-word { font-family: var(--ja); font-size: clamp(44px, 16vw, 76px); line-height: 1.2; font-weight: 800; overflow-wrap: anywhere; }
+.flash-word { font-family: var(--ja-serif); font-size: clamp(44px, 16vw, 76px); line-height: 1.2; font-weight: 800; overflow-wrap: anywhere; }
 .flash-word.long { font-size: clamp(28px, 9vw, 42px); }
 .flash-hint { color: var(--muted); font-size: 14px; padding: 8px 16px; border-radius: 99px; background: var(--surface-2); }
 .flash-answer { display: flex; flex-direction: column; align-items: center; gap: 6px; animation: answer-in 0.22s cubic-bezier(0.3, 1.4, 0.6, 1) both; max-width: 100%; }
@@ -396,7 +419,7 @@ button:disabled { cursor: default; opacity: 0.4; }
   text-align: left; padding: 12px 4px; border-bottom: 2px solid var(--line);
 }
 .word-main { grid-area: main; display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.word-main b { font-size: 19px; font-family: var(--ja); }
+.word-main b { font-size: 19px; font-family: var(--ja-serif); }
 .word-main span { font-size: 13px; color: var(--accent); }
 .word-meaning { grid-area: mean; font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .word-row .chip { grid-area: chip; }
@@ -405,7 +428,7 @@ button:disabled { cursor: default; opacity: 0.4; }
 .story-title { font-weight: 800; font-size: 17px; }
 
 /* sheet + ai */
-.sheet-backdrop { position: fixed; inset: 0; z-index: 10; background: rgb(20 18 50 / 0.5); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s ease both; }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 10; background: rgb(30 26 20 / 0.5); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s ease both; }
 @keyframes fade { from { opacity: 0; } }
 .sheet {
   width: 100%; max-width: 520px; max-height: 88dvh; overflow-y: auto; background: var(--surface);
@@ -414,7 +437,7 @@ button:disabled { cursor: default; opacity: 0.4; }
 }
 @keyframes sheet-in { from { transform: translateY(60px); opacity: 0; } }
 .sheet-head { display: flex; align-items: center; gap: 6px; margin-right: -10px; }
-.sheet-word { font-family: var(--ja); font-size: 44px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
+.sheet-word { font-family: var(--ja-serif); font-size: 44px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
 .sheet-reading { font-size: 19px; color: var(--accent); font-weight: 700; }
 .sheet-meaning { font-size: 21px; font-weight: 800; }
 .ai { width: 100%; margin-top: 12px; display: flex; flex-direction: column; gap: 12px; text-align: left; font-size: 15px; font-weight: 500; }
@@ -436,9 +459,8 @@ button:disabled { cursor: default; opacity: 0.4; }
 
 /* mascot colour fill */
 .daruma-empty { fill: var(--surface); }
-.daruma-outline { fill: none; stroke: color-mix(in srgb, #f4646b 55%, var(--line)); stroke-width: 2.5; }
+.daruma-outline { fill: none; stroke: color-mix(in srgb, #dd5a44 55%, var(--line)); stroke-width: 2.5; }
 .daruma-liquid { transition: transform 0.9s cubic-bezier(0.3, 1.2, 0.5, 1); }
 .daruma-liquid .wave { animation: wave 2.4s linear infinite; }
 .daruma-liquid .wave.back { animation-duration: 3.6s; animation-direction: reverse; }
 @keyframes wave { to { transform: translateX(60px); } }
-.fill-pct { font-variant-numeric: tabular-nums; color: #dc4850; font-weight: 800; }
