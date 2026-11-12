@@ -67,7 +67,9 @@ export default function App() {
       <nav className="tabbar">
         {TABS.map((t) => (
           <a key={t.name} href={`#${t.path}`} className={tab === t.name ? 'on' : ''} aria-current={tab === t.name ? 'page' : undefined}>
-            <Icon name={t.icon} />
+            <span className="tab-icon">
+              <Icon name={t.icon} size={22} strokeWidth={tab === t.name ? 2.4 : 2} />
+            </span>
             <span>{t.label}</span>
           </a>
         ))}
