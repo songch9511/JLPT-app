@@ -2,7 +2,8 @@ import { useId } from 'react'
 
 /**
  * Kasane's mascot: a daruma that starts the day uncoloured and fills with red, like liquid rising,
- * as today's study gets done. `fill` is today's progress from 0 to 1.
+ * as today's study gets done. `fill` is today's progress from 0 to 1. Before the day's study starts
+ * it is asleep (`mood="sleep"`).
  */
 const INK = '#3a2c28'
 const BODY = 'M60 10c31 0 49 24 49 53 0 28-20 47-49 47S11 91 11 63c0-29 18-53 49-53Z'
@@ -70,6 +71,8 @@ export function Daruma({
             <path d="M53 72q7 11 14 0Z" fill={INK} stroke={INK} strokeWidth="2" strokeLinejoin="round" />
             <path d="M56.5 77q3.5-3 7 0-3.5 3.5-7 0Z" fill="#f0907f" />
           </>
+        ) : mood === 'sleep' ? (
+          <ellipse cx="60" cy="74" rx="2.6" ry="3" fill={INK} />
         ) : (
           <path d="M54 73q3 3.5 6 0q3 3.5 6 0" fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
         )}
@@ -77,6 +80,13 @@ export function Daruma({
         <circle cx="60" cy="103.5" r="2.6" fill="#e6c15a" />
         <path d="M19 52q-3 9-2 18M101 52q3 9 2 18" fill="none" stroke="#e6c15a" strokeWidth="3" strokeLinecap="round" />
       </g>
+      {mood === 'sleep' && (
+        <g className="daruma-zzz" fill="none" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M90 26h8l-8 9h8" />
+          <path d="M101 12h6l-6 7h6" />
+          <path d="M110 2h4.5l-4.500 5h4.500" />
+        </g>
+      )}
       {mood === 'cheer' && (
         <g className="daruma-sparks" fill="#e6c15a">
           <path d="M10 22l2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" />
