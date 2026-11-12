@@ -231,20 +231,20 @@ export function Study() {
 
       <footer className={`answer-bar ${missed ? '' : 'three'}`}>
         {missed ? (
-          <button className="btn again big wide" onClick={() => submit(Rating.Again)}>
+          <button className="btn primary big wide" onClick={() => submit(Rating.Again)}>
             확인했어요 · 다음
           </button>
         ) : (
           <>
-            <button className="btn again big" onClick={onAgain} disabled={!word}>
+            <button className="btn ghost big" onClick={onAgain} disabled={!word}>
               모르겠어요
               <small>{intervals?.[Rating.Again]}</small>
             </button>
-            <button className="btn know big" onClick={() => submit(Rating.Good)} disabled={!word}>
+            <button className="btn primary big" onClick={() => submit(Rating.Good)} disabled={!word}>
               알아요
               <small>{intervals?.[Rating.Good]}</small>
             </button>
-            <button className="btn easy big" onClick={() => submit(Rating.Easy)} disabled={!word}>
+            <button className="btn ghost big" onClick={() => submit(Rating.Easy)} disabled={!word}>
               쉬워요
               <small>{intervals?.[Rating.Easy]}</small>
             </button>
