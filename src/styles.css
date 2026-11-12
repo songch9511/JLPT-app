@@ -325,3 +325,50 @@ button:disabled { cursor: default; opacity: 0.4; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* spaced repetition */
+:root { --young: #6f8fd6; --learning: #d9a441; --easy-soft: #dfe5f4; }
+h2 small { font-size: 18px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+.done-title { font-size: 26px; }
+.counts { display: flex; gap: 10px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.study-title .counts { justify-content: center; font-size: 12px; }
+.c-review { color: var(--know); }
+.c-learning { color: var(--again); }
+.c-new { color: var(--accent); }
+.chip.k-new { background: var(--accent-soft); color: var(--accent); }
+.chip.k-learning { background: var(--again-soft); color: var(--again); }
+.chip.k-review { background: var(--know-soft); color: var(--know); }
+.link.inline { padding: 4px 0; text-align: left; }
+
+.stagebar { display: flex; }
+.stagebar i { border-radius: 0; transition: width 0.35s ease; }
+.stagebar .mature, .legend .mature::before, .breakdown .mature b, .dot.mature { background: var(--know); }
+.stagebar .young, .legend .young::before, .dot.young { background: var(--young); }
+.stagebar .learning, .legend .learning::before, .dot.learning { background: var(--learning); }
+.legend { display: flex; gap: 14px; margin: -4px 4px 10px; font-size: 12px; color: var(--muted); }
+.legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 99px; margin-right: 5px; }
+.breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 14px; text-align: center; }
+.breakdown div { display: flex; flex-direction: column; }
+.breakdown b { font-size: 20px; font-variant-numeric: tabular-nums; background: none !important; }
+.breakdown span { font-size: 12px; color: var(--muted); }
+.breakdown .mature b { color: var(--know); }
+.breakdown .young b { color: var(--young); }
+.breakdown .learning b { color: var(--learning); }
+.dot { grid-area: chip; width: 10px; height: 10px; border-radius: 99px; background: var(--surface-2); }
+.seg.scroll { overflow-x: auto; }
+.seg.scroll button { flex: 1 0 auto; padding: 0 12px; }
+
+.forecast-chart { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; height: 120px; margin: 12px 0 8px; }
+.forecast-chart span { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; min-height: 18px; }
+.forecast-chart i { width: 100%; max-width: 28px; border-radius: 6px 6px 2px 2px; background: var(--accent-soft); }
+.forecast-chart div { display: grid; grid-template-rows: 18px 1fr 18px; justify-items: center; align-items: end; }
+.forecast-chart .today i { background: var(--accent); }
+.forecast-chart small { font-size: 12px; color: var(--muted); }
+.forecast-chart .today small { color: var(--accent); font-weight: 700; }
+
+.answer-bar.three { grid-template-columns: 1fr 1.25fr 1fr; gap: 8px; }
+.answer-bar .btn { flex-direction: column; gap: 0; line-height: 1.25; padding: 0 6px; }
+.answer-bar .btn small { font-size: 11px; font-weight: 500; opacity: 0.8; }
+.btn.easy { background: var(--easy-soft); color: var(--accent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --easy-soft: #263150; } }
+:root[data-theme='dark'] { --easy-soft: #263150; }

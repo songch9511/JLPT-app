@@ -1,10 +1,12 @@
 import { go } from '../App'
 import { Icon } from '../components/Icon'
-import { COUNTS, KO_READY, LEVELS, stageCount, type Level } from '../data'
-import { learnedCount, startStage, streak, useStore, type State } from '../store'
+import { COUNTS, KO_READY, LEVELS, type Level } from '../data'
+import { breakdowns, buildQueue, forecast, retention, streak, unlockMoreNew, type Breakdown } from '../srs'
+import { update, useStore, type State } from '../store'
 import { addDays, dayKey, daysBetween, parseDay } from '../util'
 
 const WEEKS = 15
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
 
 function Ring({ value, size = 92, children }: { value: number; size?: number; children: React.ReactNode }) {
   const r = (size - 10) / 2
@@ -28,37 +30,14 @@ function Ring({ value, size = 92, children }: { value: number; size?: number; ch
   )
 }
 
-function paceText(s: State, today: Date) {
-  const { target, examDate } = s.settings
-  const lv = s.levels[target]
-  const dday = daysBetween(today, parseDay(examDate))
-  const left = stageCount(target) - lv.done
-  // average over the days since the first active day in the last week, so a fresh start isn't judged as slow
-  let recent = 0
-  let span = 0
-  for (let i = 0; i < 7; i++) {
-    const n = s.log[dayKey(addDays(today, -i))]?.s ?? 0
-    recent += n
-    if (n) span = i + 1
-  }
-  const perDay = span ? recent / span : 0
-
-  let need: string
-  if (dday <= 0) need = '시험일이 지났어요. 설정에서 다음 시험일을 골라 주세요.'
-  else if (left / dday <= 1) {
-    const every = Math.floor(dday / left)
-    need = every <= 1 ? '하루 1장이면 시험 전에 이번 회독을 끝내요.' : `${every}일에 1장이면 시험 전에 이번 회독을 끝내요.`
-  } else need = `시험 전에 끝내려면 하루 ${(left / dday).toFixed(1)}장이 필요해요.`
-
-  let forecast: string | null = null
-  let onTrack: boolean | null = null
-  if (perDay > 0 && dday > 0) {
-    const days = Math.ceil(left / perDay)
-    const end = addDays(today, days)
-    onTrack = days <= dday
-    forecast = `지금 페이스로는 ${end.getMonth() + 1}월 ${end.getDate()}일 완료 예상`
-  }
-  return { dday, left, need, forecast, onTrack, goalToday: dday > 0 ? Math.max(1, Math.ceil(left / dday)) : 1 }
+export function StageBar({ b, total }: { b: Breakdown; total: number }) {
+  return (
+    <div className="bar stagebar">
+      <i className="mature" style={{ width: `${(b.mature / total) * 100}%` }} />
+      <i className="young" style={{ width: `${(b.young / total) * 100}%` }} />
+      <i className="learning" style={{ width: `${(b.learning / total) * 100}%` }} />
+    </div>
+  )
 }
 
 function Heatmap({ log, today }: { log: State['log']; today: Date }) {
@@ -69,33 +48,47 @@ function Heatmap({ log, today }: { log: State['log']; today: Date }) {
     const d = addDays(start, i)
     const future = daysBetween(today, d) > 0
     const c = log[dayKey(d)]?.c ?? 0
-    const lvl = future ? -1 : c === 0 ? 0 : c < 50 ? 1 : c < 150 ? 2 : 3
-    cells.push(
-      <i
-        key={i}
-        className={`heat h${lvl}`}
-        title={future ? undefined : `${d.getMonth() + 1}/${d.getDate()} · 카드 ${c}장`}
-      />,
-    )
+    const lvl = future ? -1 : c === 0 ? 0 : c < 30 ? 1 : c < 100 ? 2 : 3
+    cells.push(<i key={i} className={`heat h${lvl}`} title={future ? undefined : `${d.getMonth() + 1}/${d.getDate()} · 카드 ${c}장`} />)
   }
   return <div className="heatmap">{cells}</div>
+}
+
+function Forecast({ counts, today }: { counts: number[]; today: Date }) {
+  const max = Math.max(1, ...counts)
+  return (
+    <div className="forecast-chart">
+      {counts.map((n, i) => (
+        <div key={i} className={i === 0 ? 'today' : ''}>
+          <span>{n || ''}</span>
+          <i style={{ height: `${Math.max(n ? 6 : 2, (n / max) * 100)}%` }} />
+          <small>{i === 0 ? '오늘' : DAY_NAMES[addDays(today, i).getDay()]}</small>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export function Home() {
   const s = useStore((x) => x)
   const today = new Date()
-  const { target } = s.settings
-  const lv = s.levels[target]
-  const pace = paceText(s, today)
-  const todayLog = s.log[dayKey(today)] ?? { c: 0, k: 0, s: 0 }
+  const { target, examDate, dailyNew } = s.settings
+  const q = buildQueue(s, today)
+  const all = breakdowns(s)
+  const b = all[target]
+  const total = COUNTS[target]
+  const seen = total - b.new
+  const dday = daysBetween(today, parseDay(examDate))
+  const todayLog = s.log[dayKey(today)]
   const days = streak(s.log, today)
-  const learned = learnedCount(s, target)
-  const session = s.session
+  const kept = retention(s, today)
+  const todo = q.learning + q.review + q.fresh
+  const needPerDay = dday > 0 ? Math.ceil(b.new / dday) : null
 
-  const startNext = () => {
-    startStage(target, lv.done)
-    go('/study')
-  }
+  let pace: string
+  if (b.new === 0) pace = `N${target} 단어를 모두 만났어요. 이제 복습으로 굳히기만 남았어요.`
+  else if (needPerDay == null) pace = '시험일이 지났어요. 설정에서 다음 시험일을 골라 주세요.'
+  else pace = `시험 전에 전부 만나려면 하루 새 단어 ${needPerDay}개가 필요해요.`
 
   return (
     <>
@@ -104,64 +97,68 @@ export function Home() {
           <p className="eyebrow">카사네 · 重ね</p>
           <h1>오늘도 한 겹 더</h1>
         </div>
-        <div className={`dday ${pace.dday <= 30 && pace.dday > 0 ? 'soon' : ''}`}>
-          <b>{pace.dday > 0 ? `D-${pace.dday}` : pace.dday === 0 ? 'D-DAY' : '시험 종료'}</b>
+        <div className={`dday ${dday <= 30 && dday > 0 ? 'soon' : ''}`}>
+          <b>{dday > 0 ? `D-${dday}` : dday === 0 ? 'D-DAY' : '시험 종료'}</b>
           <span>JLPT N{target}</span>
         </div>
       </header>
 
       <section className="hero card">
-        {session ? (
+        {todo > 0 ? (
           <>
-            <p className="eyebrow">하던 회독이 남아 있어요</p>
+            <p className="eyebrow">오늘의 학습</p>
             <h2>
-              N{session.level} · {session.stage + 1}장
+              {todo}
+              <small>장</small>
             </h2>
-            <p className="muted">
-              {session.pass}바퀴째 · 남은 카드 {session.queue.length + session.again.length}장
-            </p>
+            <div className="counts">
+              <span className="c-review">복습 {q.review}</span>
+              <span className="c-learning">외우는 중 {q.learning}</span>
+              <span className="c-new">새 단어 {q.fresh}</span>
+            </div>
             <button className="btn primary big" onClick={() => go('/study')}>
-              이어서 하기
+              {todayLog?.c ? '이어서 하기' : '시작하기'}
             </button>
           </>
         ) : (
           <>
-            <p className="eyebrow">
-              오늘의 회독 · {lv.round}회독째
-            </p>
-            <h2>
-              N{target} · {lv.done + 1}장
-            </h2>
-            <p className="muted">
-              새 단어 {Math.min(50, COUNTS[target] - lv.done * 50)}개
-              {lv.done > 0 && ' + 지난 장 복습 50개'}
-            </p>
-            <button className="btn primary big" onClick={startNext}>
-              시작하기
-            </button>
+            <p className="eyebrow">오늘의 학습</p>
+            <h2 className="done-title">오늘 분량 끝!</h2>
+            <p className="muted">복습할 단어가 생기면 여기에 다시 나타나요. 내일 또 만나요.</p>
+            {b.new > 0 && (
+              <button
+                className="btn ghost big"
+                onClick={() => {
+                  unlockMoreNew(10)
+                  go('/study')
+                }}
+              >
+                새 단어 10개 더 하기
+              </button>
+            )}
           </>
         )}
       </section>
 
       <section className="card goal">
-        <Ring value={learned / COUNTS[target]}>
-          <b>{Math.round((learned / COUNTS[target]) * 100)}%</b>
-          <span>{lv.round}회독</span>
+        <Ring value={seen / total}>
+          <b>{Math.round((seen / total) * 100)}%</b>
+          <span>만난 단어</span>
         </Ring>
         <div className="goal-body">
           <h3>
             N{target} 목표 <a href="#/settings">변경</a>
           </h3>
           <p className="num">
-            {learned.toLocaleString()} <span>/ {COUNTS[target].toLocaleString()} 단어</span>
+            {seen.toLocaleString()} <span>/ {total.toLocaleString()} 단어</span>
           </p>
-          <p className="muted">{pace.need}</p>
-          {pace.forecast && (
-            <p className={`forecast ${pace.onTrack ? 'ok' : 'late'}`}>
-              {pace.forecast} · {pace.onTrack ? '순항 중' : '조금 더 속도를'}
-            </p>
+          <p className="muted">{pace}</p>
+          {needPerDay != null && b.new > 0 && needPerDay !== dailyNew && (
+            <button className="link inline" onClick={() => update((d) => void (d.settings.dailyNew = Math.min(100, needPerDay)))}>
+              지금 하루 {dailyNew}개 → {Math.min(100, needPerDay)}개로 맞추기
+            </button>
           )}
-          {lv.round > 1 && <p className="forecast ok">{lv.round - 1}회독 완료! 회독할수록 빨라져요.</p>}
+          {needPerDay != null && b.new > 0 && needPerDay === dailyNew && <p className="forecast ok">지금 설정이면 시험 전에 끝나요.</p>}
         </div>
       </section>
 
@@ -176,19 +173,25 @@ export function Home() {
           </b>
         </div>
         <div className="card stat">
-          <span className="stat-label">오늘 넘긴 카드</span>
+          <span className="stat-label">장기 기억</span>
           <b>
-            {todayLog.c}
-            <small>장</small>
+            {b.mature}
+            <small>개</small>
           </b>
         </div>
         <div className="card stat">
-          <span className="stat-label">오늘 끝낸 장</span>
+          <span className="stat-label">기억 유지율</span>
           <b>
-            {todayLog.s}
-            <small>/ {pace.goalToday}장</small>
+            {kept == null ? '–' : Math.round(kept * 100)}
+            <small>{kept == null ? '' : '%'}</small>
           </b>
         </div>
+      </section>
+
+      <section className="card">
+        <h3>다가오는 복습</h3>
+        <Forecast counts={forecast(s, today)} today={today} />
+        <p className="muted small">기억이 흐려질 때쯤 다시 나와요. 기억할수록 간격이 길어져요.</p>
       </section>
 
       <section className="card">
@@ -198,29 +201,27 @@ export function Home() {
       </section>
 
       <section>
-        <h3 className="section-title">급수별 진행</h3>
+        <h3 className="section-title">급수별 기억 상태</h3>
+        <div className="legend">
+          <span className="mature">장기 기억</span>
+          <span className="young">익히는 중</span>
+          <span className="learning">외우는 중</span>
+        </div>
         <div className="levels">
-          {LEVELS.map((l: Level) => {
-            const done = learnedCount(s, l)
-            const r = s.levels[l].round
-            return (
-              <a key={l} href={`#/level/${l}`} className={`card level-row ${l === target ? 'target' : ''}`}>
-                <div className="level-name">
-                  <b>N{l}</b>
-                  {l === target && <span className="chip accent">목표</span>}
-                  {r > 1 && <span className="chip">{r - 1}회독 완료</span>}
-                  {!KO_READY[l] && <span className="chip">뜻: 영어</span>}
-                </div>
-                <div className="bar">
-                  <i style={{ width: `${(done / COUNTS[l]) * 100}%` }} />
-                </div>
-                <span className="level-count">
-                  {done} / {COUNTS[l]}
-                </span>
-                <Icon name="chevron" size={18} />
-              </a>
-            )
-          })}
+          {LEVELS.map((l: Level) => (
+            <a key={l} href={`#/level/${l}`} className={`card level-row ${l === target ? 'target' : ''}`}>
+              <div className="level-name">
+                <b>N{l}</b>
+                {l === target && <span className="chip accent">목표</span>}
+                {!KO_READY[l] && <span className="chip">뜻: 영어</span>}
+              </div>
+              <StageBar b={all[l]} total={COUNTS[l]} />
+              <span className="level-count">
+                {COUNTS[l] - all[l].new} / {COUNTS[l]}
+              </span>
+              <Icon name="chevron" size={18} />
+            </a>
+          ))}
         </div>
       </section>
     </>

@@ -7,6 +7,7 @@ export function Onboarding() {
   const exams = upcomingExams(new Date(), 3)
   const [target, setTarget] = useState<Level>(5)
   const [exam, setExam] = useState(exams[0])
+  const [daily, setDaily] = useState(20)
 
   return (
     <div className="onboard">
@@ -16,19 +17,19 @@ export function Onboarding() {
         <i />
       </div>
       <p className="eyebrow">카사네 · 重ね</p>
-      <h1>겹겹이 쌓는 JLPT 단어</h1>
+      <h1>잊기 전에 한 겹 더, JLPT 단어</h1>
       <ol className="how">
         <li>
-          <b>알아요 / 다시 볼게요</b>
-          <span>카드마다 둘 중 하나만 고르면 돼요.</span>
+          <b>잊을 때쯤 다시</b>
+          <span>기억이 흐려지는 시점을 계산해서 그때 단어를 다시 보여 줘요.</span>
         </li>
         <li>
-          <b>모를수록 다시 만나요</b>
-          <span>“다시 볼게요”한 단어는 “알아요”가 될 때까지 돌아와요.</span>
+          <b>아는 단어는 점점 멀리</b>
+          <span>기억할수록 며칠 → 몇 주 → 몇 달로 간격이 벌어져요. 모르면 금방 돌아와요.</span>
         </li>
         <li>
-          <b>앞 장이 다음 장에 섞여요</b>
-          <span>새 단어 50개 + 지난 장 50개. 끝까지 가면 1회독이에요.</span>
+          <b>하루 분량만 하면 끝</b>
+          <span>오늘 나온 복습과 새 단어만 넘기면 돼요. 중간에 나가도 그대로 이어져요.</span>
         </li>
       </ol>
 
@@ -38,6 +39,14 @@ export function Onboarding() {
           {LEVELS.map((l) => (
             <button key={l} className={target === l ? 'on' : ''} onClick={() => setTarget(l)}>
               N{l}
+            </button>
+          ))}
+        </div>
+        <label>하루 새 단어</label>
+        <div className="seg">
+          {[10, 20, 30].map((n) => (
+            <button key={n} className={daily === n ? 'on' : ''} onClick={() => setDaily(n)}>
+              {n}개
             </button>
           ))}
         </div>
@@ -57,6 +66,7 @@ export function Onboarding() {
           update((d) => {
             d.settings.target = target
             d.settings.examDate = exam
+            d.settings.dailyNew = daily
             d.onboarded = true
           })
         }

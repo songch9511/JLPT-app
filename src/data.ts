@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 
 export type Level = 5 | 4 | 3 | 2 | 1
 export const LEVELS: Level[] = [5, 4, 3, 2, 1]
-export const STAGE_SIZE = 50
 
 /** Word counts per level (kept in sync with public/data by scripts/build-data.mjs output). */
 export const COUNTS: Record<Level, number> = { 5: 718, 4: 668, 3: 2140, 2: 1905, 1: 2699 }
@@ -19,15 +18,8 @@ export interface Word {
 }
 
 export const meaning = (w: Word) => w.ko || w.en
-export const stageCount = (l: Level) => Math.ceil(COUNTS[l] / STAGE_SIZE)
 export const wordId = (l: Level, idx: number) => `${l}-${idx}`
-
-/** New-word indexes of a stage. */
-export function stageRange(l: Level, stage: number): number[] {
-  const out: number[] = []
-  for (let i = stage * STAGE_SIZE; i < Math.min((stage + 1) * STAGE_SIZE, COUNTS[l]); i++) out.push(i)
-  return out
-}
+export const levelOf = (id: string) => Number(id[0]) as Level
 
 const cache = new Map<Level, Promise<Word[]>>()
 

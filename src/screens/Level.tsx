@@ -1,19 +1,27 @@
-import { go } from '../App'
+import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
-import { COUNTS, KO_READY, stageCount, stageRange, type Level } from '../data'
-import { startStage, useStore } from '../store'
+import { WordSheet } from '../components/WordSheet'
+import { COUNTS, KO_READY, meaning, useLevel, type Level, type Word } from '../data'
+import { breakdowns, STAGE_LABEL, stageOf, type Stage } from '../srs'
+import { update, useStore } from '../store'
+import { StageBar } from './Home'
+
+const PAGE = 100
+const FILTERS: ('all' | Stage)[] = ['all', 'learning', 'young', 'mature', 'new']
 
 export function LevelScreen({ level }: { level: Level }) {
-  const lv = useStore((s) => s.levels[level])
-  const session = useStore((s) => s.session)
-  const n = stageCount(level)
+  const s = useStore((x) => x)
+  const { words, error } = useLevel(level)
+  const [filter, setFilter] = useState<'all' | Stage>('all')
+  const [shown, setShown] = useState(PAGE)
+  const [open, setOpen] = useState<Word | null>(null)
+  const b = breakdowns(s)[level]
+  const isTarget = s.settings.target === level
 
-  const open = (stage: number) => {
-    if (session && session.level === level && session.stage === stage) return go('/study')
-    if (session && !confirm(`진행 중인 N${session.level} ${session.stage + 1}장을 그만두고 새로 시작할까요?`)) return
-    startStage(level, stage)
-    go('/study')
-  }
+  const list = useMemo(
+    () => (words ?? []).filter((w) => filter === 'all' || stageOf(s.cards[w.id]) === filter),
+    [words, filter, s.cards],
+  )
 
   return (
     <>
@@ -23,45 +31,66 @@ export function LevelScreen({ level }: { level: Level }) {
         </a>
         <div className="grow">
           <h1>JLPT N{level}</h1>
-          <p className="muted">
-            {lv.round}회독째 · {n}장 중 {lv.done}장 완료 · 단어 {COUNTS[level].toLocaleString()}개
-          </p>
+          <p className="muted">단어 {COUNTS[level].toLocaleString()}개</p>
         </div>
+        {isTarget ? (
+          <span className="chip accent">목표 급수</span>
+        ) : (
+          <button className="btn ghost" onClick={() => update((d) => void (d.settings.target = level))}>
+            목표로 설정
+          </button>
+        )}
       </header>
 
-      {!KO_READY[level] && (
-        <p className="note">이 급수는 아직 한국어 뜻이 준비되지 않아 영어 뜻으로 표시돼요.</p>
-      )}
+      {!KO_READY[level] && <p className="note">이 급수는 아직 한국어 뜻이 준비되지 않아 영어 뜻으로 표시돼요.</p>}
 
-      <div className="stages">
-        {Array.from({ length: n }, (_, i) => {
-          const state = i < lv.done ? 'done' : i === lv.done ? 'now' : 'locked'
-          const active = session?.level === level && session.stage === i
-          return (
-            <button key={i} className={`stage ${state}`} disabled={state === 'locked'} onClick={() => open(i)}>
-              <span className="stage-no">{i + 1}장</span>
-              <span className="stage-sub">
-                {active
-                  ? '진행 중'
-                  : state === 'done'
-                    ? '다시 하기'
-                    : state === 'now'
-                      ? `새 단어 ${stageRange(level, i).length}`
-                      : ''}
-              </span>
-              <span className="stage-icon">
-                {state === 'done' && <Icon name="check" size={18} />}
-                {state === 'locked' && <Icon name="lock" size={16} />}
-              </span>
-            </button>
-          )
-        })}
+      <section className="card">
+        <StageBar b={b} total={COUNTS[level]} />
+        <div className="breakdown">
+          {(['mature', 'young', 'learning', 'new'] as Stage[]).map((k) => (
+            <div key={k} className={k}>
+              <b>{b[k]}</b>
+              <span>{STAGE_LABEL[k]}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="seg scroll">
+        {FILTERS.map((f) => (
+          <button
+            key={f}
+            className={filter === f ? 'on' : ''}
+            onClick={() => {
+              setFilter(f)
+              setShown(PAGE)
+            }}
+          >
+            {f === 'all' ? '전체' : STAGE_LABEL[f]}
+          </button>
+        ))}
       </div>
-      <p className="muted small center">
-        각 장은 새 단어 50개에 바로 앞 장의 단어가 섞여 나와요.
-        <br />
-        모든 장을 끝내면 1회독, 다시 1장부터 다음 회독이 시작돼요.
-      </p>
+
+      {error && <p className="error">{error}</p>}
+      <div className="word-list">
+        {list.slice(0, shown).map((w) => (
+          <button key={w.id} className="word-row" onClick={() => setOpen(w)}>
+            <span className="word-main">
+              <b lang="ja">{w.w}</b>
+              {w.r && <span lang="ja">{w.r}</span>}
+            </span>
+            <span className="word-meaning">{meaning(w)}</span>
+            <span className={`dot ${stageOf(s.cards[w.id])}`} />
+          </button>
+        ))}
+      </div>
+      {words && list.length === 0 && <p className="empty">여기에 해당하는 단어가 아직 없어요.</p>}
+      {list.length > shown && (
+        <button className="btn ghost" onClick={() => setShown(shown + PAGE)}>
+          더 보기 ({list.length - shown}개 남음)
+        </button>
+      )}
+      {open && <WordSheet word={open} onClose={() => setOpen(null)} />}
     </>
   )
 }

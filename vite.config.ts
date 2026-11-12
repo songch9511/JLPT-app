@@ -14,9 +14,9 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3_000_000,
       },
       manifest: {
-        name: '카사네 — JLPT 회독 단어장',
+        name: '카사네 — JLPT 단어장',
         short_name: '카사네',
-        description: '겹겹이 쌓는 JLPT 단어 회독',
+        description: '잊기 전에 한 겹 더, 간격 반복 JLPT 단어장',
         lang: 'ko',
         display: 'standalone',
         orientation: 'portrait',

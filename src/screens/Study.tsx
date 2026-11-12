@@ -1,36 +1,33 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { go } from '../App'
 import { Icon } from '../components/Icon'
 import { AiExplain } from '../components/WordSheet'
-import { meaning, stageCount, useLevel, type Level } from '../data'
-import { answer, getState, restoreSession, startStage, toggleMark, useStore, type Session, type State } from '../store'
+import { levelOf, meaning, useLevel } from '../data'
+import { answer, breakdowns, buildQueue, previewIntervals, Rating, restore, snapshot, unlockMoreNew, type Grade, type Snapshot } from '../srs'
+import { toggleMark, useStore } from '../store'
 import { speak } from '../util'
 
-interface Finished {
-  level: Level
-  stage: number
-  total: number
-  pass: number
-  roundDone: boolean
-}
-
-type Snapshot = { session: Session; stats: State['stats']; log: State['log'] }
+const KIND_LABEL = { new: '새 단어', learning: '외우는 중', review: '복습' } as const
 
 export function Study() {
-  const session = useStore((s) => s.session)
-  const autoSpeak = useStore((s) => s.settings.autoSpeak)
-  const marks = useStore((s) => s.marks)
-  const [finished, setFinished] = useState<Finished | null>(null)
+  const s = useStore((x) => x)
   const [revealed, setRevealed] = useState(false)
   const [missed, setMissed] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
   const [showAi, setShowAi] = useState(false)
+  const [answered, setAnswered] = useState(0)
+  const [last, setLast] = useState<string | undefined>()
   const undo = useRef<Snapshot | null>(null)
-  const { words, error } = useLevel(session?.level ?? finished?.level ?? null)
 
-  const idx = session?.queue[0]
-  const word = words && idx != null ? words[idx] : null
-  const cardKey = session ? `${session.pass}:${session.queue.length}:${idx}` : ''
+  // Recomputed after every answer; `now` is taken then so waiting cards become due as time passes.
+  const { q, now } = useMemo(() => {
+    const now = new Date()
+    return { q: buildQueue(s, now, last), now }
+  }, [s, last])
+  const id = q.next?.id
+  const { words, error } = useLevel(id ? levelOf(id) : null)
+  const word = words && id ? words[Number(id.split('-')[1])] : null
+  const intervals = useMemo(() => (id ? previewIntervals(s, id, now) : null), [s, id, now])
+  const cardKey = `${id}:${answered}`
 
   useEffect(() => {
     setRevealed(false)
@@ -39,68 +36,45 @@ export function Study() {
   }, [cardKey])
 
   useEffect(() => {
-    if (autoSpeak && word) speak(word.r || word.w)
-  }, [autoSpeak, word])
-
-  useEffect(() => {
-    if (!session && !finished) go('/')
-  }, [session, finished])
-
-  useEffect(() => {
-    if (!notice) return
-    const t = setTimeout(() => setNotice(null), 2200)
-    return () => clearTimeout(t)
-  }, [notice])
+    if (s.settings.autoSpeak && word) speak(word.r || word.w)
+  }, [s.settings.autoSpeak, word])
 
   const submit = useCallback(
-    (known: boolean) => {
-      const s = getState()
-      if (!s.session) return
-      const before = s.session
-      undo.current = { session: before, stats: s.stats, log: s.log }
-      const roundBefore = s.levels[before.level].round
-      const result = answer(known)
-      if (result === 'pass') {
-        const next = getState().session!
-        setNotice(`${before.pass}바퀴 끝! 다시 볼 단어 ${next.queue.length}개`)
-      } else if (result === 'done') {
-        undo.current = null
-        setFinished({
-          level: before.level,
-          stage: before.stage,
-          total: before.total,
-          pass: before.pass,
-          roundDone: getState().levels[before.level].round > roundBefore,
-        })
-      }
+    (grade: Grade) => {
+      if (!id) return
+      undo.current = snapshot()
+      answer(id, grade)
+      setLast(id)
+      setAnswered((n) => n + 1)
     },
-    [],
+    [id],
   )
 
   const onAgain = useCallback(() => {
-    // Not knowing a word should always end with seeing the answer first.
+    // Forgetting a word should always end with seeing the answer first.
     if (!revealed) {
       setRevealed(true)
       setMissed(true)
-    } else submit(false)
+    } else submit(Rating.Again)
   }, [revealed, submit])
 
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (finished || !word || (e.target as HTMLElement).tagName === 'INPUT') return
+      if (!word) return
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault()
-        if (missed) submit(false)
+        if (missed) submit(Rating.Again)
         else setRevealed((r) => !r)
-      } else if (e.key === 'ArrowRight' && !missed) submit(true)
+      } else if (e.key === 'ArrowRight' && !missed) submit(Rating.Good)
+      else if (e.key === 'ArrowUp' && !missed) submit(Rating.Easy)
       else if (e.key === 'ArrowLeft') onAgain()
     }
     addEventListener('keydown', on)
     return () => removeEventListener('keydown', on)
-  }, [finished, word, missed, submit, onAgain])
+  }, [word, missed, submit, onAgain])
 
-  if (finished) {
-    const last = finished.stage + 1 >= stageCount(finished.level)
+  if (!q.next) {
+    const moreNew = breakdowns(s)[s.settings.target].new > 0
     return (
       <div className="study done-screen">
         <div className="done-art" aria-hidden="true">
@@ -108,35 +82,29 @@ export function Study() {
           <i />
           <i />
         </div>
-        <h1>{finished.roundDone ? `N${finished.level} 1회독 완료!` : `${finished.stage + 1}장, 한 겹 쌓았어요`}</h1>
+        <h1>오늘 분량 끝!</h1>
         <p className="muted">
-          {finished.total}개 단어를 {finished.pass}바퀴 만에 모두 “알아요”로 만들었어요.
-          {finished.roundDone && <><br />이제 1장부터 다음 회독이 시작돼요. 이번엔 훨씬 빨라요.</>}
+          {answered > 0 && <>이번에 카드 {answered}장을 넘겼어요. </>}
+          {q.waiting > 0
+            ? `외우는 중인 ${q.waiting}개는 조금 뒤에 다시 나와요.`
+            : '기억이 흐려질 때쯤 알아서 다시 가져올게요.'}
         </p>
         <div className="done-actions">
-          <button
-            className="btn primary big"
-            onClick={() => {
-              const lv = getState().levels[finished.level]
-              startStage(finished.level, finished.roundDone || last ? lv.done : finished.stage + 1)
-              setFinished(null)
-            }}
-          >
-            다음 장 계속하기
+          <button className="btn primary big" onClick={() => go('/')}>
+            홈으로
           </button>
-          <button className="btn ghost big" onClick={() => go('/')}>
-            오늘은 여기까지
-          </button>
+          {moreNew && (
+            <button className="btn ghost big" onClick={() => unlockMoreNew(10)}>
+              새 단어 10개 더 하기
+            </button>
+          )}
         </div>
       </div>
     )
   }
 
-  if (!session) return null
-
-  const left = session.queue.length + session.again.length
-  const isNew = idx != null && Math.floor(idx / 50) === session.stage
-  const marked = word ? marks.includes(word.id) : false
+  const left = q.learning + q.review + q.fresh
+  const marked = word ? s.marks.includes(word.id) : false
 
   return (
     <div className="study">
@@ -145,20 +113,22 @@ export function Study() {
           <Icon name="close" />
         </button>
         <div className="study-title">
-          <b>
-            N{session.level} · {session.stage + 1}장
-          </b>
-          <span>
-            {session.pass}바퀴째 · 남은 {session.queue.length}장
-            {session.again.length > 0 && ` · 다시 볼 단어 ${session.again.length}`}
-          </span>
+          <b>오늘의 학습</b>
+          <div className="counts">
+            <span className="c-review">복습 {q.review}</span>
+            <span className="c-learning">외우는 중 {q.learning}</span>
+            <span className="c-new">새 단어 {q.fresh}</span>
+          </div>
         </div>
         <button
           className="icon-btn"
           disabled={!undo.current}
           onClick={() => {
-            if (undo.current) restoreSession(undo.current)
+            if (!undo.current) return
+            restore(undo.current)
             undo.current = null
+            setLast(undefined)
+            setAnswered((n) => Math.max(0, n - 1))
           }}
           aria-label="방금 선택 되돌리기"
         >
@@ -166,17 +136,15 @@ export function Study() {
         </button>
       </header>
       <div className="bar thin">
-        <i style={{ width: `${((session.total - left) / session.total) * 100}%` }} />
+        <i style={{ width: `${(answered / (answered + left)) * 100}%` }} />
       </div>
-
-      {notice && <div className="toast">{notice}</div>}
 
       <div className="card-area">
         {error && <p className="error">{error}</p>}
         {word && (
           <div className={`flash ${revealed ? 'open' : ''}`} key={cardKey} onClick={() => !revealed && setRevealed(true)}>
             <div className="flash-head">
-              <span className={`chip ${isNew ? 'accent' : ''}`}>{isNew ? '새 단어' : '복습'}</span>
+              <span className={`chip k-${q.next.kind}`}>{KIND_LABEL[q.next.kind]}</span>
               <span className="grow" />
               <button
                 className="icon-btn"
@@ -220,25 +188,31 @@ export function Study() {
                   )}
                 </div>
               ) : (
-                <p className="flash-hint">탭해서 뜻 확인</p>
+                <p className="flash-hint">떠올려 본 뒤 탭해서 확인</p>
               )}
             </div>
           </div>
         )}
       </div>
 
-      <footer className="answer-bar">
+      <footer className={`answer-bar ${missed ? '' : 'three'}`}>
         {missed ? (
-          <button className="btn again big wide" onClick={() => submit(false)}>
+          <button className="btn again big wide" onClick={() => submit(Rating.Again)}>
             확인했어요 · 다음
           </button>
         ) : (
           <>
             <button className="btn again big" onClick={onAgain} disabled={!word}>
-              다시 볼게요
+              모르겠어요
+              <small>{intervals?.[Rating.Again]}</small>
             </button>
-            <button className="btn know big" onClick={() => submit(true)} disabled={!word}>
+            <button className="btn know big" onClick={() => submit(Rating.Good)} disabled={!word}>
               알아요
+              <small>{intervals?.[Rating.Good]}</small>
+            </button>
+            <button className="btn easy big" onClick={() => submit(Rating.Easy)} disabled={!word}>
+              쉬워요
+              <small>{intervals?.[Rating.Easy]}</small>
             </button>
           </>
         )}

@@ -3,7 +3,8 @@ import { AiError, weakStory, type Story } from '../ai'
 import { Icon } from '../components/Icon'
 import { WordSheet } from '../components/WordSheet'
 import { meaning, useAllWords, type Word } from '../data'
-import { useStore, weakIds } from '../store'
+import { leechIds } from '../srs'
+import { useStore } from '../store'
 import { speak } from '../util'
 
 type Tab = 'search' | 'marks' | 'weak'
@@ -27,7 +28,7 @@ export function Words() {
   const [open, setOpen] = useState<Word | null>(null)
   const all = useAllWords()
   const marks = useStore((s) => s.marks)
-  const stats = useStore((s) => s.stats)
+  const cards = useStore((s) => s.cards)
   const [story, setStory] = useState<Story | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,7 +47,7 @@ export function Words() {
     return out
   }, [all, q])
 
-  const weak = useMemo(() => weakIds(stats), [stats])
+  const weak = useMemo(() => leechIds(cards), [cards])
   const weakWords = pick(weak)
   useEffect(() => setError(null), [tab])
 
@@ -156,10 +157,10 @@ export function Words() {
           )}
           <div className="word-list">
             {weakWords.map((w) => (
-              <Row key={w.id} w={w} onOpen={setOpen} extra={`다시 ${stats[w.id]?.[1] ?? 0}회`} />
+              <Row key={w.id} w={w} onOpen={setOpen} extra={`잊음 ${cards[w.id]?.lapses ?? 0}회`} />
             ))}
           </div>
-          {weak.length === 0 && <p className="empty">“다시 볼게요”를 여러 번 누른 단어가 여기에 모여요.</p>}
+          {weak.length === 0 && <p className="empty">복습에서 두 번 이상 잊어버린 단어가 여기에 모여요.</p>}
         </>
       )}
 

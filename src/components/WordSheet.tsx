@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AiError, cachedExplain, explainWord, hasKey, type Explain } from '../ai'
 import { meaning, type Word } from '../data'
+import { formatInterval, STAGE_LABEL, stageOf } from '../srs'
 import { toggleMark, useStore } from '../store'
 import { speak } from '../util'
 import { Icon } from './Icon'
@@ -85,7 +86,7 @@ export function AiExplain({ word }: { word: Word }) {
 
 export function WordSheet({ word, onClose }: { word: Word; onClose: () => void }) {
   const marked = useStore((s) => s.marks.includes(word.id))
-  const stat = useStore((s) => s.stats[word.id])
+  const card = useStore((s) => s.cards[word.id])
 
   useEffect(() => {
     const on = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -98,11 +99,11 @@ export function WordSheet({ word, onClose }: { word: Word; onClose: () => void }
       <div className="sheet" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head">
           <span className="chip">N{word.level}</span>
-          {stat && (
-            <span className="muted small">
-              알아요 {stat[0]} · 다시 {stat[1]}
-            </span>
-          )}
+          <span className="muted small">
+            {STAGE_LABEL[stageOf(card)]}
+            {card && ` · 다음 복습 ${card.due <= Date.now() ? '지금' : formatInterval(card.due - Date.now()) + ' 뒤'}`}
+            {card && card.lapses > 0 && ` · 잊은 횟수 ${card.lapses}`}
+          </span>
           <span className="grow" />
           <button className="icon-btn" onClick={() => speak(word.r || word.w)} aria-label="발음 듣기">
             <Icon name="speaker" />

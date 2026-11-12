@@ -1,58 +1,59 @@
 import { useSyncExternalStore } from 'react'
-import { COUNTS, LEVELS, STAGE_SIZE, stageCount, stageRange, wordId, type Level } from './data'
-import { addDays, dayKey, shuffle, upcomingExams } from './util'
+import { LEVELS, type Level } from './data'
+import { upcomingExams } from './util'
 
-export interface Session {
-  level: Level
-  stage: number
-  /** word indexes still to answer in the current pass (first = current card) */
-  queue: number[]
-  /** words marked "study again" in this pass; they come back in the next pass */
-  again: number[]
-  pass: number
-  total: number
-  /** stage counts toward level progress (false when replaying a finished stage) */
-  counts: boolean
+/** A scheduled card (ts-fsrs Card with timestamps as epoch ms). Words without an entry are still new. */
+export interface SCard {
+  due: number
+  stability: number
+  difficulty: number
+  elapsed_days: number
+  scheduled_days: number
+  learning_steps: number
+  reps: number
+  lapses: number
+  /** 1 learning · 2 review · 3 relearning */
+  state: number
+  last_review?: number
 }
 
 export interface DayLog {
-  /** cards answered */
+  /** answers given */
   c: number
-  /** answered "known" */
-  k: number
-  /** stages finished */
-  s: number
+  /** new words introduced */
+  n: number
+  /** answers on cards that were in review (the ones that measure retention) */
+  r: number
+  /** …of which remembered */
+  p: number
+  /** extra new words unlocked for this day on top of the daily limit */
+  x?: number
 }
 
 export interface State {
-  v: 1
+  v: 2
   onboarded: boolean
   settings: {
     target: Level
     examDate: string
+    dailyNew: number
     theme: 'system' | 'light' | 'dark'
     apiKey: string
     autoSpeak: boolean
   }
-  /** round = current 회독 (1-based); done = stages finished in the current round */
-  levels: Record<Level, { round: number; done: number }>
-  session: Session | null
-  /** per word: [times known, times marked again] */
-  stats: Record<string, [number, number]>
+  cards: Record<string, SCard>
   log: Record<string, DayLog>
   marks: string[]
 }
 
-const KEY = 'kasane.state.v1'
+const KEY = 'kasane.state.v2'
 
 function initial(): State {
   return {
-    v: 1,
+    v: 2,
     onboarded: false,
-    settings: { target: 5, examDate: upcomingExams()[0], theme: 'system', apiKey: '', autoSpeak: false },
-    levels: Object.fromEntries(LEVELS.map((l) => [l, { round: 1, done: 0 }])) as State['levels'],
-    session: null,
-    stats: {},
+    settings: { target: 5, examDate: upcomingExams()[0], dailyNew: 20, theme: 'system', apiKey: '', autoSpeak: false },
+    cards: {},
     log: {},
     marks: [],
   }
@@ -64,7 +65,7 @@ function load(): State {
     if (raw) {
       const s = JSON.parse(raw) as State
       const base = initial()
-      return { ...base, ...s, settings: { ...base.settings, ...s.settings }, levels: { ...base.levels, ...s.levels } }
+      return { ...base, ...s, settings: { ...base.settings, ...s.settings } }
     }
   } catch {
     /* storage unavailable or corrupt: start fresh */
@@ -77,8 +78,9 @@ const subs = new Set<() => void>()
 
 export const getState = () => state
 
+/** Copy-on-write update: `mutate` receives a shallow copy and must replace (not mutate) nested objects it changes. */
 export function update(mutate: (draft: State) => void) {
-  const draft = structuredClone(state)
+  const draft = { ...state, settings: { ...state.settings } }
   mutate(draft)
   state = draft
   try {
@@ -108,110 +110,10 @@ export function resetAll() {
   update((d) => Object.assign(d, initial()))
 }
 
-// ── study flow ──────────────────────────────────────────────────────────────
-
-/** Stage `stage` = its 50 new words + the previous stage's words mixed in. */
-export function startStage(level: Level, stage: number) {
-  update((d) => {
-    const fresh = stageRange(level, stage)
-    const review = stage > 0 ? stageRange(level, stage - 1) : []
-    const queue = shuffle([...fresh, ...review])
-    d.session = {
-      level,
-      stage,
-      queue,
-      again: [],
-      pass: 1,
-      total: queue.length,
-      counts: stage >= d.levels[level].done,
-    }
-  })
-}
-
-export type AnswerResult = 'next' | 'pass' | 'done'
-
-/** Returns what happened after the answer: next card, a new pass started, or the stage finished. */
-export function answer(known: boolean): AnswerResult {
-  let result: AnswerResult = 'next'
-  update((d) => {
-    const s = d.session
-    if (!s || !s.queue.length) return
-    const idx = s.queue.shift()!
-    const id = wordId(s.level, idx)
-    const st = (d.stats[id] ??= [0, 0])
-    st[known ? 0 : 1]++
-    if (!known) s.again.push(idx)
-    const log = (d.log[dayKey()] ??= { c: 0, k: 0, s: 0 })
-    log.c++
-    if (known) log.k++
-
-    if (s.queue.length) return
-    if (s.again.length) {
-      s.queue = shuffle(s.again)
-      s.again = []
-      s.pass++
-      result = 'pass'
-      return
-    }
-    result = 'done'
-    log.s++
-    d.session = null
-    if (s.counts) {
-      const lv = d.levels[s.level]
-      lv.done = Math.max(lv.done, s.stage + 1)
-      if (lv.done >= stageCount(s.level)) {
-        lv.round++
-        lv.done = 0
-      }
-    }
-  })
-  return result
-}
-
-export function restoreSession(prev: { session: Session; stats: State['stats']; log: State['log'] }) {
-  update((d) => {
-    d.session = prev.session
-    d.stats = prev.stats
-    d.log = prev.log
-  })
-}
-
-export function quitSession() {
-  update((d) => {
-    d.session = null
-  })
-}
-
 export function toggleMark(id: string) {
   update((d) => {
-    const i = d.marks.indexOf(id)
-    if (i >= 0) d.marks.splice(i, 1)
-    else d.marks.unshift(id)
+    d.marks = d.marks.includes(id) ? d.marks.filter((m) => m !== id) : [id, ...d.marks]
   })
 }
 
-// ── derived ─────────────────────────────────────────────────────────────────
-
-export function learnedCount(s: State, l: Level): number {
-  return Math.min(s.levels[l].done * STAGE_SIZE, COUNTS[l])
-}
-
-export function streak(log: State['log'], today = new Date()): number {
-  let n = 0
-  // today doesn't break the streak until it's over
-  let d = log[dayKey(today)]?.c ? today : addDays(today, -1)
-  while (log[dayKey(d)]?.c) {
-    n++
-    d = addDays(d, -1)
-  }
-  return n
-}
-
-/** Words the user keeps missing, most-missed first. */
-export function weakIds(stats: State['stats'], limit = 30): string[] {
-  return Object.entries(stats)
-    .filter(([, [k, a]]) => a >= 2 && a > k - 1)
-    .sort((x, y) => y[1][1] - y[1][0] - (x[1][1] - x[1][0]) || y[1][1] - x[1][1])
-    .slice(0, limit)
-    .map(([id]) => id)
-}
+export { LEVELS }

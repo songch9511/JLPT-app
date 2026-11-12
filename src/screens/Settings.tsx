@@ -23,7 +23,7 @@ export function Settings() {
   const importData = async (f: File) => {
     try {
       const data = JSON.parse(await f.text()) as State
-      if (data.v !== 1 || !data.levels || !data.settings) throw new Error()
+      if (data.v !== 2 || !data.cards || !data.settings) throw new Error()
       if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요?')) return
       replaceState({ ...data, settings: { ...data.settings, apiKey: st.apiKey } })
     } catch {
@@ -47,6 +47,17 @@ export function Settings() {
             </button>
           ))}
         </div>
+        <label>하루 새 단어</label>
+        <div className="seg">
+          {[5, 10, 20, 30, 50].map((n) => (
+            <button key={n} className={st.dailyNew === n ? 'on' : ''} onClick={() => set({ dailyNew: n })}>
+              {n}
+            </button>
+          ))}
+        </div>
+        <p className="muted small">
+          지금 {st.dailyNew}개. 새 단어가 많을수록 며칠 뒤 복습도 늘어나요. 복습이 부담되면 줄이세요.
+        </p>
         <label htmlFor="exam">시험일</label>
         <div className="chips">
           {exams.map((d) => (
@@ -128,7 +139,9 @@ export function Settings() {
       </section>
 
       <p className="muted small center">
-        단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반) · 한국어 뜻은 N5 · N4 제공
+        복습 간격: FSRS (ts-fsrs, MIT) · 단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반)
+        <br />
+        한국어 뜻은 N5 · N4 제공
       </p>
     </>
   )
