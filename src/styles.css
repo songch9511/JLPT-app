@@ -425,3 +425,7 @@ button:disabled { cursor: default; opacity: 0.4; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+.daruma-sparks path { transform-box: fill-box; transform-origin: center; animation: twinkle 1.2s ease-in-out infinite; }
+.daruma-sparks path:nth-child(2) { animation-delay: 0.4s; }
+.daruma-sparks path:nth-child(3) { animation-delay: 0.8s; }
+@keyframes twinkle { 50% { transform: scale(0.4); opacity: 0.4; } }
