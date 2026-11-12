@@ -429,3 +429,12 @@ button:disabled { cursor: default; opacity: 0.4; }
 .daruma-sparks path:nth-child(2) { animation-delay: 0.4s; }
 .daruma-sparks path:nth-child(3) { animation-delay: 0.8s; }
 @keyframes twinkle { 50% { transform: scale(0.4); opacity: 0.4; } }
+
+/* mascot colour fill */
+.daruma-empty { fill: var(--surface); }
+.daruma-outline { fill: none; stroke: color-mix(in srgb, #f4646b 55%, var(--line)); stroke-width: 2.5; }
+.daruma-liquid { transition: transform 0.9s cubic-bezier(0.3, 1.2, 0.5, 1); }
+.daruma-liquid .wave { animation: wave 2.4s linear infinite; }
+.daruma-liquid .wave.back { animation-duration: 3.6s; animation-direction: reverse; }
+@keyframes wave { to { transform: translateX(60px); } }
+.fill-pct { font-variant-numeric: tabular-nums; color: #dc4850; font-weight: 800; }

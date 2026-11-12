@@ -140,12 +140,15 @@ export function Home() {
   else if (needPerDay == null) pace = '시험일이 지났어요. 설정에서 다음 시험일을 골라 주세요.'
   else pace = `시험 전에 전부 만나려면 하루 새 단어 ${needPerDay}개`
 
+  // share of today's cards already answered; the mascot fills with colour to match
+  const progress = cleared ? 1 : started ? (todayLog?.c ?? 0) / ((todayLog?.c ?? 0) + todo) : 0
+  const pct = Math.round(progress * 100)
   const bubble = cleared
-    ? '두 눈 다 그렸다! 오늘 목표 달성이에요.'
+    ? '가득 찼다! 오늘 목표 달성이에요.'
     : started
-      ? `한쪽 눈은 그렸어요. ${todo}장만 더 하면 완성!`
+      ? `${pct}% 채워졌어요. ${todo}장만 더 하면 가득!`
       : todo > 0
-        ? `오늘은 ${todo}장! 시작하면 한쪽 눈을 그려 줄게요.`
+        ? `오늘은 ${todo}장! 공부할수록 제 색이 차올라요.`
         : '오늘은 돌아온 복습이 없어요. 새 단어를 더 해 볼까요?'
 
   return (
@@ -154,7 +157,7 @@ export function Home() {
 
       <section className="hero">
         <div className="hero-top">
-          <Daruma eyes={cleared ? 2 : started ? 1 : 0} mood={cleared ? 'cheer' : 'idle'} size={104} />
+          <Daruma fill={todo === 0 && !started ? 1 : progress} mood={cleared ? 'cheer' : 'idle'} size={104} />
           <p className="bubble">{bubble}</p>
         </div>
         {todo > 0 ? (

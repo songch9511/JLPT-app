@@ -12,7 +12,7 @@ export function Onboarding() {
 
   return (
     <div className="onboard">
-      <Daruma eyes={0} size={120} />
+      <Daruma fill={1} size={120} />
       <p className="eyebrow">카사네 · 重ね</p>
       <h1>잊기 전에 한 겹 더, JLPT 단어</h1>
       <ol className="how">
@@ -25,8 +25,8 @@ export function Onboarding() {
           <span>기억할수록 며칠 → 몇 주 → 몇 달로 간격이 벌어져요. 모르면 금방 돌아와요.</span>
         </li>
         <li>
-          <b>하루 분량을 끝내면 다루마의 눈을</b>
-          <span>시작하면 한쪽 눈, 오늘 분량을 끝내면 나머지 눈을 그려요. XP와 연속 학습도 쌓여요.</span>
+          <b>공부할수록 다루마가 차올라요</b>
+          <span>카드를 넘길수록 다루마에 색이 차오르고, 오늘 분량을 끝내면 가득 차요. XP와 연속 학습도 쌓여요.</span>
         </li>
       </ol>
 
