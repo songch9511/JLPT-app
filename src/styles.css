@@ -162,12 +162,8 @@ button:disabled { cursor: default; opacity: 0.4; }
 
 .bar { position: relative; height: 12px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
 .bar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.35s cubic-bezier(0.3, 1.4, 0.6, 1); }
-/* highlight stripe, centred in the fill */
-.bar i { position: relative; }
-.bar i::after { content: ''; position: absolute; left: 6px; right: 6px; top: 50%; height: 3px; transform: translateY(-50%); border-radius: 99px; background: rgb(255 255 255 / 0.3); }
 .bar.fat { height: 18px; }
 .bar.fat i { background: var(--know); min-width: 18px; }
-.bar.fat i::after { height: 4px; }
 
 /* HUD */
 .hud { display: flex; align-items: center; gap: 12px; min-height: 44px; }
@@ -239,7 +235,6 @@ button:disabled { cursor: default; opacity: 0.4; }
 .quest-body p { font-size: 15px; font-weight: 700; }
 .quest .bar { height: 18px; }
 .quest .bar i { background: var(--gold); }
-.quest .bar i::after { display: none; } /* the count sits on this bar, so no stripe under the text */
 .quest.done .bar i { background: var(--know); }
 .quest .bar span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .quest-xp { font-size: 13px; font-weight: 800; color: var(--gold-deep); white-space: nowrap; }
@@ -307,7 +302,6 @@ button:disabled { cursor: default; opacity: 0.4; }
 .level-row svg { grid-area: chev; color: var(--muted); }
 .stagebar { display: flex; }
 .stagebar i { border-radius: 0; }
-.stagebar i::after { display: none; }
 .stagebar .mature, .legend .mature::before, .dot.mature { background: var(--know); }
 .stagebar .young, .legend .young::before, .dot.young { background: var(--young); }
 .stagebar .learning, .legend .learning::before, .dot.learning { background: var(--learning); }
