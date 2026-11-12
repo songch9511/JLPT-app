@@ -148,7 +148,7 @@ export function Home() {
     : started
       ? `${pct}% 채워졌어요. ${todo}장만 더 하면 가득!`
       : todo > 0
-        ? `오늘은 ${todo}장! 공부할수록 제 색이 차올라요.`
+        ? `쿨쿨… 오늘은 ${todo}장! 시작하면 깨어나서 색이 차올라요.`
         : '오늘은 돌아온 복습이 없어요. 새 단어를 더 해 볼까요?'
 
   return (
@@ -157,7 +157,7 @@ export function Home() {
 
       <section className="hero">
         <div className="hero-top">
-          <Daruma fill={todo === 0 && !started ? 1 : progress} mood={cleared ? 'cheer' : 'idle'} size={104} />
+          <Daruma fill={todo === 0 && !started ? 1 : progress} mood={cleared ? 'cheer' : !started && todo > 0 ? 'sleep' : 'idle'} size={104} />
           <p className="bubble">{bubble}</p>
         </div>
         {todo > 0 ? (
