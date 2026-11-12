@@ -48,6 +48,11 @@ npm run build    # 타입 검사 + 프로덕션 빌드 (dist/)
 npm run data     # data/raw + data/ko → public/data 재생성
 ```
 
+## 배포
+
+`main`에 푸시되면 `.github/workflows/deploy.yml`이 빌드해서 GitHub Pages에 올립니다.
+저장소 Settings → Pages → Source가 "GitHub Actions"로 설정되어 있어야 합니다.
+
 ## 단어 데이터
 
 - 단어 목록: [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) (MIT, tanos.co.uk 기반) — `data/raw/`
