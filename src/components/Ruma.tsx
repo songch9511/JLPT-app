@@ -1,17 +1,16 @@
 import { useId } from 'react'
 
 /**
- * 루마 (Ruma), the mascot: a drop-shaped porcelain daruma with a curled tip, a dark glass visor
+ * 루마 (Ruma), the mascot: a round porcelain daruma with a dark glass visor
  * with glowing eyes and a gold spark on its belly. It starts the day white and fills with red,
  * like liquid rising, as today's study gets done. `fill` is today's progress from 0 to 1.
  * Before the day's study starts it is asleep (`mood="sleep"`).
  */
 const GLOW = '#ffe3a3'
 const GOLD = '#f0c24f'
-const BODY =
-  'M79 4C80 14 67 16 50 21 27 28 11 45 11 66c0 26 21 44 49 44s49-18 49-44c0-17-8-31-21-40-8-5-10-12-9-22Z'
+const BODY = 'M60 9c30 0 49 24 49 54 0 28-20 47-49 47S11 91 11 63C11 33 30 9 60 9Z'
 const VISOR = 'M60 41c14 0 26 2 32 9 6 8 6 22 0 30-6 7-18 9-32 9s-26-2-32-9c-6-8-6-22 0-30 6-7 18-9 32-9Z'
-const TOP = 4
+const TOP = 9
 const BOTTOM = 110
 
 export function Ruma({
@@ -25,7 +24,7 @@ export function Ruma({
 }) {
   const id = useId()
   const f = Math.min(1, Math.max(0, fill))
-  // a full body pushes the surface above the tip, an empty one below the base, so no wave line shows
+  // a full body pushes the surface above the head, an empty one below the base, so no wave line shows
   const level = f >= 1 ? TOP - 8 : f <= 0 ? BOTTOM + 8 : BOTTOM - f * (BOTTOM - TOP)
 
   const eye = (cx: number) => {
@@ -93,14 +92,15 @@ export function Ruma({
           </g>
           {eyes}
         </g>
+        <path d="M19 50q-3 9-2 19M101 50q3 9 2 19" fill="none" stroke={GOLD} strokeWidth="3" strokeLinecap="round" />
         {/* belly spark */}
         <path d="M60 93q1.3 5.7 7 7-5.7 1.3-7 7-1.3-5.7-7-7 5.7-1.3 7-7Z" fill={GOLD} stroke={GOLD} strokeWidth="1.5" strokeLinejoin="round" />
       </g>
       {mood === 'sleep' && (
         <g className="ruma-zzz" fill="none" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M99 32h8l-8 9h8" />
-          <path d="M109 18h6l-6 7h6" />
-          <path d="M116 7h4.5l-4.5 5h4.5" />
+          <path d="M92 26h8l-8 9h8" />
+          <path d="M103 12h6l-6 7h6" />
+          <path d="M111 2h4.5l-4.5 5h4.5" />
         </g>
       )}
       {mood === 'cheer' && (
