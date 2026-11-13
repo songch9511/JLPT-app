@@ -15,7 +15,7 @@ export function Settings() {
     const blob = new Blob([JSON.stringify({ ...rest, settings: { ...settings, apiKey: '' } })], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `kasane-backup-${dayKey()}.json`
+    a.download = `jlpt-ruma-backup-${dayKey()}.json`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -27,7 +27,7 @@ export function Settings() {
       if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요?')) return
       replaceState({ ...data, settings: { ...data.settings, apiKey: st.apiKey } })
     } catch {
-      alert('카사네 백업 파일이 아니에요.')
+      alert('JLPT 루마 백업 파일이 아니에요.')
     }
   }
 

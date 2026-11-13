@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { go } from '../App'
-import { Daruma } from '../components/Daruma'
+import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
 import { COUNTS, KO_READY, LEVELS, type Level } from '../data'
 import {
@@ -157,7 +157,7 @@ export function Home() {
 
       <section className="hero">
         <div className="hero-top">
-          <Daruma fill={todo === 0 && !started ? 1 : progress} mood={cleared ? 'cheer' : !started && todo > 0 ? 'sleep' : 'idle'} size={104} />
+          <Ruma fill={todo === 0 && !started ? 1 : progress} mood={cleared ? 'cheer' : !started && todo > 0 ? 'sleep' : 'idle'} size={104} />
           <p className="bubble">{bubble}</p>
         </div>
         {todo > 0 ? (
