@@ -19,14 +19,14 @@
       <rect width="120" height="120" fill="url(#d)"/><rect width="120" height="120" fill="url(#h)"/>
     </g>
     <path d="M60 34c16 0 28 3 34 10 6 8 6 22 0 30-6 7-18 10-34 10s-28-3-34-10c-6-8-6-22 0-30 6-7 18-10 34-10Z" fill="url(#v)" stroke="#f0c24f" stroke-width="1.8"/>
-    <ellipse cx="29" cy="72" rx="6" ry="4" fill="#f2a08f" opacity=".7"/><ellipse cx="91" cy="72" rx="6" ry="4" fill="#f2a08f" opacity=".7"/>
-    <g fill="none" stroke="#2a2022" stroke-linecap="round">
-      <path d="M57 45q-10-6-24 3M63 45q10-6 24 3" stroke-width="4.2"/>
+    <ellipse cx="30" cy="72.5" rx="7" ry="4.2" fill="#f7a9b4"/><ellipse cx="90" cy="72.5" rx="7" ry="4.2" fill="#f7a9b4"/>
+    <path d="M27 74.5l1.6-4M30 74.5l1.6-4M33 74.5l1.6-4M87 74.5l1.6-4M90 74.5l1.6-4M93 74.5l1.6-4" fill="none" stroke="#e8798b" stroke-width="1.1" stroke-linecap="round"/>
+    <g fill="none" stroke="#2a2022" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M36 52q5-3.5 10-2.5M84 52q-5-3.5-10-2.5" stroke-width="2.4"/>
+      <path d="M55 69q2.5 3.6 5 0q2.5 3.6 5 0" stroke-width="2.2"/>
     </g>
-    <g>
-      <circle cx="45" cy="61" r="9.5" fill="#fff" stroke="#f0c24f" stroke-width="2"/><circle cx="75" cy="61" r="9.5" fill="#fff" stroke="#f0c24f" stroke-width="2"/>
-      <circle cx="45" cy="61" r="7.1" fill="#2a2022"/><circle cx="75" cy="61" r="7.1" fill="#2a2022"/>
-      <circle cx="42.6" cy="58.4" r="2.2" fill="#fff"/><circle cx="72.6" cy="58.4" r="2.2" fill="#fff"/>
-    </g>
+    <circle cx="45" cy="64" r="5.6" fill="#2a2022"/><circle cx="75" cy="64" r="5.6" fill="#2a2022"/>
+    <circle cx="43.2" cy="62" r="1.9" fill="#fff"/><circle cx="73.2" cy="62" r="1.9" fill="#fff"/>
+    <circle cx="47" cy="66.2" r=".9" fill="#fff"/><circle cx="77" cy="66.2" r=".9" fill="#fff"/>
   </g>
 </svg>
