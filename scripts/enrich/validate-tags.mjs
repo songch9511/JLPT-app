@@ -9,6 +9,7 @@ import { isHan } from './forms.mjs'
 import { loadManifest } from './tag-chunks.mjs'
 import { prepassLevel, loadKanjiTable } from './prepass.mjs'
 import { K_VALUES, RT_VALUES, SK_RULE, FF_MAX, HANGUL_ONLY, JAPANESE } from './tags-schema.mjs'
+import { ruleErrors, headwordKey, sameWordConflicts } from './tag-rules.mjs'
 
 const args = process.argv.slice(2)
 const quiet = args.includes('--quiet')
@@ -19,6 +20,11 @@ const targets = files.length
   : readdirSync(dir).filter((f) => /^n[1-5]-\d+\.json$/.test(f)).sort().map((f) => `${dir}/${f}`)
 
 const manifest = loadManifest()
+// Warnings a reviewer has looked at and accepted (sk/rt overrides of the pre-pass candidates):
+// { "n1-1:277": "sk 부담: candidate table lacks the reading" }. They are counted, not printed.
+const reviewedPath = `${dir}/reviewed.json`
+const reviewed = existsSync(reviewedPath) ? JSON.parse(readFileSync(reviewedPath, 'utf8')) : {}
+let accepted = 0
 const table = loadKanjiTable()
 const cache = {}
 const level = (n) => (cache[n] ??= { ws: levelWords(n), pre: prepassLevel(n, table) })
@@ -26,12 +32,16 @@ const level = (n) => (cache[n] ??= { ws: levelWords(n), pre: prepassLevel(n, tab
 let errors = 0, warnings = 0
 const seen = {} // level -> Map(idx -> file)
 const dist = {}
-const byWord = new Map() // core|reading -> [{k, where}] for the cross-file consistency check
+const byWord = [] // {key, k, sk, ff, where} for the cross-file consistency check
 
 function check(path) {
   const name = basename(path).replace(/\.json$/, '')
   const err = (m) => { errors++; console.log(`ERROR ${name}: ${m}`) }
-  const warn = (m) => { warnings++; if (!quiet) console.log(`warn  ${name}: ${m}`) }
+  const warn = (m, idx) => {
+    if (idx !== undefined && reviewed[`${name}:${idx}`]) return void accepted++
+    warnings++
+    if (!quiet) console.log(`warn  ${name}: ${m}`)
+  }
   const m = name.match(/^n([1-5])-(\d+)$/)
   if (!m) return err(`file name must be n<level>-<part>.json (got ${basename(path)})`)
   const n = Number(m[1])
@@ -61,13 +71,13 @@ function check(path) {
     const { k, sk, ff, rt } = t
     if (!K_VALUES.includes(k)) { err(`${at}: k must be one of ${K_VALUES.join('/')} (got ${JSON.stringify(k)})`); continue }
     dist[n][k] = (dist[n][k] ?? 0) + 1
-    const wk = `${p.core}|${w.coreReading}`
-    if (!byWord.has(wk)) byWord.set(wk, [])
-    byWord.get(wk).push({ k, sk, where: `${name} idx ${i}` })
+    // same headword = same core, reading and affix position (～中 and 中 may differ; 我(が～) and 我(われ) do)
+    byWord.push({ key: headwordKey({ ...w, core: p.core }), k, sk, ff, where: `${name} idx ${i}` })
+    for (const m of ruleErrors({ core: p.core, coreReading: w.coreReading, affix: w.affix }, t)) err(`${at}: ${m}`)
     // script consistency
     if (!p.hk && !['L', 'K'].includes(k)) err(`${at}: no kanji in "${p.core}", so k must be L or K (got ${k})`)
     if (p.hk && ['L', 'K'].includes(k)) err(`${at}: "${p.core}" contains kanji, so k cannot be ${k} (use M for kanji+katakana)`)
-    if (p.auto && k !== p.auto) warn(`${at}: automatic type is ${p.auto} but labelled ${k} — fine only if deliberate (e.g. katakana onomatopoeia → K)`)
+    if (p.auto && k !== p.auto) warn(`${at}: automatic type is ${p.auto} but labelled ${k} — fine only if deliberate (e.g. katakana onomatopoeia → K)`, i)
     // sk
     const rule = SK_RULE[k]
     if (sk !== undefined && sk !== '') {
@@ -76,7 +86,7 @@ function check(path) {
       else {
         const nHan = [...p.core].filter(isHan).length
         if ([...sk].length !== nHan) err(`${at}: sk "${sk}" has ${[...sk].length} syllables but "${p.core}" has ${nHan} kanji — one syllable per kanji`)
-        else if (p.sk.length && !p.sk.includes(sk)) warn(`${at}: sk "${sk}" is not among the candidates (${p.sk.join(' ')}) — check for typos`)
+        else if (p.sk.length && !p.sk.includes(sk)) warn(`${at}: sk "${sk}" is not among the candidates (${p.sk.join(' ')}) — check for typos`, i)
       }
     } else if (rule === 'req') err(`${at}: sk (Korean hanja reading) is required for k=${k}; candidates: ${p.sk.join(' ') || '(none)'}`)
     // ff
@@ -91,7 +101,7 @@ function check(path) {
     // rt
     if (p.hk) {
       if (!RT_VALUES.includes(rt)) err(`${at}: rt must be one of ${RT_VALUES.join('/')} for a word with kanji (got ${JSON.stringify(rt)}); candidate: ${p.rt}`)
-      else if (p.rt && rt !== p.rt) warn(`${at}: rt "${rt}" differs from the automatic candidate "${p.rt}" — fine if checked`)
+      else if (p.rt && rt !== p.rt) warn(`${at}: rt "${rt}" differs from the automatic candidate "${p.rt}" — fine if checked`, i)
     } else if (rt !== undefined && rt !== '') err(`${at}: rt must be omitted for a word without kanji`)
   }
 }
@@ -112,12 +122,13 @@ for (const n of [5, 4, 3, 2, 1]) {
   const todo = parts.filter((k) => !done.has(k))
   console.log(`N${n}: ${labelled}/${total} labelled  ${d}${todo.length ? `  | not checked/labelled: ${todo.join(' ')}` : ''}`)
 }
-for (const [wk, list] of byWord) {
-  const ks = new Set(list.map((x) => `${x.k}/${x.sk ?? ''}`))
-  if (ks.size > 1) {
-    warnings++
-    if (!quiet) console.log(`warn  same word labelled differently: ${wk.split('|')[0]} — ${list.map((x) => `${x.where}: ${x.k}${x.sk ? ' ' + x.sk : ''}`).join('; ')}`)
-  }
+const totals = {}
+for (const n in dist) for (const k in dist[n]) totals[k] = (totals[k] ?? 0) + dist[n][k]
+console.log(`all: ${K_VALUES.filter((k) => totals[k]).map((k) => `${k}=${totals[k]}`).join(' ')}`)
+// the same headword in two chunks or two levels must get the same answer (it is the same word for the learner)
+for (const [wk, list] of sameWordConflicts(byWord)) {
+  errors++
+  console.log(`ERROR same headword labelled differently: ${wk.split('|')[0]} — ${list.map((x) => `${x.where}: ${x.k}${x.sk ? ' ' + x.sk : ''}`).join('; ')}`)
 }
-console.log(`\n${errors} error(s), ${warnings} warning(s)${quiet && warnings ? ' (hidden by --quiet)' : ''}`)
+console.log(`\n${errors} error(s), ${warnings} warning(s)${quiet && warnings ? ' (hidden by --quiet)' : ''}${accepted ? `, ${accepted} reviewed warning(s) accepted (data/tags/reviewed.json)` : ''}`)
 process.exit(errors ? 1 : 0)

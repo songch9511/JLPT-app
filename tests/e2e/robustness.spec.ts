@@ -21,7 +21,8 @@ test.describe('error screen', () => {
     await expect(page.getByRole('button', { name: '다시 불러오기' })).toBeVisible()
     const { name, body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
     expect(name).toBe('jlpt-ruma-backup-2026-11-13.json')
-    expect(body).toMatchObject({ format: 'jlpt-luma-backup', v: 2, xp: 33 })
+    // the stored state was saved again after loading, migrated to v3 (fast-track)
+    expect(body).toMatchObject({ format: 'jlpt-luma-backup', v: 3, xp: 33 })
     expect(body.cards['9-0']).toBeTruthy() // exactly what is stored, broken part included
     expect(body.settings).not.toHaveProperty('apiKey') // left by an older version: never exported
   })
@@ -110,12 +111,12 @@ test.describe('backups', () => {
     await open(page, { state: user({}, { xp: 77 }), hash: '/settings' })
     await expect(page.getByText('아직 백업한 적이 없어요.')).toBeVisible()
     const { body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
-    expect(body).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 1, v: 2, xp: 77 })
+    expect(body).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 2, v: 3, xp: 77 })
     expect(typeof body.app).toBe('string')
     await expect(page.getByText('마지막 백업: 2026년 11월 13일')).toBeVisible()
 
     const newer = page.waitForEvent('dialog')
-    await page.locator('input[type=file]').setInputFiles({ name: 'n.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, formatVersion: 2, xp: 1 })) })
+    await page.locator('input[type=file]').setInputFiles({ name: 'n.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, formatVersion: 3, xp: 1 })) })
     const d = await newer
     expect(d.message()).toContain('더 새로운 버전')
     await d.accept()

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Icon, type IconName } from './components/Icon'
 import { SaveWarning } from './components/Notices'
-import type { Level } from './data'
+import { useLevels, type Level } from './data'
 import { Home } from './screens/Home'
 import { LevelScreen } from './screens/Level'
 import { Onboarding } from './screens/Onboarding'
@@ -9,6 +9,7 @@ import { Settings } from './screens/Settings'
 import { Stats } from './screens/Stats'
 import { Study } from './screens/Study'
 import { Words } from './screens/Words'
+import { studyLevels } from './srs'
 import { useStore } from './store'
 
 type Route =
@@ -39,6 +40,10 @@ export default function App() {
   const [route, setRoute] = useState(() => parse(location.hash))
   const onboarded = useStore((s) => s.onboarded)
   const theme = useStore((s) => s.settings.theme)
+  const target = useStore((s) => s.settings.target)
+  const includeLower = useStore((s) => s.settings.includeLower)
+  // the studied levels' data in the background: today's counts (new words, reading cards) follow its order
+  useLevels(onboarded ? studyLevels({ target, includeLower }) : [])
 
   useEffect(() => {
     const on = () => {

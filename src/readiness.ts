@@ -2,9 +2,9 @@
 // morning. Recall comes from ts-fsrs's own forgetting curve (`get_retrievability`) and scheduler (`next`);
 // nothing here re-derives the formula.
 import { fsrs, generatorParameters, Rating, type Card } from 'ts-fsrs'
-import { COUNTS, type Level } from './data'
+import { COUNTS, wordOfCard, type Level } from './data'
 import { pNew } from './pnew'
-import { endOfDay, newLeftToday, studyLevels, toCard } from './srs'
+import { endOfDay, isActive, newLeftToday, studyLevels, toCard } from './srs'
 import { MAX_DAILY_NEW, type SCard, type State } from './store'
 import { addDays, dayKey, daysBetween, parseDay } from './util'
 
@@ -26,10 +26,7 @@ export const examTime = (examDate: string) => {
 }
 
 /** Card ids are `<level>-<idx>` with an optional `:<type>` suffix for further card types of the same word (03 §3). */
-export const wordOfCard = (id: string) => {
-  const i = id.indexOf(':')
-  return i < 0 ? id : id.slice(0, i)
-}
+export { wordOfCard }
 
 const safe = (r: number) => (Number.isFinite(r) ? Math.min(1, Math.max(0, r)) : 0)
 
@@ -171,11 +168,13 @@ export function readiness(s: State, now: Date, opts: { dailyNew?: number } = {})
   const examDay = daysLeft === 0
   const eod = endOfDay(now)
 
-  // a word's probability is that of its weakest card (03 §4.1); words without a card count 0
+  // a word's probability is that of its weakest card (03 §4.1); words without a card count 0. A word with a
+  // meaning and a reading card counts once; resting reading cards (fast-track off) do not count.
   const inLevels = new Set<number>(levels)
   const words = new Map<string, CardTerms>()
+  const ft = s.settings.fastTrack !== false
   for (const id in s.cards) {
-    if (!inLevels.has(Number(id[0]))) continue
+    if (!inLevels.has(Number(id[0])) || !isActive(id, ft)) continue
     const t = cardTerms(s.cards[id], exam, nowQ, eod, examDay)
     const w = wordOfCard(id)
     const prev = words.get(w)

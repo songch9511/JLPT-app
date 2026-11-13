@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test --trace off",
-    "data": "node scripts/build-data.mjs"
+    "data": "node scripts/build-data.mjs --extras"
   },
   "dependencies": {
     "lucide-react": "^1.72.0",

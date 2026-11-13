@@ -9,7 +9,7 @@ describe('store: loading', () => {
     const s = store.getState()
     expect(s.onboarded).toBe(false)
     // a new learner studies the lower levels too (03 decision 2)
-    expect(s.settings).toEqual({ target: 5, examDate: '2026-12-06', dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, goal: 0.8 })
+    expect(s.settings).toEqual({ target: 5, examDate: '2026-12-06', dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, goal: 0.8, fastTrack: true })
     expect(s.cards).toEqual({})
     expect(s.marks).toEqual([])
     expect(s.xp).toBe(0)
@@ -33,7 +33,7 @@ describe('store: loading', () => {
     const { store, ls } = await boot({ now: NOW, saved })
     const s = store.getState()
     // a learner from before `includeLower` keeps studying the target level only, so the plan does not suddenly grow
-    expect(s.settings).toEqual({ target: 3, examDate: '2027-07-04', dailyNew: 10, theme: 'dark', autoSpeak: false, includeLower: false, goal: 0.8 })
+    expect(s.settings).toEqual({ target: 3, examDate: '2027-07-04', dailyNew: 10, theme: 'dark', autoSpeak: false, includeLower: false, goal: 0.8, fastTrack: true })
     expect(JSON.stringify(s)).not.toContain('sk-ant-old')
     // and out of storage at once, not only at the next save
     expect(ls.getItem(KEY)).not.toContain('sk-ant-old')
@@ -207,8 +207,9 @@ describe('store: additive fields without a version bump', () => {
     }
     const { store, srs } = await boot({ now: NOW, saved })
     const s = store.getState()
-    expect(s.v).toBe(2)
-    expect(s.settings).toEqual({ target: 1, examDate: '2026-12-06', dailyNew: 40, theme: 'light', autoSpeak: true, includeLower: false, goal: 0.8 })
+    // migrated to v3 on load (the fast-track); nothing else about the state changes
+    expect(s.v).toBe(3)
+    expect(s.settings).toEqual({ target: 1, examDate: '2026-12-06', dailyNew: 40, theme: 'light', autoSpeak: true, includeLower: false, goal: 0.8, fastTrack: true })
     expect(s.log['2026-11-12']).toEqual({ c: 5, n: 5, r: 0, p: 0, xp: 50 })
     expect(s.cards['1-0']).toEqual(saved.cards['1-0'])
     // answering adds the new fields alongside the old ones

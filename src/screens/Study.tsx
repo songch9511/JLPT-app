@@ -1,18 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { go } from '../App'
 import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
-import { levelOf, meaning, useLevel } from '../data'
+import { Bridge, FalseFriend, SoundHints, TypeLine } from '../components/WordNotes'
+import { idxOf, isReadingCard, levelOf, meaning, useAllWords, useLevel, useLevels } from '../data'
+import { readingOf, readingQuestion } from '../distractors'
 import {
   answer,
   breakdowns,
   buildQueue,
+  gradeReading,
   previewIntervals,
   Rating,
   restore,
   snapshot,
   streak,
+  studyLevels,
   unlockMoreNew,
   type Grade,
   type Queue,
@@ -77,13 +81,17 @@ export function Study() {
   // While nothing is due yet, re-check as time passes so waiting cards come back on their own.
   const tick = useClock(idle)
   const [wake, setWake] = useState(0)
+  /** reading card: the choice made (index), -1 for "모르겠어요", null before answering */
+  const [picked, setPicked] = useState<number | null>(null)
+  // The queue needs the studied levels' data: their introduction order and which words take a reading card.
+  const levels = useLevels(studyLevels(s.settings))
 
   // Recomputed after every answer; `now` is taken then so waiting cards become due as time passes.
   const { q, now } = useMemo(() => {
     const now = new Date()
     const q = buildQueue(s, now, last, { finishNow })
     return { q: redo ? { ...q, next: redo } : q, now }
-  }, [s, last, redo, tick, wake, finishNow])
+  }, [s, last, redo, tick, wake, finishNow, levels.ready])
   useEffect(() => setIdle(!q.next), [q.next])
   // …and wake up exactly when the first waiting card is due, not only on the next minute tick
   useEffect(() => {
@@ -92,9 +100,16 @@ export function Study() {
     return () => clearTimeout(id)
   }, [q.next, q.nextDue])
 
-  const id = q.next?.id
-  const { words, error } = useLevel(id ? levelOf(id) : null, retry)
-  const word = words && id ? words[Number(id.split('-')[1])] : null
+  const id = levels.ready ? q.next?.id : undefined
+  const reading = !!id && isReadingCard(id)
+  const { words, error: levelError } = useLevel(id ? levelOf(id) : null, retry)
+  // reading questions draw wrong choices from the data and must know every entry of the same written word
+  const all = useAllWords(reading)
+  const word = words && id ? (words[idxOf(id)] ?? null) : null
+  const error = levelError ?? levels.error
+  const reps = id ? (s.cards[id]?.reps ?? 0) : 0
+  const question = useMemo(() => (reading && word && all ? readingQuestion(word, all, `${id}|${reps}`) : null), [reading, word, all, id, reps])
+  const ready = !!word && (!reading || !!question)
   const intervals = useMemo(() => (id ? previewIntervals(s, id, now) : null), [s, id, now])
   const cardKey = `${id}:${answered}`
   const activeMs = useActiveTime(cardKey)
@@ -102,11 +117,13 @@ export function Study() {
   useEffect(() => {
     setRevealed(false)
     setMissed(false)
+    setPicked(null)
   }, [cardKey])
 
+  // a reading card speaks only once answered: hearing it first would give the answer away
   useEffect(() => {
-    if (s.settings.autoSpeak && word && mayPlayAudio()) speak(word.r || word.w)
-  }, [s.settings.autoSpeak, word])
+    if (s.settings.autoSpeak && word && !reading && mayPlayAudio()) speak(word.r || word.w)
+  }, [s.settings.autoSpeak, word, reading])
 
   useEffect(() => {
     if (!note) return
@@ -164,6 +181,19 @@ export function Study() {
     } else submit(Rating.Again)
   }, [revealed, submit, autoSpeak, word])
 
+  /** Reading card: a choice (or -1, "모르겠어요") grades it at once; the answer and meaning are then shown. */
+  const choose = useCallback(
+    (i: number) => {
+      if (!question || picked !== null || Date.now() < lockUntil.current) return
+      lockUntil.current = Date.now() + DOUBLE_TAP_MS
+      setPicked(i)
+      setRevealed(true)
+      setMissed(i !== question.answer)
+      if (autoSpeak && word) speak(word.r || word.w)
+    },
+    [question, picked, autoSpeak, word],
+  )
+
   const onUndo = () => {
     if (!undo.current) return
     restore(undo.current.snap)
@@ -176,13 +206,24 @@ export function Study() {
   }
 
   // Keys follow the two steps: Space/Enter shows the answer; 1/2/3 (or ←/→/↑) grade once it is shown.
-  // 1 / ← on the front is "모르겠어요", the only other choice there.
-  useEffect(() => {
+  // 1 / ← on the front is "모르겠어요", the only other choice there. Registered before paint, so a key pressed
+  // as soon as a card shows is never handled by the previous card's handler.
+  useLayoutEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (!word || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
+      if (!ready || !word || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
       // a control the user moved to with the keyboard gets its own Enter/Space
       if ((e.key === ' ' || e.key === 'Enter') && e.target instanceof Element && e.target.matches(':focus-visible')) return
       const k = e.key
+      // reading card: 1–4 pick a choice, 0 or ← is "모르겠어요"; once answered Space/Enter goes on
+      if (reading) {
+        if (picked === null && /^[1-4]$/.test(k)) choose(Number(k) - 1)
+        else if (picked === null && (k === '0' || k === 'ArrowLeft')) choose(-1)
+        else if (picked !== null && (k === ' ' || k === 'Enter')) {
+          e.preventDefault()
+          if (question) submit(gradeReading(picked, question.answer))
+        }
+        return
+      }
       if (k === ' ' || k === 'Enter') {
         e.preventDefault()
         if (!revealed) reveal()
@@ -193,9 +234,9 @@ export function Study() {
     }
     addEventListener('keydown', on)
     return () => removeEventListener('keydown', on)
-  }, [word, revealed, missed, submit, onAgain, reveal])
+  }, [ready, word, reading, picked, choose, revealed, missed, submit, onAgain, reveal])
 
-  if (!q.next) {
+  if (levels.ready && !q.next) {
     const moreNew = breakdowns(s)[s.settings.target].new > 0
     const log = s.log[dayKey(now)]
     const cleared = q.waiting === 0
@@ -259,10 +300,11 @@ export function Study() {
   }
 
   const left = q.learning + q.review + q.fresh
+  const next = q.next
   // measured against the whole day, like the home screen, so resuming does not start from zero
   const dayTotal = Math.max(1, todayCount + left)
   const marked = word ? s.marks.includes(word.id) : false
-  const lower = levelOf(q.next.id) !== s.settings.target
+  const lower = !!next && levelOf(next.id) !== s.settings.target
 
   return (
     <div className="study">
@@ -305,34 +347,41 @@ export function Study() {
             </button>
           </div>
         )}
-        {!word && !error && (
+        {!ready && !error && (
           <div className="skeleton" aria-busy="true" aria-label="단어를 불러오는 중">
             <i className="sk-word" />
             <i className="sk-meaning" />
           </div>
         )}
-        {word && (
-          <div className={`flash ${revealed ? 'open' : ''} ${missed ? 'missed' : ''}`} key={cardKey} onClick={() => reveal()}>
+        {ready && word && next && (
+          <div
+            className={`flash ${revealed ? 'open' : ''} ${missed ? 'missed' : ''} ${reading ? 'reading-card' : ''}`}
+            key={cardKey}
+            onClick={() => !reading && reveal()}
+          >
             <div className="flash-head">
               {missed ? (
                 <span className="chip k-again" role="status">
                   다시 나와요 · {intervals?.[Rating.Again]}
                 </span>
               ) : (
-                q.next.kind === 'new' && <span className="chip k-new">새 단어</span>
+                next.kind === 'new' && <span className="chip k-new">새 단어</span>
               )}
-              {lower && <span className="chip">N{levelOf(q.next.id)}</span>}
+              {reading && <span className="chip k-read">읽기</span>}
+              {lower && <span className="chip">N{levelOf(next.id)}</span>}
               <span className="grow" />
-              <button
-                className="icon-btn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  speak(word.r || word.w)
-                }}
-                aria-label="발음 듣기"
-              >
-                <Icon name="speaker" />
-              </button>
+              {(!reading || revealed) && (
+                <button
+                  className="icon-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    speak(word.r || word.w)
+                  }}
+                  aria-label="발음 듣기"
+                >
+                  <Icon name="speaker" />
+                </button>
+              )}
               <button
                 className={`icon-btn ${marked ? 'marked' : ''}`}
                 onClick={(e) => {
@@ -349,20 +398,69 @@ export function Study() {
               <p lang="ja" className={`flash-word ${word.w.length > 6 ? 'long' : ''}`}>
                 {word.w}
               </p>
-              <div className="flash-answer-slot" aria-live="polite">
-                {revealed ? (
-                  <div className="flash-answer">
-                    {word.r && (
-                      <p lang="ja" className="flash-reading">
-                        {word.r}
-                      </p>
-                    )}
-                    <p className="flash-meaning">{meaning(word)}</p>
+              {reading && question ? (
+                <>
+                  <p className="reading-prompt" id="reading-prompt">
+                    {picked === null ? '어떻게 읽을까요?' : picked === question.answer ? '맞았어요' : picked < 0 ? '정답을 확인하세요' : '정답은 초록색이에요'}
+                  </p>
+                  <div className="choices" role="group" aria-labelledby="reading-prompt">
+                    {question.choices.map((c, i) => {
+                      const state = picked === null ? '' : i === question.answer ? 'right' : i === picked ? 'wrong' : 'dim'
+                      return (
+                        <button
+                          key={c}
+                          lang="ja"
+                          className={`choice ${state}`}
+                          disabled={picked !== null}
+                          aria-label={state === 'right' ? `${c}, 정답` : state === 'wrong' ? `${c}, 고른 답, 오답` : c}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            choose(i)
+                          }}
+                        >
+                          {state === 'right' && (
+                            <span className="choice-mark">
+                              <Icon name="check" size={18} />
+                            </span>
+                          )}
+                          {state === 'wrong' && (
+                            <span className="choice-mark">
+                              <Icon name="close" size={18} />
+                            </span>
+                          )}
+                          {c}
+                        </button>
+                      )
+                    })}
                   </div>
-                ) : (
-                  <p className="flash-hint">떠올려 본 뒤 정답을 확인하세요</p>
-                )}
-              </div>
+                  <div className="flash-answer-slot" aria-live="polite">
+                    {picked !== null && (
+                      <div className="flash-answer">
+                        {word.sk && <Bridge word={word} reading={readingOf(word)} />}
+                        <p className="flash-meaning">{meaning(word)}</p>
+                        <SoundHints word={word} />
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flash-answer-slot" aria-live="polite">
+                  {revealed ? (
+                    <div className="flash-answer">
+                      {word.r && (
+                        <p lang="ja" className="flash-reading">
+                          {word.r}
+                        </p>
+                      )}
+                      <p className="flash-meaning">{meaning(word)}</p>
+                      <FalseFriend word={word} />
+                      <TypeLine word={word} />
+                    </div>
+                  ) : (
+                    <p className="flash-hint">떠올려 본 뒤 정답을 확인하세요</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -375,37 +473,57 @@ export function Study() {
           </button>
         </div>
       )}
-      <footer className={`answer-bar ${!revealed ? 'front' : missed ? '' : 'three'}`}>
-        {!revealed ? (
-          <>
-            <button className="btn ghost big" onClick={onAgain} disabled={!word}>
+      {reading ? (
+        <footer className="answer-bar">
+          {picked === null ? (
+            <button className="btn ghost big wide" onClick={() => choose(-1)} disabled={!ready}>
               모르겠어요
             </button>
-            <button className="btn primary big" onClick={() => reveal(true)} disabled={!word}>
-              정답 보기
-            </button>
-          </>
-        ) : missed ? (
-          <button className="btn primary big wide" onClick={() => submit(Rating.Again)}>
-            확인했어요 · 다음
-          </button>
-        ) : (
-          <>
-            <button className="btn ghost big" onClick={onAgain} aria-label={answerLabel('모르겠어요', intervals?.[Rating.Again])}>
-              모르겠어요
+          ) : missed ? (
+            <button className="btn primary big wide" onClick={() => submit(gradeReading(picked, question?.answer ?? 0))} aria-label={answerLabel('확인했어요 · 다음', intervals?.[Rating.Again])}>
+              확인했어요 · 다음
               <small>{intervals?.[Rating.Again]}</small>
             </button>
-            <button className="btn primary big" onClick={() => submit(Rating.Good)} aria-label={answerLabel('알아요', intervals?.[Rating.Good])}>
-              알아요
+          ) : (
+            <button className="btn primary big wide" onClick={() => submit(gradeReading(picked, question?.answer ?? -2))} aria-label={answerLabel('다음', intervals?.[Rating.Good])}>
+              다음
               <small>{intervals?.[Rating.Good]}</small>
             </button>
-            <button className="btn ghost big" onClick={() => submit(Rating.Easy)} aria-label={answerLabel('쉬워요', intervals?.[Rating.Easy])}>
-              쉬워요
-              <small>{intervals?.[Rating.Easy]}</small>
+          )}
+        </footer>
+      ) : (
+        <footer className={`answer-bar ${!revealed ? 'front' : missed ? '' : 'three'}`}>
+          {!revealed ? (
+            <>
+              <button className="btn ghost big" onClick={onAgain} disabled={!ready}>
+                모르겠어요
+              </button>
+              <button className="btn primary big" onClick={() => reveal(true)} disabled={!ready}>
+                정답 보기
+              </button>
+            </>
+          ) : missed ? (
+            <button className="btn primary big wide" onClick={() => submit(Rating.Again)}>
+              확인했어요 · 다음
             </button>
-          </>
-        )}
-      </footer>
+          ) : (
+            <>
+              <button className="btn ghost big" onClick={onAgain} aria-label={answerLabel('모르겠어요', intervals?.[Rating.Again])}>
+                모르겠어요
+                <small>{intervals?.[Rating.Again]}</small>
+              </button>
+              <button className="btn primary big" onClick={() => submit(Rating.Good)} aria-label={answerLabel('알아요', intervals?.[Rating.Good])}>
+                알아요
+                <small>{intervals?.[Rating.Good]}</small>
+              </button>
+              <button className="btn ghost big" onClick={() => submit(Rating.Easy)} aria-label={answerLabel('쉬워요', intervals?.[Rating.Easy])}>
+                쉬워요
+                <small>{intervals?.[Rating.Easy]}</small>
+              </button>
+            </>
+          )}
+        </footer>
+      )}
     </div>
   )
 }

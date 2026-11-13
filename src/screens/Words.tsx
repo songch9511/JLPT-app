@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
 import { LevelList } from '../components/LevelList'
+import { inGroup, TypeFilter, type TypeGroup } from '../components/TypeFilter'
 import { WordSheet } from '../components/WordSheet'
 import { meaning, useAllWords, type Word } from '../data'
-import { breakdowns, leechIds } from '../srs'
+import { breakdowns, leechIds, wordLapses } from '../srs'
 import { useStore } from '../store'
 
 type Tab = 'search' | 'marks' | 'weak'
@@ -29,24 +30,29 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
   const marks = useStore((s) => s.marks)
   const cards = useStore((s) => s.cards)
   const target = useStore((s) => s.settings.target)
-  const levels = useMemo(() => breakdowns({ cards } as Parameters<typeof breakdowns>[0]), [cards])
+  const fastTrack = useStore((s) => s.settings.fastTrack)
+  const [type, setType] = useState<TypeGroup>('all')
+  const levels = useMemo(() => breakdowns({ cards, settings: { fastTrack } }), [cards, fastTrack])
 
   const byId = useMemo(() => new Map(all?.map((w) => [w.id, w])), [all])
   const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter((w): w is Word => !!w)
 
   const results = useMemo(() => {
     const t = q.trim().toLowerCase()
-    if (!all || !t) return []
+    // with a type chosen and nothing typed, the list is every word of that type (by level, then frequency)
+    if (!all || (!t && type === 'all')) return []
     const out: Word[] = []
-    for (const w of all) {
-      if (w.w.includes(t) || w.r.includes(t) || w.ko.includes(t) || w.en.toLowerCase().includes(t)) out.push(w)
-      if (out.length >= 60) break
+    const pool = t ? all : all.slice().sort((a, b) => b.level - a.level || a.o - b.o)
+    for (const w of pool) {
+      if (inGroup(w.k, type) && (!t || w.w.includes(t) || w.r.includes(t) || w.ko.includes(t) || w.en.toLowerCase().includes(t))) out.push(w)
+      if (out.length >= (t ? 60 : 200)) break
     }
     return out
-  }, [all, q])
+  }, [all, q, type])
 
-  const weak = useMemo(() => leechIds(cards), [cards])
-  const weakWords = pick(weak)
+  const weak = useMemo(() => leechIds(cards, 40, fastTrack), [cards, fastTrack])
+  const weakWords = pick(weak).filter((w) => inGroup(w.k, type))
+  const markWords = pick(marks).filter((w) => inGroup(w.k, type))
 
   return (
     <>
@@ -66,6 +72,7 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
           </button>
         ))}
       </div>
+      <TypeFilter value={type} onChange={setType} />
 
       {tab === 'search' && (
         <>
@@ -85,15 +92,15 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
               <Row key={w.id} w={w} onOpen={setOpen} />
             ))}
           </div>
-          {!q.trim() && <p className="empty">N5부터 N1까지 8,130개 단어에서 찾아요.</p>}
-          {q.trim() && all && results.length === 0 && <p className="empty">찾는 단어가 없어요.</p>}
+          {!q.trim() && type === 'all' && <p className="empty">N5부터 N1까지 8,130개 단어에서 찾아요.</p>}
+          {(q.trim() || type !== 'all') && all && results.length === 0 && <p className="empty">찾는 단어가 없어요.</p>}
         </>
       )}
 
       {tab === 'marks' && (
         <>
           <div className="word-list">
-            {pick(marks).map((w) => (
+            {markWords.map((w) => (
               <Row key={w.id} w={w} onOpen={setOpen} />
             ))}
           </div>
@@ -105,7 +112,7 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
         <>
           <div className="word-list">
             {weakWords.map((w) => (
-              <Row key={w.id} w={w} onOpen={setOpen} extra={`${cards[w.id]?.lapses ?? 0}번 잊음`} />
+              <Row key={w.id} w={w} onOpen={setOpen} extra={`${wordLapses({ cards, settings: { fastTrack } }, w.id)}번 잊음`} />
             ))}
           </div>
           {weak.length === 0 && <p className="empty">복습에서 두 번 이상 잊어버린 단어가 여기에 모여요.</p>}

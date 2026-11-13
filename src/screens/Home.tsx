@@ -200,7 +200,7 @@ export function Home() {
   // recomputed per hour, like readiness itself
   const pace = useMemo(() => paceToGoal(s, today), [s, hour])
   const nextExam = upcomingExams(today, 2).find((d) => d > s.settings.examDate)
-  const weak = useMemo(() => leechIds(s.cards).length, [s.cards])
+  const weak = useMemo(() => leechIds(s.cards, 40, s.settings.fastTrack).length, [s.cards, s.settings.fastTrack])
   const quest = quests(s, today)[0]
   const week = weekDays(s.log, today)
 
@@ -253,6 +253,7 @@ export function Home() {
               )}
               <span className="c-new">
                 새 단어 <b className="num">{q.fresh}</b>
+                {q.freshReading > 0 && <small className="muted"> (읽기만 {q.freshReading})</small>}
               </span>
             </p>
             {backlog > 0 && (

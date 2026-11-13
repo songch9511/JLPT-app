@@ -1,6 +1,7 @@
 // Builds src/generated/words.ts from the app's canonical word data (../public/data/n{1..5}.json).
 //
-// Input rows are [expression, reading, korean, english]; the word id today is positional:
+// Input rows are [expression, reading, korean, english, …] (only the first four are read; the app appends
+// order/frequency/word-type columns after them, see docs/plan/08 §5); the word id today is positional:
 // `<level>-<index in that level's file>` (see src/data.ts in the app). A stable-id migration is
 // planned: when it lands, change `idOf()` below (and WORD_ID_PATTERN / shardOf in src/words.ts)
 // and nothing else in the Worker needs to change, because the Worker only ever looks words up

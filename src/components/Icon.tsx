@@ -11,6 +11,7 @@ import {
   Info,
   Search,
   Settings,
+  TriangleAlert,
   Undo2,
   Volume2,
   X,
@@ -33,6 +34,7 @@ const ICONS = {
   info: Info,
   circle: Circle,
   chart: ChartColumn,
+  alert: TriangleAlert,
 } satisfies Record<string, LucideIcon>
 
 export type IconName = keyof typeof ICONS

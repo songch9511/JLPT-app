@@ -106,7 +106,10 @@ test('“모르겠어요” always shows the answer before moving on', async ({ 
   await page.waitForTimeout(READ_MS)
   await page.getByRole('button', { name: '확인했어요 · 다음' }).click()
   await expect.poll(async () => (await todayLog(page))?.c).toBe(1)
-  expect((await saved(page)).cards['5-0'].state).toBe(1)
+  // the first new word comes from the frequency order, so it is whichever card now exists
+  const cards = Object.values((await saved(page)).cards) as { state: number }[]
+  expect(cards).toHaveLength(1)
+  expect(cards[0].state).toBe(1)
 })
 
 test('the next day’s reviews appear (clock moves forward)', async ({ page }) => {
@@ -393,7 +396,9 @@ test.describe('two-step answering (05 batch 2)', () => {
     await page.keyboard.press('3')
     await expect.poll(async () => (await todayLog(page))?.c).toBe(3)
     const s = await saved(page)
-    expect(s.cards['5-2'].state).toBe(2) // 쉬워요 on a new word graduates it
+    // the third word introduced (frequency order; cards keep their insertion order)
+    expect(Object.keys(s.cards)).toHaveLength(3)
+    expect(s.cards[Object.keys(s.cards)[2]].state).toBe(2) // 쉬워요 on a new word graduates it
   })
 
   test('a double tap on “정답 보기” shows the answer but does not grade the card', async ({ page }) => {

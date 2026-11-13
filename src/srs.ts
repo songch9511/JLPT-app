@@ -1,7 +1,7 @@
 // Spaced repetition on top of FSRS (the open scheduler Anki uses): every answer moves a card's
 // next review further out when remembered and brings it back within minutes when forgotten.
 import { createEmptyCard, fsrs, generatorParameters, Rating, State as CardState, type Card, type Grade } from 'ts-fsrs'
-import { COUNTS, LEVELS, levelOf, wordId, type Level } from './data'
+import { COUNTS, isReadingCard, LEVELS, levelInfo, levelOf, readingId, wordId, wordOfCard, type Level } from './data'
 import { getState, MAX_DAILY_NEW, update, type DayLog, type SCard, type State } from './store'
 import { addDays, dayKey, daysBetween } from './util'
 
@@ -52,6 +52,8 @@ export interface Queue {
   learning: number
   review: number
   fresh: number
+  /** …of the new words, those introduced with a reading card (fast-track) */
+  freshReading: number
   /** the card to show now, if any */
   next: { id: string; kind: Kind } | null
   /** learning cards that come back later today (beyond the learn-ahead window) */
@@ -68,13 +70,54 @@ export function studyLevels(settings: Pick<State['settings'], 'target' | 'includ
   return settings.includeLower ? LEVELS.filter((l) => l >= settings.target) : [settings.target]
 }
 
+// ── card types (03 §3 C): meaning card `<id>`, fast-track reading card `<id>:r` ──
+
+/** What the per-word helpers read: the cards and whether the fast-track is on. */
+export type CardsView = { cards: State['cards']; settings: Pick<State['settings'], 'fastTrack'> }
+
+const fastOn = (s: { settings: Pick<State['settings'], 'fastTrack'> }) => s.settings?.fastTrack !== false
+
+/** Whether a card takes part in study. Reading cards rest (kept, not shown, not counted) while the fast-track is off. */
+export const isActive = (id: string, fastTrack: boolean) => fastTrack || !isReadingCard(id)
+
+/** The active cards of a word (meaning first). */
+export function wordCards(s: CardsView, word: string): { id: string; card: SCard }[] {
+  const out: { id: string; card: SCard }[] = []
+  if (s.cards[word]) out.push({ id: word, card: s.cards[word] })
+  const r = readingId(word)
+  if (s.cards[r] && fastOn(s)) out.push({ id: r, card: s.cards[r] })
+  return out
+}
+
+/** A word counts as introduced once it has an active card; words without one are still new. */
+export const isSeen = (s: CardsView, word: string) => !!s.cards[word] || (fastOn(s) && !!s.cards[readingId(word)])
+
+/**
+ * The card that introduces a word: the reading card for a word tagged S while the fast-track is on, else the
+ * meaning card. Before the level's data has loaded nothing is known about the word, so it is a meaning card;
+ * the study screen waits for the data before showing a new card.
+ */
+export function introCard(s: { settings: Pick<State['settings'], 'fastTrack'> }, l: Level, idx: number): string {
+  const id = wordId(l, idx)
+  return fastOn(s) && levelInfo(l)?.fast.has(idx) ? readingId(id) : id
+}
+
+/**
+ * The next words to introduce, as card ids: per level in the data's introduction order (frequency, 08 §2),
+ * or idx order until the level's data has loaded. Words already introduced are skipped wherever they are in
+ * the order, so a learner part-way through a level keeps every word seen and simply gets the next unseen
+ * words of the new order.
+ */
 function nextNewIds(s: State, limit: number): string[] {
   const out: string[] = []
-  for (const l of studyLevels(s.settings))
-    for (let i = 0; i < COUNTS[l] && out.length < limit; i++) {
-      const id = wordId(l, i)
-      if (!s.cards[id]) out.push(id)
+  for (const l of studyLevels(s.settings)) {
+    const order = levelInfo(l)?.order
+    const n = order ? order.length : COUNTS[l]
+    for (let k = 0; k < n && out.length < limit; k++) {
+      const i = order ? order[k] : k
+      if (!isSeen(s, wordId(l, i))) out.push(introCard(s, l, i))
     }
+  }
   return out
 }
 
@@ -98,16 +141,32 @@ export function newLeftToday(s: State, now: Date, dailyNew = s.settings.dailyNew
 export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNow?: boolean } = {}): Queue {
   const t = now.getTime()
   const eod = endOfDay(now)
+  const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const ft = fastOn(s)
   const learning: [string, number][] = []
-  const review: [string, number][] = []
+  let review: [string, number][] = []
+  /** words with a card answered today: their other card waits for another day (sibling burying, 03 §3) */
+  const answeredToday = new Map<string, string>()
   for (const id in s.cards) {
+    if (!isActive(id, ft)) continue
     const c = s.cards[id]
+    if ((c.last_review ?? 0) >= sod) answeredToday.set(wordOfCard(id), id)
     if (isLearning(c)) {
       if (c.due < eod) learning.push([id, c.due])
     } else if (c.due < eod) review.push([id, c.due])
   }
   learning.sort((a, b) => a[1] - b[1])
   review.sort((a, b) => a[1] - b[1])
+  // only one card of a word a day: a review whose sibling was answered today, or a second review card of the
+  // same word, waits (learning cards are mid-step and always come back)
+  const queued = new Set(learning.map(([id]) => wordOfCard(id)))
+  review = review.filter(([id]) => {
+    const w = wordOfCard(id)
+    const other = answeredToday.get(w)
+    if ((other !== undefined && other !== id) || queued.has(w)) return false
+    queued.add(w)
+    return true
+  })
   const fresh = nextNewIds(s, newLeftToday(s, now))
 
   const ready = opts.finishNow ? learning : learning.filter(([, due]) => due <= t + LEARN_AHEAD_MS)
@@ -127,10 +186,17 @@ export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNo
 
   const waiting = learning.length - ready.length
   const nextDue = waiting > 0 ? learning[ready.length][1] : null
-  return { learning: learning.length, review: review.length, fresh: fresh.length, next, waiting, nextDue }
+  return { learning: learning.length, review: review.length, fresh: fresh.length, freshReading: fresh.filter(isReadingCard).length, next, waiting, nextDue }
 }
 
 // ── answering ───────────────────────────────────────────────────────────────
+
+/**
+ * How a reading card's multiple-choice answer maps onto FSRS (03 §7.5): the right reading is "알아요" (Good),
+ * a wrong one or "모르겠어요" (-1) is Again. There is no Easy: recognising among four choices is easier than
+ * recalling, so it never earns the longest interval.
+ */
+export const gradeReading = (picked: number, answer: number): Grade => (picked === answer ? Rating.Good : Rating.Again)
 
 /** Time on one card counts up to this much: a card left on screen while the learner is away is not study. */
 export const MAX_CARD_MS = 60_000
@@ -225,13 +291,35 @@ export function stageOf(c: SCard | undefined): Stage {
 
 export type Breakdown = Record<Stage, number>
 
-export function breakdowns(s: State): Record<Level, Breakdown> {
+const STAGE_RANK: Record<Stage, number> = { new: 0, learning: 1, young: 2, mature: 3 }
+
+/** A word's stage: the lowest stage among its active cards (03 §3: a word is only as known as its weakest card). */
+export function wordStage(s: CardsView, word: string): Stage {
+  let st: Stage | null = null
+  for (const { card } of wordCards(s, word)) {
+    const x = stageOf(card)
+    if (st === null || STAGE_RANK[x] < STAGE_RANK[st]) st = x
+  }
+  return st ?? 'new'
+}
+
+/** Words per stage and level. Counted per word, not per card, so a word with two cards counts once. */
+export function breakdowns(s: CardsView): Record<Level, Breakdown> {
   const out = Object.fromEntries(
     LEVELS.map((l) => [l, { new: COUNTS[l], learning: 0, young: 0, mature: 0 }]),
   ) as Record<Level, Breakdown>
+  const ft = fastOn(s)
+  const per = new Map<string, Stage>()
   for (const id in s.cards) {
-    const b = out[levelOf(id)]
-    b[stageOf(s.cards[id])]++
+    if (!isActive(id, ft)) continue
+    const w = wordOfCard(id)
+    const st = stageOf(s.cards[id])
+    const prev = per.get(w)
+    if (prev === undefined || STAGE_RANK[st] < STAGE_RANK[prev]) per.set(w, st)
+  }
+  for (const [w, st] of per) {
+    const b = out[levelOf(w)]
+    b[st]++
     b.new--
   }
   return out
@@ -240,7 +328,9 @@ export function breakdowns(s: State): Record<Level, Breakdown> {
 /** Cards coming due on each of the next `days` days (index 0 = today, including overdue). */
 export function forecast(s: State, now: Date, days = 7): number[] {
   const out = new Array<number>(days).fill(0)
+  const ft = fastOn(s)
   for (const id in s.cards) {
+    if (!isActive(id, ft)) continue
     const i = Math.max(0, daysBetween(now, new Date(s.cards[id].due)))
     if (i < days) out[i]++
   }
@@ -294,11 +384,24 @@ export function streak(log: State['log'], today = new Date()): number {
   return n
 }
 
-/** Words that keep being forgotten (Anki calls them leeches), most-forgotten first. */
-export function leechIds(cards: State['cards'], limit = 40): string[] {
-  return Object.entries(cards)
-    .filter(([, c]) => c.lapses >= LEECH_LAPSES)
-    .sort((a, b) => b[1].lapses - a[1].lapses)
+/** Times a word was forgotten: the most of its active cards. */
+export function wordLapses(s: CardsView, word: string): number {
+  return Math.max(0, ...wordCards(s, word).map(({ card }) => card.lapses))
+}
+
+/**
+ * Words (word ids, never card ids) that keep being forgotten (Anki calls them leeches), most-forgotten first.
+ * A word with a forgotten meaning card and reading card is listed once.
+ */
+export function leechIds(cards: State['cards'], limit = 40, fastTrack = true): string[] {
+  const by = new Map<string, number>()
+  for (const [id, c] of Object.entries(cards))
+    if (c.lapses >= LEECH_LAPSES && isActive(id, fastTrack)) {
+      const w = wordOfCard(id)
+      by.set(w, Math.max(by.get(w) ?? 0, c.lapses))
+    }
+  return [...by]
+    .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([id]) => id)
 }

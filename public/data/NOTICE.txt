@@ -1,0 +1,35 @@
+JLPT 루마 — word data notice (public/data/n1.json … n5.json)
+
+Each row is [w, r, ko, en, o, f, k, sk, ff, rt, a]. The first four columns (word, reading, Korean
+meaning, English meaning) come from the word list and the app's own translation. The other columns
+are computed by this project from the sources below:
+
+  o, f   introduction order and frequency score, derived from
+         - wordfreq 3.1.1 by Robyn Speer — https://github.com/rspeer/wordfreq
+           data licensed CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
+           wordfreq contains data from OPUS OpenSubtitles 2018 (http://opus.nlpl.eu/OpenSubtitles.php;
+           data originating from http://www.opensubtitles.org/), Wikipedia, web text (OSCAR), Twitter,
+           Reddit and other sources listed in its README.
+         - JMdict, © Electronic Dictionary Research and Development Group (EDRDG),
+           https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project
+           used under the EDRDG licence (Creative Commons Attribution-ShareAlike):
+           https://www.edrdg.org/edrdg/licence.html
+  k, sk, ff, rt
+         word-type labels written by this project's labellers; the Korean hanja readings were
+         checked against candidates built from the Unicode Unihan database (kHangul,
+         © Unicode, Inc., Unicode License v3, https://www.unicode.org/license.txt) and
+         KANJIDIC2 (© EDRDG, licence as above, https://www.edrdg.org/wiki/index.php/KANJIDIC_Project).
+  a      the reading split per kanji, computed from KANJIDIC2 on-readings (© EDRDG, licence as above).
+
+Licence of the derived data: the data in the columns o, f and a, and the candidate tables they were
+built from (data/freq/, data/hanja/ in the source repository), are distributed under
+Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0):
+https://creativecommons.org/licenses/by-sa/4.0/legalcode
+If you reuse them, credit wordfreq (and its sources, including OpenSubtitles) and the EDRDG, and keep
+the derived data under CC BY-SA.
+
+Not decided yet: whether this licence extends to the rest of each file (the Korean meanings and the
+word-type labels). See docs/plan/08-word-data.md, "결정이 필요한 것" 1, in the source repository.
+
+Word list: open-anki-jlpt-decks (MIT licence, https://github.com/jamsinclair/open-anki-jlpt-decks),
+based on the lists at tanos.co.uk. JLPT does not publish an official vocabulary list.

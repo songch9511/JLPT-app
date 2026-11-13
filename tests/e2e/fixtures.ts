@@ -1,20 +1,23 @@
+import { readFileSync } from 'node:fs'
 import { expect, type Page } from '@playwright/test'
 
 export const KEY = 'kasane.state.v2'
 /** Friday 2026-11-13 09:00 in Seoul (the browser context runs in Asia/Seoul). */
 export const NOW = new Date('2026-11-13T09:00:00+09:00')
 
-type Settings = { target: number; examDate: string; dailyNew: number; theme: string; autoSpeak: boolean; includeLower: boolean; goal: number }
+type Settings = { target: number; examDate: string; dailyNew: number; theme: string; autoSpeak: boolean; includeLower: boolean; goal: number; fastTrack: boolean }
 
 /**
  * A saved state as an existing learner has it. Without `includeLower` it is a learner from before that
  * setting: only the target level is studied (pass `includeLower: true` for a new learner's behaviour).
+ * The cognate fast-track is off unless asked for (`fastTrack: true`), so scenarios about the meaning card,
+ * its three answers and their intervals see meaning cards only; fasttrack.spec.ts covers reading cards.
  */
 export function user(settings: Partial<Settings> & Record<string, unknown> = {}, extra: Record<string, unknown> = {}) {
   return {
     v: 2,
     onboarded: true,
-    settings: { target: 5, examDate: '2026-12-06', dailyNew: 10, theme: 'light', autoSpeak: false, ...settings },
+    settings: { target: 5, examDate: '2026-12-06', dailyNew: 10, theme: 'light', autoSpeak: false, fastTrack: false, ...settings },
     cards: {},
     log: {},
     marks: [],
@@ -52,13 +55,41 @@ export const todayLog = async (page: Page, day = '2026-11-13') => (await saved(p
  */
 export const READ_MS = 400
 
-/** Reveal the current card and answer it. */
+/** Every reading the word data gives a written form, to pick the right choice on a reading card. */
+const READINGS = (() => {
+  const m = new Map<string, Set<string>>()
+  for (const l of [1, 2, 3, 4, 5])
+    for (const [w, r] of JSON.parse(readFileSync(new URL(`../../public/data/n${l}.json`, import.meta.url), 'utf8')) as string[][]) {
+      const set = m.get(w) ?? m.set(w, new Set()).get(w)!
+      for (const x of (r || w).replace(/[(（][^)）]*[)）]/g, ' ').split(/[;；、,，\s]+/)) if (x) set.add(x.replace(/[～〜~]/g, ''))
+    }
+  return m
+})()
+
+/** The right choice on the reading card shown now. */
+export async function rightChoice(page: Page) {
+  const w = await currentWord(page)
+  const choices = await page.locator('.choice').allInnerTexts()
+  const right = choices.find((c) => READINGS.get(w)?.has(c.trim()))
+  if (!right) throw new Error(`no right reading for ${w} among ${choices.join(', ')}`)
+  return page.locator('.choice', { hasText: new RegExp(`^${right.trim()}$`) })
+}
+
+/**
+ * Reveal the current card and answer it. On a reading card (fast-track) "알아요"/"쉬워요" pick the right
+ * reading — a reading card has no "쉬워요" — and "모르겠어요" is its own button.
+ */
 export async function answer(page: Page, choice: '알아요' | '쉬워요' | '모르겠어요' = '알아요') {
   const card = page.locator('.flash')
   await expect(card).toBeVisible()
   await page.waitForTimeout(READ_MS)
   const before = (await todayLog(page))?.c ?? 0
-  if (choice === '모르겠어요') {
+  if (await page.locator('.reading-card').count()) {
+    if (choice === '모르겠어요') await page.getByRole('button', { name: /^모르겠어요/ }).click()
+    else await (await rightChoice(page)).click()
+    await page.waitForTimeout(READ_MS)
+    await page.getByRole('button', { name: choice === '모르겠어요' ? /^확인했어요 · 다음/ : /^다음/ }).click()
+  } else if (choice === '모르겠어요') {
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await page.waitForTimeout(READ_MS)
     await page.getByRole('button', { name: '확인했어요 · 다음' }).click()

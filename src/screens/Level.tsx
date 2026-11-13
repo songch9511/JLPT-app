@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
 import { WordSheet } from '../components/WordSheet'
+import { inGroup, TypeFilter, TYPE_GROUPS, type TypeGroup } from '../components/TypeFilter'
 import { COUNTS, meaning, useLevel, type Level, type Word } from '../data'
-import { breakdowns, STAGE_LABEL, stageOf, type Stage } from '../srs'
+import { breakdowns, STAGE_LABEL, wordStage, type Stage } from '../srs'
 import { update, useStore } from '../store'
 import { StageBar } from '../components/LevelList'
 
@@ -13,15 +14,21 @@ export function LevelScreen({ level }: { level: Level }) {
   const s = useStore((x) => x)
   const { words, error } = useLevel(level)
   const [filter, setFilter] = useState<'all' | Stage>('all')
+  const [type, setType] = useState<TypeGroup>('all')
   const [shown, setShown] = useState(PAGE)
   const [open, setOpen] = useState<Word | null>(null)
   const b = breakdowns(s)[level]
   const isTarget = s.settings.target === level
 
   const list = useMemo(
-    () => (words ?? []).filter((w) => filter === 'all' || stageOf(s.cards[w.id]) === filter),
-    [words, filter, s.cards],
+    () => (words ?? []).filter((w) => (filter === 'all' || wordStage(s, w.id) === filter) && inGroup(w.k, type)),
+    [words, filter, type, s],
   )
+  const typeCounts = useMemo(() => {
+    const c = Object.fromEntries(TYPE_GROUPS.map(([g]) => [g, 0])) as Record<TypeGroup, number>
+    for (const w of words ?? []) for (const [g] of TYPE_GROUPS) if (g !== 'all' && inGroup(w.k, g)) c[g]++
+    return c
+  }, [words])
 
   return (
     <>
@@ -43,6 +50,18 @@ export function LevelScreen({ level }: { level: Level }) {
       </header>
 
       <section className="card">
+        {words && (
+          <p className="fast-count">
+            {s.settings.fastTrack ? (
+              <>
+                한국어 한자어와 뜻이 같은 <b>{typeCounts.S.toLocaleString()}개</b>는 뜻 대신 읽기만 확인해요
+              </>
+            ) : (
+              <>한자어 빠른 통과가 꺼져 있어요. 모든 단어를 뜻 카드로 배워요</>
+            )}
+            {typeCounts.F > 0 && <> · 뜻이 다른 한자어 {typeCounts.F}개</>}
+          </p>
+        )}
         <StageBar b={b} total={COUNTS[level]} />
         <div className="breakdown">
           {(['mature', 'young', 'learning', 'new'] as Stage[]).map((k) => (
@@ -70,6 +89,15 @@ export function LevelScreen({ level }: { level: Level }) {
         ))}
       </div>
 
+      <TypeFilter
+        value={type}
+        counts={typeCounts}
+        onChange={(g) => {
+          setType(g)
+          setShown(PAGE)
+        }}
+      />
+
       {error && <p className="error">{error}</p>}
       <div className="word-list">
         {list.slice(0, shown).map((w) => (
@@ -79,7 +107,7 @@ export function LevelScreen({ level }: { level: Level }) {
               {w.r && <span lang="ja">{w.r}</span>}
             </span>
             <span className="word-meaning">{meaning(w)}</span>
-            <span className={`dot ${stageOf(s.cards[w.id])}`} />
+            <span className={`dot ${wordStage(s, w.id)}`} />
           </button>
         ))}
       </div>

@@ -86,6 +86,20 @@ export function Settings() {
       </section>
 
       <section className="card form">
+        <h3>학습 방식</h3>
+        <label className="switch">
+          <span>
+            한자어 빠른 통과
+            <small className="muted">
+              한국어 한자어와 뜻이 같은 단어(産業 = 산업)는 뜻 대신 읽기를 4지선다로 물어요. 끄면 모든 단어를 뜻 카드로 배우고, 읽기로만 배운
+              단어도 뜻 카드로 새로 나와요. 다시 켜면 읽기 카드가 이어서 나와요.
+            </small>
+          </span>
+          <input type="checkbox" checked={st.fastTrack} onChange={(e) => set({ fastTrack: e.target.checked })} />
+        </label>
+      </section>
+
+      <section className="card form">
         <h3>화면 · 소리</h3>
         <label>테마</label>
         <div className="seg">
@@ -158,6 +172,46 @@ export function Settings() {
           <li>단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반). JLPT는 공식 어휘 목록을 공개하지 않아서 비공식 목록이에요.</li>
           <li>한국어 뜻은 기계 번역이라 틀린 곳이 있을 수 있어요.</li>
           <li>복습 간격: FSRS (ts-fsrs, MIT)</li>
+          <li>
+            단어 빈도·소개 순서:{' '}
+            <a href="https://github.com/rspeer/wordfreq" target="_blank" rel="noreferrer">
+              wordfreq
+            </a>{' '}
+            (Robyn Speer, CC BY-SA 4.0. OpenSubtitles 2018, Wikipedia 등의 자료 포함)
+          </li>
+          <li>
+            사전 데이터:{' '}
+            <a href="https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project" target="_blank" rel="noreferrer">
+              JMdict
+            </a>
+            ·
+            <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noreferrer">
+              KANJIDIC2
+            </a>{' '}
+            © Electronic Dictionary Research and Development Group (
+            <a href="https://www.edrdg.org/edrdg/licence.html" target="_blank" rel="noreferrer">
+              CC BY-SA
+            </a>
+            )
+          </li>
+          <li>
+            한국 한자음:{' '}
+            <a href="https://www.unicode.org/reports/tr38/" target="_blank" rel="noreferrer">
+              Unicode Unihan
+            </a>{' '}
+            (Unicode License v3)
+          </li>
+          <li>
+            이 자료로 만든 단어 빈도·순서·유형 데이터는{' '}
+            <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ko" target="_blank" rel="noreferrer">
+              CC BY-SA 4.0
+            </a>
+            으로 배포해요(
+            <a href={`${import.meta.env.BASE_URL}data/NOTICE.txt`} target="_blank" rel="noreferrer">
+              고지문
+            </a>
+            ).
+          </li>
         </ul>
       </section>
     </>

@@ -1,11 +1,15 @@
 import { useSyncExternalStore } from 'react'
-import { getState, isBackup, type State } from './store'
+import { getState, isBackup, migrate, type State } from './store'
 import { addDays, dayKey, daysBetween, parseDay } from './util'
 
 // ── export format ──
 
 export const BACKUP_FORMAT = 'jlpt-luma-backup'
-export const BACKUP_FORMAT_VERSION = 1
+/**
+ * 2 since the state's v3 (reading cards `:r`). An app that only knows 1 refuses a version-2 file as "newer"
+ * instead of failing on card ids it cannot read; files of version 1 (and plain v2 states) still import here.
+ */
+export const BACKUP_FORMAT_VERSION = 2
 declare const __APP_VERSION__: string | undefined
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'
 
@@ -26,8 +30,8 @@ export function backupFile(s: State, now = new Date()) {
 export type ReadResult = { ok: true; state: State } | { ok: false; reason: 'invalid' | 'newer' }
 
 /**
- * Reads a parsed backup file. Accepts this format and the earlier plain state (`{ v: 2, … }`) files;
- * returns the state with the format fields removed.
+ * Reads a parsed backup file. Accepts this format (versions 1 and 2) and the earlier plain state (`{ v: 2, … }`)
+ * files; returns the state with the format fields removed, migrated to the current state version.
  */
 export function readBackup(x: unknown): ReadResult {
   if (typeof x !== 'object' || x === null || Array.isArray(x)) return { ok: false, reason: 'invalid' }
@@ -39,7 +43,7 @@ export function readBackup(x: unknown): ReadResult {
   }
   const rest: Record<string, unknown> = { ...o }
   for (const k of ENVELOPE) delete rest[k]
-  return isBackup(rest) ? { ok: true, state: rest } : { ok: false, reason: 'invalid' }
+  return isBackup(rest) ? { ok: true, state: migrate(rest) } : { ok: false, reason: 'invalid' }
 }
 
 function download(json: string, name: string) {

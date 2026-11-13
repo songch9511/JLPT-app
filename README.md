@@ -61,3 +61,12 @@ npm run data     # data/raw + data/ko → public/data 재생성
 - 단어 목록: [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) (MIT, tanos.co.uk 기반) — `data/raw/`
 - 한국어 뜻: `data/ko/n{급수}-*.json` (`{ "<idx>": "뜻" }`). N5~N1 전체(8,130개)에 들어 있습니다. 모델이 번역한 것으로 표본만 확인했습니다.
 - 뜻을 고치려면 `data/ko/`의 해당 항목을 수정하고 `npm run data`를 실행합니다. (`node scripts/make-chunks.mjs <급수>`는 번역용 TSV를 만듭니다.)
+- 단어 빈도·소개 순서(`data/freq/`), 단어 유형 태그(`data/tags/`)와 한국 한자음(`data/hanja/`)은 `npm run data`가 `public/data/n*.json`의 각 행 뒤에 열로 붙입니다(앞 네 열과 행 순서는 그대로). 만드는 법과 형식은 `docs/plan/08-word-data.md`.
+
+### 출처와 라이선스
+
+- 단어 목록: open-anki-jlpt-decks (MIT), tanos.co.uk 목록 기반. JLPT 공식 목록이 아닙니다.
+- 단어 빈도: [wordfreq](https://github.com/rspeer/wordfreq) 3.1.1, Robyn Speer — 데이터 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). wordfreq에는 OPUS [OpenSubtitles 2018](http://opus.nlpl.eu/OpenSubtitles.php)(원자료 http://www.opensubtitles.org/), Wikipedia, 웹 텍스트, Twitter, Reddit 등의 자료가 들어 있습니다.
+- 사전 데이터: [JMdict](https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project)·[KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project) © Electronic Dictionary Research and Development Group, [EDRDG 라이선스](https://www.edrdg.org/edrdg/licence.html)(Creative Commons Attribution-ShareAlike).
+- 한국 한자음: [Unicode Unihan](https://www.unicode.org/reports/tr38/) `kHangul`, © Unicode, Inc., Unicode License v3 (고지문 전문은 `data/hanja/NOTICE.md`).
+- 위 자료에서 계산한 열(빈도 `f`, 소개 순서 `o`, 유형 태그의 한자음 후보와 읽기 분할 `a`)과 `data/freq/`, `data/hanja/`는 CC BY-SA 4.0으로 배포합니다. 고지문: `public/data/NOTICE.txt`(앱에서는 설정 → 정보). 이 라이선스가 `public/data/n*.json` 파일 전체(한국어 뜻 포함)에 미치는지는 아직 정하지 않았습니다(`docs/plan/08-word-data.md` 결정 1).
