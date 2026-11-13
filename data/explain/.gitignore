@@ -1,0 +1,4 @@
+# Written by scripts/explain (see docs/plan/09-explanations.md).
+# Raw API result lines are large and re-downloadable for 29 days; keep them out of git.
+work/raw/
+work/requests-preview.jsonl

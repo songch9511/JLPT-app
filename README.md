@@ -1,5 +1,7 @@
 # JLPT 루마 — 간격 반복 단어장
 
+> JLPT 루마는 일본국제교류기금(JF)·일본국제교육지원협회(JEES)와 관계없는 비공식 학습 앱이며, 두 기관이 승인하거나 후원하지 않습니다. JLPT(일본어능력시험)는 해당 기관의 상표입니다.
+
 마스코트 루마와 함께 간격 반복으로 겹겹이 쌓는 JLPT 단어 학습 PWA. 설치 없이 브라우저에서 열고, 홈 화면에 추가하면 앱처럼 오프라인으로 쓸 수 있습니다.
 
 ## 학습 방식 — 간격 반복
@@ -9,20 +11,21 @@ Anki가 쓰는 오픈소스 스케줄러 [FSRS](https://github.com/open-spaced-r
 - 카드마다 **모르겠어요 / 알아요 / 쉬워요** 중 하나를 고릅니다. 버튼 아래에 그 단어가 다시 나올 시점이 표시됩니다.
 - 새 단어는 같은 날 몇 분 간격으로 다시 확인한 뒤, 며칠 → 몇 주 → 몇 달로 간격이 벌어집니다.
 - 복습에서 잊은 단어는 10분 뒤 다시 나오고 간격이 짧아집니다.
-- 하루 분량은 "그날 돌아온 복습 + 새 단어 N개(기본 20)"입니다. 다 넘기면 끝이고, 중간에 나가도 그대로 이어집니다.
+- 하루 분량은 "그날 돌아온 복습 + 새 단어 N개(기본 20, 최대 40)"입니다. 다 넘기면 끝이고, 중간에 나가도 그대로 이어집니다.
 - 목표 유지율은 90%, 복습 간격이 21일 이상인 단어를 "장기 기억"으로 셉니다.
 
 ## 기능
 
-- 게임 요소: 카드마다 XP(답과 무관하게 10), 레벨, 연속 학습, 일일 퀘스트 3개, 50단어마다 도장이 찍히는 급수 여정, 마스코트 루마(금색 줄무늬의 둥근 다루마로, 흰 얼굴에 작은 눈과 볼 홍조가 있는 낙서풍 표정을 가짐. 다루마에 눈을 그려 넣듯, 학습을 시작하면 한쪽 눈을, 오늘 분량을 끝내면 두 눈을 다 뜸)
-- 목표 대시보드: 오늘 할 카드, 시험일 D-day, 시험 전에 필요한 하루 새 단어 수, 연속 학습, 장기 기억 단어 수, 기억 유지율, 7일 복습 예보, 학습 기록
-- 학습 세션: 방금 선택 되돌리기, 발음 듣기, 북마크, 키보드(← 모름 · → 앎 · ↑ 쉬움 · Space 뒤집기)
-- 급수별 화면: 기억 상태별 단어 수와 단어 목록
-- 단어장: 전체 검색, 북마크, 자주 잊는 약한 단어
-- AI (Anthropic API 키 필요): 단어별 예문 · 한자 풀이 · 암기 팁, 약한 단어로 만든 짧은 이야기
+- 시험 준비도(홈 맨 위): 목록 단어 중 시험날 아침에 기억할 것으로 예상되는 수(FSRS 망각 곡선, `src/readiness.ts`). "지금 그만두면"과 "계획대로면" 두 값과 목표(기본 80%)를 보여 줍니다. 어휘만 다루는 비공식 목록 기준 추정이고 합격 확률이 아닙니다.
+- 오늘의 계획: 복습·새 단어 수, 예상 소요 시간(측정한 답변 속도), 오늘 하면 늘어나는 예상 단어 수, 목표에 못 미칠 때 하루 새 단어 수 제안(최대 40)
+- 아래 급수 포함: 새 학습자는 목표 급수 아래 단어(예: N3 목표면 N5·N4)도 쉬운 급수부터 배웁니다. 설정에서 끄고 켤 수 있습니다.
+- 게임 요소: 카드마다 XP(답과 무관하게 10), 연속 학습, "오늘 분량 끝내기" 퀘스트, 예상 기억 50단어마다 찍히는 도장, 마스코트 루마(학습을 시작하면 한쪽 눈을, 오늘 분량을 끝내면 두 눈을 다 뜸)
+- 기록 탭: 도장 여정, 기억 유지율(예측 대비), 최근 학습 시간, 7일 복습 예보, 학습 기록 히트맵, 누적 XP
+- 학습 세션: 앞면은 "모르겠어요 / 정답 보기", 정답을 본 뒤 "모르겠어요 / 알아요 / 쉬워요". 되돌리기, 발음 듣기, 북마크, 키보드(Space·Enter 정답 보기 · 1/← 모름 · 2/→ 앎 · 3/↑ 쉬움)
+- 단어장: 급수별 기억 상태와 단어 목록, 전체 검색, 북마크, 자주 잊는 약한 단어
 - 라이트/다크 테마, 백업 내보내기/가져오기
 
-학습 기록과 API 키는 브라우저(localStorage)에만 저장됩니다.
+학습 기록은 브라우저(localStorage)에만 저장됩니다. 단어 설명과 이야기는 나중에 미리 만든 데이터와 서버로 제공할 예정이라 지금은 없습니다(`src/content.ts`).
 
 ## 색
 
@@ -58,3 +61,12 @@ npm run data     # data/raw + data/ko → public/data 재생성
 - 단어 목록: [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) (MIT, tanos.co.uk 기반) — `data/raw/`
 - 한국어 뜻: `data/ko/n{급수}-*.json` (`{ "<idx>": "뜻" }`). N5~N1 전체(8,130개)에 들어 있습니다. 모델이 번역한 것으로 표본만 확인했습니다.
 - 뜻을 고치려면 `data/ko/`의 해당 항목을 수정하고 `npm run data`를 실행합니다. (`node scripts/make-chunks.mjs <급수>`는 번역용 TSV를 만듭니다.)
+- 단어 빈도·소개 순서(`data/freq/`), 단어 유형 태그(`data/tags/`)와 한국 한자음(`data/hanja/`)은 `npm run data`가 `public/data/n*.json`의 각 행 뒤에 열로 붙입니다(앞 네 열과 행 순서는 그대로). 만드는 법과 형식은 `docs/plan/08-word-data.md`.
+
+### 출처와 라이선스
+
+- 단어 목록: open-anki-jlpt-decks (MIT), tanos.co.uk 목록 기반. JLPT 공식 목록이 아닙니다.
+- 단어 빈도: [wordfreq](https://github.com/rspeer/wordfreq) 3.1.1, Robyn Speer — 데이터 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). wordfreq에는 OPUS [OpenSubtitles 2018](http://opus.nlpl.eu/OpenSubtitles.php)(원자료 http://www.opensubtitles.org/), Wikipedia, 웹 텍스트, Twitter, Reddit 등의 자료가 들어 있습니다.
+- 사전 데이터: [JMdict](https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project)·[KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project) © Electronic Dictionary Research and Development Group, [EDRDG 라이선스](https://www.edrdg.org/edrdg/licence.html)(Creative Commons Attribution-ShareAlike).
+- 한국 한자음: [Unicode Unihan](https://www.unicode.org/reports/tr38/) `kHangul`, © Unicode, Inc., Unicode License v3 (고지문 전문은 `data/hanja/NOTICE.md`).
+- 위 자료에서 계산한 열(빈도 `f`, 소개 순서 `o`, 유형 태그의 한자음 후보와 읽기 분할 `a`)과 `data/freq/`, `data/hanja/`는 CC BY-SA 4.0으로 배포합니다. 고지문: `public/data/NOTICE.txt`(앱에서는 설정 → 정보). 이 라이선스가 `public/data/n*.json` 파일 전체(한국어 뜻 포함)에 미치는지는 아직 정하지 않았습니다(`docs/plan/08-word-data.md` 결정 1).

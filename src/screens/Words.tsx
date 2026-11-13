@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import { weakStory, type Story } from '../ai'
+import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
-import { AiErrorNote, WordSheet } from '../components/WordSheet'
+import { LevelList } from '../components/LevelList'
+import { inGroup, TypeFilter, type TypeGroup } from '../components/TypeFilter'
+import { WordSheet } from '../components/WordSheet'
 import { meaning, useAllWords, type Word } from '../data'
-import { leechIds } from '../srs'
+import { breakdowns, leechIds, wordLapses } from '../srs'
 import { useStore } from '../store'
-import { speak } from '../util'
 
 type Tab = 'search' | 'marks' | 'weak'
 
@@ -22,46 +22,37 @@ function Row({ w, onOpen, extra }: { w: Word; onOpen: (w: Word) => void; extra?:
   )
 }
 
-export function Words() {
-  const [tab, setTab] = useState<Tab>('search')
+export function Words({ initialTab }: { initialTab?: Tab } = {}) {
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'search')
   const [q, setQ] = useState('')
   const [open, setOpen] = useState<Word | null>(null)
   const all = useAllWords()
   const marks = useStore((s) => s.marks)
   const cards = useStore((s) => s.cards)
-  const [story, setStory] = useState<Story | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
+  const target = useStore((s) => s.settings.target)
+  const fastTrack = useStore((s) => s.settings.fastTrack)
+  const [type, setType] = useState<TypeGroup>('all')
+  const levels = useMemo(() => breakdowns({ cards, settings: { fastTrack } }), [cards, fastTrack])
 
   const byId = useMemo(() => new Map(all?.map((w) => [w.id, w])), [all])
   const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter((w): w is Word => !!w)
 
   const results = useMemo(() => {
     const t = q.trim().toLowerCase()
-    if (!all || !t) return []
+    // with a type chosen and nothing typed, the list is every word of that type (by level, then frequency)
+    if (!all || (!t && type === 'all')) return []
     const out: Word[] = []
-    for (const w of all) {
-      if (w.w.includes(t) || w.r.includes(t) || w.ko.includes(t) || w.en.toLowerCase().includes(t)) out.push(w)
-      if (out.length >= 60) break
+    const pool = t ? all : all.slice().sort((a, b) => b.level - a.level || a.o - b.o)
+    for (const w of pool) {
+      if (inGroup(w.k, type) && (!t || w.w.includes(t) || w.r.includes(t) || w.ko.includes(t) || w.en.toLowerCase().includes(t))) out.push(w)
+      if (out.length >= (t ? 60 : 200)) break
     }
     return out
-  }, [all, q])
+  }, [all, q, type])
 
-  const weak = useMemo(() => leechIds(cards), [cards])
-  const weakWords = pick(weak)
-  useEffect(() => setError(null), [tab])
-
-  const makeStory = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      setStory(await weakStory(weakWords.slice(0, 12)))
-    } catch (e) {
-      setError(e instanceof Error ? e : new Error(String(e)))
-    } finally {
-      setBusy(false)
-    }
-  }
+  const weak = useMemo(() => leechIds(cards, 40, fastTrack), [cards, fastTrack])
+  const weakWords = pick(weak).filter((w) => inGroup(w.k, type))
+  const markWords = pick(marks).filter((w) => inGroup(w.k, type))
 
   return (
     <>
@@ -81,6 +72,7 @@ export function Words() {
           </button>
         ))}
       </div>
+      <TypeFilter value={type} onChange={setType} />
 
       {tab === 'search' && (
         <>
@@ -100,15 +92,15 @@ export function Words() {
               <Row key={w.id} w={w} onOpen={setOpen} />
             ))}
           </div>
-          {!q.trim() && <p className="empty">N5부터 N1까지 8,130개 단어에서 찾아요.</p>}
-          {q.trim() && all && results.length === 0 && <p className="empty">찾는 단어가 없어요.</p>}
+          {!q.trim() && type === 'all' && <p className="empty">N5부터 N1까지 8,130개 단어에서 찾아요.</p>}
+          {(q.trim() || type !== 'all') && all && results.length === 0 && <p className="empty">찾는 단어가 없어요.</p>}
         </>
       )}
 
       {tab === 'marks' && (
         <>
           <div className="word-list">
-            {pick(marks).map((w) => (
+            {markWords.map((w) => (
               <Row key={w.id} w={w} onOpen={setOpen} />
             ))}
           </div>
@@ -118,48 +110,16 @@ export function Words() {
 
       {tab === 'weak' && (
         <>
-          {weakWords.length > 0 && (
-            <div className="card story">
-              <h3>
-                <Icon name="spark" size={18} /> 약한 단어로 만든 AI 이야기
-              </h3>
-              {story ? (
-                <>
-                  <p className="story-title">{story.title}</p>
-                  {story.lines.map((l, i) => (
-                    <div className="example" key={i}>
-                      <button className="icon-btn sm" onClick={() => speak(l.ja)} aria-label="문장 듣기">
-                        <Icon name="speaker" size={18} />
-                      </button>
-                      <div>
-                        <p lang="ja" className="ja">
-                          {l.ja}
-                        </p>
-                        <p lang="ja" className="kana">
-                          {l.kana}
-                        </p>
-                        <p>{l.ko}</p>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <p className="muted">자꾸 틀리는 단어를 한 편의 짧은 이야기로 엮어 문맥 속에서 다시 만나요.</p>
-              )}
-              <button className="btn ghost" onClick={makeStory} disabled={busy}>
-                {busy ? '이야기를 쓰는 중…' : story ? '다른 이야기 만들기' : '이야기 만들기'}
-              </button>
-              {error && <AiErrorNote error={error} />}
-            </div>
-          )}
           <div className="word-list">
             {weakWords.map((w) => (
-              <Row key={w.id} w={w} onOpen={setOpen} extra={`${cards[w.id]?.lapses ?? 0}번 잊음`} />
+              <Row key={w.id} w={w} onOpen={setOpen} extra={`${wordLapses({ cards, settings: { fastTrack } }, w.id)}번 잊음`} />
             ))}
           </div>
           {weak.length === 0 && <p className="empty">복습에서 두 번 이상 잊어버린 단어가 여기에 모여요.</p>}
         </>
       )}
+
+      <LevelList all={levels} target={target} />
 
       {open && <WordSheet word={open} onClose={() => setOpen(null)} />}
     </>

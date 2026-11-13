@@ -1,6 +1,8 @@
 import { defineConfig } from '@playwright/test'
 
 const PORT = Number(process.env.E2E_PORT ?? 4273)
+/** The same app built for the iOS shell (`--mode native`), driven with a fake Capacitor bridge (native-shell.spec.ts). */
+export const NATIVE_PORT = PORT + 1
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -23,10 +25,18 @@ export default defineConfig({
     serviceWorkers: 'block',
     launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {},
   },
-  webServer: {
-    command: `npx vite --port ${PORT} --strictPort`,
-    url: `http://localhost:${PORT}/`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: `npx vite --port ${PORT} --strictPort`,
+      url: `http://localhost:${PORT}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      command: `npx vite --mode native --port ${NATIVE_PORT} --strictPort`,
+      url: `http://localhost:${NATIVE_PORT}/`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+  ],
 })

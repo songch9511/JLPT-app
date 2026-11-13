@@ -21,7 +21,7 @@ async function withCards(cards: Record<string, SCard>, settings = {}, now = NOW)
 
 describe('buildQueue: new words', () => {
   it('a new user gets the first `dailyNew` words of the target level, in order', async () => {
-    const { srs, store } = await bootUser(NOW, { target: 4, dailyNew: 10 })
+    const { srs, store } = await bootUser(NOW, { target: 4, dailyNew: 10, includeLower: false })
     const q = srs.buildQueue(store.getState(), at(NOW))
     expect(q).toMatchObject({ fresh: 10, review: 0, learning: 0, waiting: 0, next: { id: '4-0', kind: 'new' } })
   })
@@ -232,22 +232,19 @@ describe('XP and quests', () => {
     expect(store.getState().xp).toBe(20)
   })
 
-  it('awards each quest exactly once, at the answer that completes it', async () => {
+  it('awards the one quest — finishing today’s plan — exactly once, at the answer that completes it', async () => {
     const { srs, store } = await bootUser(NOW, { dailyNew: 5 })
     const gains: number[] = []
-    // 5 new words, all “쉬워요”: the 5th meets the new-word quest (goal = min(10, 5)) and clears the day
+    // 5 new words, all “쉬워요”: the 5th clears the day
     for (let i = 0; i < 5; i++) gains.push(srs.answer(`5-${i}`, srs.Rating.Easy, new Date(T + i * MIN)))
-    expect(gains).toEqual([10, 10, 10, 10, 10 + 20 + 50])
-    expect(store.getState().log['2026-11-13'].q).toBe(0b110)
-    // more words after clearing: no quest is paid twice
+    expect(gains).toEqual([10, 10, 10, 10, 10 + 50])
+    expect(store.getState().log['2026-11-13'].q).toBe(0b1)
+    // more words after clearing: the quest is not paid twice, and card counts earn no quest (03 §6)
     srs.unlockMoreNew(20, at(NOW))
-    for (let i = 5; i < 19; i++) expect(srs.answer(`5-${i}`, srs.Rating.Easy, new Date(T + i * MIN))).toBe(10)
-    // the 20th card completes “카드 20장 넘기기”
-    expect(srs.answer('5-19', srs.Rating.Easy, new Date(T + 19 * MIN))).toBe(10 + 20)
-    expect(srs.answer('5-20', srs.Rating.Easy, new Date(T + 20 * MIN))).toBe(10)
+    for (let i = 5; i < 25; i++) expect(srs.answer(`5-${i}`, srs.Rating.Easy, new Date(T + i * MIN))).toBe(10)
     const s = store.getState()
-    expect(s.log['2026-11-13']).toMatchObject({ c: 21, n: 21, q: 0b111, xp: 21 * 10 + 90 })
-    expect(s.xp).toBe(21 * 10 + 90)
+    expect(s.log['2026-11-13']).toMatchObject({ c: 25, n: 25, q: 0b1, xp: 25 * 10 + 50 })
+    expect(s.xp).toBe(25 * 10 + 50)
   })
 
   it('quests reset the next day', async () => {
@@ -258,11 +255,9 @@ describe('XP and quests', () => {
     expect(srs.answer('5-5', srs.Rating.Easy, tomorrow)).toBe(10)
   })
 
-  it('the new-word quest goal is min(10, dailyNew)', async () => {
+  it('there is a single quest, finishing today’s plan (no card-count or new-word quests)', async () => {
     const { srs, store } = await bootUser(NOW, { dailyNew: 30 })
-    expect(srs.quests(store.getState(), at(NOW))[1]).toMatchObject({ title: '새 단어 10개 만나기', need: 10 })
-    store.update((d) => void (d.settings.dailyNew = 5))
-    expect(srs.quests(store.getState(), at(NOW))[1]).toMatchObject({ title: '새 단어 5개 만나기', need: 5 })
+    expect(srs.quests(store.getState(), at(NOW))).toEqual([{ title: '오늘 분량 끝내기', have: 0, need: 1, xp: 50, done: false }])
   })
 })
 
@@ -272,14 +267,14 @@ describe('undo (snapshot / restore)', () => {
     for (let i = 0; i < 4; i++) srs.answer(`5-${i}`, srs.Rating.Easy, at(NOW))
     const before = structuredClone({ cards: store.getState().cards, log: store.getState().log, xp: store.getState().xp })
     const snap = srs.snapshot()
-    const gained = srs.answer('5-4', srs.Rating.Easy, at(NOW)) // completes two quests
-    expect(gained).toBe(80)
+    const gained = srs.answer('5-4', srs.Rating.Easy, at(NOW)) // completes the quest
+    expect(gained).toBe(60)
     srs.restore(snap)
     const s = store.getState()
     expect({ cards: s.cards, log: s.log, xp: s.xp }).toEqual(before)
-    // answering again pays the quests again, once
-    expect(srs.answer('5-4', srs.Rating.Easy, at(NOW))).toBe(80)
-    expect(store.getState().xp).toBe(before.xp + 80)
+    // answering again pays the quest again, once
+    expect(srs.answer('5-4', srs.Rating.Easy, at(NOW))).toBe(60)
+    expect(store.getState().xp).toBe(before.xp + 60)
   })
 
   it('undoing the first answer of a word makes it new again', async () => {
@@ -434,24 +429,6 @@ describe('weekDays', () => {
   })
 })
 
-describe('levelInfo', () => {
-  it('level boundaries are exact', async () => {
-    const { srs } = await bootUser(NOW)
-    expect(srs.levelInfo(0)).toEqual({ level: 1, into: 0, span: 150 })
-    expect(srs.levelInfo(149)).toEqual({ level: 1, into: 149, span: 150 })
-    expect(srs.levelInfo(150)).toEqual({ level: 2, into: 0, span: 300 })
-    expect(srs.levelInfo(449)).toEqual({ level: 2, into: 299, span: 300 })
-    expect(srs.levelInfo(450)).toEqual({ level: 3, into: 0, span: 450 })
-    for (let n = 1; n <= 500; n++) {
-      const start = (150 * n * (n - 1)) / 2
-      expect(srs.levelInfo(start).level).toBe(n)
-      expect(srs.levelInfo(start).into).toBe(0)
-      if (start > 0) expect(srs.levelInfo(start - 1).level).toBe(n - 1)
-      if (start > 0) expect(srs.levelInfo(start - 10)).toMatchObject({ level: n - 1, into: srs.levelInfo(start - 10).span - 10 })
-    }
-  })
-})
-
 describe('formatInterval / leechIds', () => {
   it('formats durations', async () => {
     const { srs } = await bootUser(NOW)
@@ -482,5 +459,82 @@ describe('scale', () => {
     const per = (performance.now() - t0) / 20
     expect(per).toBeLessThan(50)
     expect(store.getState().log['2026-11-13'].c).toBe(20)
+  })
+})
+
+// ── fixes from the curriculum spec (03 §1) ──────────────────────────────────
+
+describe('P4: a learner targeting N3 also gets the N4/N5 words when lower levels are included', () => {
+  it('new words come from the easiest level not yet finished, then up to the target', async () => {
+    const { srs, store } = await bootUser(NOW, { target: 3, dailyNew: 10, includeLower: true })
+    expect(srs.studyLevels(store.getState().settings)).toEqual([5, 4, 3])
+    expect(srs.buildQueue(store.getState(), at(NOW)).next).toEqual({ id: '5-0', kind: 'new' })
+    const n5: Record<string, SCard> = {}
+    for (let i = 0; i < 718; i++) n5[`5-${i}`] = card({ due: T + 30 * DAY })
+    store.update((d) => void (d.cards = n5))
+    expect(srs.buildQueue(store.getState(), at(NOW)).next).toEqual({ id: '4-0', kind: 'new' })
+    expect(srs.newWordsLeft(store.getState())).toBe(668 + 2140)
+  })
+
+  it('with the setting off (learners from before it existed) only the target level is offered', async () => {
+    const { srs, store } = await bootUser(NOW, { target: 3, dailyNew: 10, includeLower: false })
+    expect(srs.buildQueue(store.getState(), at(NOW)).next).toEqual({ id: '3-0', kind: 'new' })
+    expect(srs.newWordsLeft(store.getState())).toBe(2140)
+  })
+})
+
+describe('P9: new words a day are capped at 40', () => {
+  it('a daily setting above the cap still gives at most 40 new words, plus extras the learner unlocks', async () => {
+    const { srs, store } = await bootUser(NOW, { dailyNew: 10 })
+    expect(srs.newLeftToday(store.getState(), at(NOW), 100)).toBe(40)
+    store.update((d) => void (d.settings.dailyNew = 100))
+    expect(srs.buildQueue(store.getState(), at(NOW)).fresh).toBe(40)
+    srs.unlockMoreNew(10, at(NOW))
+    expect(srs.newLeftToday(store.getState(), at(NOW))).toBe(50)
+  })
+})
+
+describe('P13: study time is recorded', () => {
+  it('adds the active time of each answer to the day, at most 60 s per card', async () => {
+    const { srs, store } = await bootUser(NOW)
+    srs.answer('5-0', srs.Rating.Good, at(NOW), 7_400)
+    srs.answer('5-1', srs.Rating.Good, at(NOW), 5 * MIN) // left on screen: counts 60 s
+    srs.answer('5-2', srs.Rating.Good, at(NOW)) // no timing (e.g. an older caller): nothing added
+    expect(store.getState().log['2026-11-13']).toMatchObject({ c: 3, ms: 7_400 + 60_000 })
+  })
+
+  it('records the predicted recall of review answers next to how many were remembered', async () => {
+    const { srs, store } = await withCards({ '5-0': card({ due: T, last_review: T - 3 * DAY, stability: 3 }), '5-1': card({ due: T, last_review: T - 10 * DAY, stability: 3 }) })
+    srs.answer('5-0', srs.Rating.Good, at(NOW), 3000)
+    srs.answer('5-1', srs.Rating.Again, at(NOW), 3000)
+    const l = store.getState().log['2026-11-13']
+    expect(l).toMatchObject({ r: 2, p: 1 })
+    expect(l.e).toBeGreaterThan(0.9) // ≈ 0.90 + 0.7
+    expect(l.e).toBeLessThan(2)
+  })
+
+  it('secondsPerAnswer uses the last 14 days once 50 timed answers exist, else 8 s', async () => {
+    const { srs, store } = await bootUser(NOW)
+    store.update((d) => void (d.log = { '2026-11-12': log({ c: 40, ms: 400_000 }) }))
+    expect(srs.secondsPerAnswer(store.getState(), at(NOW))).toBe(8)
+    store.update((d) => void (d.log = { ...d.log, '2026-11-10': log({ c: 20, ms: 200_000 }), '2026-10-01': log({ c: 900, ms: 1 }) }))
+    expect(srs.secondsPerAnswer(store.getState(), at(NOW))).toBe(10)
+    expect(srs.minutesFor({ review: 30, learning: 0, fresh: 10 }, 10)).toBe(10)
+  })
+})
+
+describe('P7: a session never gets stuck on learning cards that come back in minutes', () => {
+  it('only 10-minute learning cards left: they are shown at once (learn-ahead), the queue is not empty', async () => {
+    const { srs, store } = await bootUser(NOW, { dailyNew: 3 })
+    for (let i = 0; i < 3; i++) srs.answer(`5-${i}`, srs.Rating.Good, at(NOW)) // each comes back in 10 min
+    const q = srs.buildQueue(store.getState(), at(NOW))
+    expect(q).toMatchObject({ fresh: 0, review: 0, learning: 3, waiting: 0 })
+    expect(q.next?.kind).toBe('learning')
+  })
+
+  it('cards beyond the window wait, and “지금 마무리” (finishNow) shows them right away', async () => {
+    const { srs, store } = await withCards({ '5-0': card({ due: T + 40 * MIN, state: RELEARNING }) }, { dailyNew: 0 })
+    expect(srs.buildQueue(store.getState(), at(NOW))).toMatchObject({ next: null, waiting: 1, nextDue: T + 40 * MIN })
+    expect(srs.buildQueue(store.getState(), at(NOW), undefined, { finishNow: true })).toMatchObject({ next: { id: '5-0', kind: 'learning' }, waiting: 0, nextDue: null })
   })
 })

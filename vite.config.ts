@@ -5,35 +5,72 @@ import { readFileSync } from 'node:fs'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 
-export default defineConfig({
-  base: './',
-  // written into backup files so a future app can tell which version made them
-  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,json}'],
-        maximumFileSizeToCacheInBytes: 3_000_000,
-      },
-      manifest: {
-        name: 'JLPT 루마',
-        short_name: 'JLPT 루마',
-        description: '루마와 함께 잊기 전에 한 겹 더, 간격 반복 JLPT 단어장',
-        lang: 'ko',
-        display: 'standalone',
-        orientation: 'portrait',
-        background_color: '#fbfaf5',
-        theme_color: '#fbfaf5',
-        start_url: '.',
-        icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
-      },
-    }),
-  ],
+/**
+ * Two builds from the same code (docs/plan/10-ios-build.md):
+ * - `vite build` (web, GitHub Pages): PWA with a service worker, exactly as before; the native platform code
+ *   is not in this bundle at all (`import.meta.env.MODE === 'native'` is false at build time, so the dynamic
+ *   import of src/platform/native.ts is dropped).
+ * - `vite build --mode native` (iOS app via Capacitor, output in dist-native/): no service worker — the
+ *   assets and word data are bundled in the app and served from capacitor://localhost, where WKWebView does
+ *   not run service workers anyway.
+ */
+export default defineConfig(({ mode }) => {
+  const native = mode === 'native'
+  return {
+    base: './',
+    // written into backup files so a future app can tell which version made them
+    define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+    build: native ? { outDir: 'dist-native', emptyOutDir: true } : undefined,
+    // a separate dependency cache, so a web and a native dev server can run side by side (the e2e tests do)
+    cacheDir: native ? 'node_modules/.vite-native' : undefined,
+    // the dev server in native mode (tests/e2e/native-shell.spec.ts) pre-bundles the lazily imported plugins up
+    // front, so the first page load does not trigger a dependency re-optimisation and reload
+    optimizeDeps: native
+      ? {
+          include: [
+            '@capacitor/core',
+            '@capacitor/app',
+            '@capacitor/browser',
+            '@capacitor/filesystem',
+            '@capacitor/haptics',
+            '@capacitor/local-notifications',
+            '@capacitor/share',
+            '@capacitor/status-bar',
+            '@capacitor-community/text-to-speech',
+            '@capawesome/capacitor-file-picker',
+          ],
+        }
+      : undefined,
+    plugins: [
+      react(),
+      ...(native
+        ? []
+        : [
+            VitePWA({
+              registerType: 'autoUpdate',
+              includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+              workbox: {
+                globPatterns: ['**/*.{js,css,html,svg,png,json}'],
+                maximumFileSizeToCacheInBytes: 3_000_000,
+              },
+              manifest: {
+                name: 'JLPT 루마',
+                short_name: 'JLPT 루마',
+                description: '루마와 함께 잊기 전에 한 겹 더, 간격 반복 JLPT 단어장',
+                lang: 'ko',
+                display: 'standalone',
+                orientation: 'portrait',
+                background_color: '#fbfaf5',
+                theme_color: '#fbfaf5',
+                start_url: '.',
+                icons: [
+                  { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+                  { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+                  { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+                ],
+              },
+            }),
+          ]),
+    ],
+  }
 })

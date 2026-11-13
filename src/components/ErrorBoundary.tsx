@@ -1,5 +1,6 @@
 import { Component, useState, type ReactNode } from 'react'
 import { exportRaw } from '../backup'
+import { platform } from '../platform'
 import { STATE_KEY } from '../store'
 
 /**
@@ -45,7 +46,9 @@ function Recovery({ error }: { error: Error }) {
               </button>
               <button
                 className="btn ghost danger-ink"
-                onClick={() => {
+                onClick={async () => {
+                  // the iOS app's durable copy would otherwise bring the same state back at the next launch
+                  await platform.clearDeviceData().catch(() => {})
                   try {
                     localStorage.removeItem(STATE_KEY)
                   } catch {

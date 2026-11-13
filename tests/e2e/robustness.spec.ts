@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
-import { KEY, NOW, open, READ_MS, saved, user } from './fixtures'
+import { homeShown, KEY, NOW, open, READ_MS, saved, user } from './fixtures'
 
 const DAY = 86400_000
 const review = (due: number) => ({ due, stability: 30, difficulty: 5, elapsed_days: 25, scheduled_days: 25, learning_steps: 0, reps: 5, lapses: 0, state: 2, last_review: due - 25 * DAY })
@@ -21,9 +21,10 @@ test.describe('error screen', () => {
     await expect(page.getByRole('button', { name: '다시 불러오기' })).toBeVisible()
     const { name, body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
     expect(name).toBe('jlpt-ruma-backup-2026-11-13.json')
-    expect(body).toMatchObject({ format: 'jlpt-luma-backup', v: 2, xp: 33 })
+    // the stored state was saved again after loading, migrated to v3 (fast-track)
+    expect(body).toMatchObject({ format: 'jlpt-luma-backup', v: 3, xp: 33 })
     expect(body.cards['9-0']).toBeTruthy() // exactly what is stored, broken part included
-    expect(body.settings.apiKey).toBe('')
+    expect(body.settings).not.toHaveProperty('apiKey') // left by an older version: never exported
   })
 
   test('reset asks first, then starts over', async ({ page }) => {
@@ -43,7 +44,7 @@ test.describe('error screen', () => {
     await expect(page.getByRole('heading', { name: '화면을 여는 중에 문제가 생겼어요' })).toBeVisible()
     await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, JSON.stringify(user())])
     await page.getByRole('button', { name: '다시 불러오기' }).click()
-    await expect(page.getByText('N5 여정')).toBeVisible()
+    await homeShown(page)
   })
 })
 
@@ -110,12 +111,12 @@ test.describe('backups', () => {
     await open(page, { state: user({}, { xp: 77 }), hash: '/settings' })
     await expect(page.getByText('아직 백업한 적이 없어요.')).toBeVisible()
     const { body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
-    expect(body).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 1, v: 2, xp: 77 })
+    expect(body).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 2, v: 3, xp: 77 })
     expect(typeof body.app).toBe('string')
     await expect(page.getByText('마지막 백업: 2026년 11월 13일')).toBeVisible()
 
     const newer = page.waitForEvent('dialog')
-    await page.locator('input[type=file]').setInputFiles({ name: 'n.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, formatVersion: 2, xp: 1 })) })
+    await page.locator('input[type=file]').setInputFiles({ name: 'n.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, formatVersion: 3, xp: 1 })) })
     const d = await newer
     expect(d.message()).toContain('더 새로운 버전')
     await d.accept()
@@ -134,7 +135,7 @@ test.describe('backups', () => {
     await nudge.getByRole('button', { name: '백업 알림 닫기' }).click()
     await expect(nudge).toBeHidden()
     await page.reload()
-    await expect(page.getByText('N5 여정')).toBeVisible()
+    await homeShown(page)
     await expect(nudge).toBeHidden()
   })
 
@@ -147,7 +148,7 @@ test.describe('backups', () => {
 
   test('no reminder without real progress', async ({ page }) => {
     await open(page, { state: user({}, { cards: manyCards(5) }) })
-    await expect(page.getByText('N5 여정')).toBeVisible()
+    await homeShown(page)
     await expect(page.locator('.nudge')).toHaveCount(0)
   })
 
@@ -168,16 +169,4 @@ test.describe('backups', () => {
     await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
     await expect.poll(calls).toBe(1)
   })
-})
-
-test('AI code missing after a deploy: asks to reload instead of a generic error', async ({ page }) => {
-  await page.route('**/src/ai-client.ts*', (r) => r.abort())
-  await open(page, { state: user({ apiKey: 'sk-ant-test' }), hash: '/words' })
-  await page.getByPlaceholder('일본어, 읽기, 뜻으로 검색').fill('学校')
-  await page.locator('.word-row').filter({ hasText: 'がっこう' }).first().click()
-  const sheet = page.getByRole('dialog')
-  await sheet.getByRole('button', { name: /AI 예문/ }).click()
-  await expect(sheet.locator('.error')).toContainText('앱이 새 버전으로 바뀌었어요.')
-  await expect(sheet.locator('.error')).not.toContainText('알 수 없는 오류')
-  await Promise.all([page.waitForEvent('load'), sheet.getByRole('button', { name: '새로고침' }).click()])
 })

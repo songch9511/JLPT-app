@@ -1,0 +1,5 @@
+# `wrangler dev`용 로컬 비밀. 이 파일을 .dev.vars로 복사해 값을 채웁니다(.dev.vars는 git에 올리지 않음).
+ANTHROPIC_API_KEY=
+REVENUECAT_SECRET_KEY=
+REVENUECAT_WEBHOOK_AUTH=Bearer change-me-local
+USER_ID_PEPPER=local-dev-pepper-change-me

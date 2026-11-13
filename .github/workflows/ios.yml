@@ -1,0 +1,91 @@
+name: iOS compile check (unsigned)
+
+# Compiles the iOS app — the Capacitor project, every Swift package plugin, the app's own Swift code
+# (WidgetBridgePlugin, MainViewController) and the RumaWidget extension — for the iOS Simulator, WITHOUT
+# signing. It proves the native project builds; it does not run the app, sign it or upload anything.
+# Signed TestFlight builds are .github/workflows/ios-testflight.yml (manual, needs the owner's secrets).
+#
+# Written and reviewed on Linux (docs/plan/10-ios-build.md): its first run on GitHub is the first real
+# compile of the native project.
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'ios/**'
+      - 'capacitor.config.ts'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/ios/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Unsigned iOS Simulator compile check (no signing, no upload)
+    # macos-26 (arm64): Xcode 26.x, the version Capacitor 8 and App Store uploads require. Image contents:
+    # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      # pinned so an image update that changes the default Xcode does not silently change the toolchain;
+      # if this path disappears from the image, pick another Xcode 26.x listed in the README above
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Web build for the app shell and Capacitor sync
+        # tsc, vite build --mode native (no service worker), cap sync ios (copies dist-native into the app,
+        # writes capacitor.config.json and the Swift package list)
+        run: npm run ios:sync
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -list -project ios/App/App.xcodeproj
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project ios/App/App.xcodeproj -scheme App
+      - name: Build for the iOS Simulator, unsigned
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild build \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | tee build/xcodebuild.log
+      - name: Check the bundle (widget embedded, web assets and word data bundled, privacy manifest present)
+        run: |
+          app=build/DerivedData/Build/Products/Debug-iphonesimulator/App.app
+          test -d "$app/PlugIns/RumaWidget.appex"
+          test -f "$app/PlugIns/RumaWidget.appex/PrivacyInfo.xcprivacy"
+          test -f "$app/PrivacyInfo.xcprivacy"
+          test -f "$app/public/index.html"
+          for l in 1 2 3 4 5; do test -s "$app/public/data/n$l.json"; done
+          test ! -e "$app/public/sw.js"
+          plutil -p "$app/Info.plist" | grep -E 'RumaAppGroup|ITSAppUsesNonExemptEncryption|CFBundleIdentifier'
+      - name: Keep the build log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: xcodebuild-log
+          path: build/xcodebuild.log
+          retention-days: 7

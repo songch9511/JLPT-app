@@ -9,6 +9,7 @@ export function Onboarding() {
   const [target, setTarget] = useState<Level>(5)
   const [exam, setExam] = useState(exams[0])
   const [daily, setDaily] = useState(20)
+  const [lower, setLower] = useState(true)
 
   return (
     <div className="onboard">
@@ -39,6 +40,15 @@ export function Onboarding() {
             </button>
           ))}
         </div>
+        {target < 5 && (
+          <label className="switch">
+            <span>
+              아래 급수 단어도 함께 (N{LEVELS.filter((l) => l > target).join('·N')})
+              <small className="muted">시험은 아래 급수 단어를 안다고 보고 나와요. 쉬운 급수부터 새 단어가 나와요.</small>
+            </span>
+            <input type="checkbox" checked={lower} onChange={(e) => setLower(e.target.checked)} />
+          </label>
+        )}
         <label>하루 새 단어</label>
         <div className="seg">
           {[10, 20, 30].map((n) => (
@@ -64,12 +74,14 @@ export function Onboarding() {
             d.settings.target = target
             d.settings.examDate = exam
             d.settings.dailyNew = daily
+            d.settings.includeLower = lower
             d.onboarded = true
           })
         }
       >
         시작하기
       </button>
+      <p className="onboard-note">JLPT 주최 기관(JF·JEES)과 관계없는 비공식 학습 앱이에요.</p>
     </div>
   )
 }

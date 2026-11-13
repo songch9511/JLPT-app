@@ -1,4 +1,5 @@
 import { exportBackup, shouldNudge, snoozeNudge, useMeta } from '../backup'
+import { platform } from '../platform'
 import { dismissSaveWarning, useSaveStatus, useStore } from '../store'
 import { Icon } from './Icon'
 
@@ -9,8 +10,9 @@ export function SaveWarning() {
   return (
     <div className="save-warning" role="alert">
       <p>
-        <b>기록을 이 기기에 저장하지 못했어요.</b> 저장 공간이 부족하거나 브라우저가 막고 있어요. 앱을 닫기 전에 백업을 내보내
-        두세요.
+        <b>기록을 이 기기에 저장하지 못했어요.</b>{' '}
+        {platform.native ? '기기의 저장 공간이 부족한 것 같아요.' : '저장 공간이 부족하거나 브라우저가 막고 있어요.'} 앱을 닫기 전에 백업을
+        내보내 두세요.
       </p>
       <div className="save-warning-actions">
         <button className="btn ghost" onClick={exportBackup}>

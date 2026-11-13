@@ -1,20 +1,20 @@
 import {
   Bookmark,
   BookOpen,
+  ChartColumn,
   Check,
   ChevronLeft,
   ChevronRight,
+  Circle,
   Flame,
   House,
-  Lock,
+  Info,
   Search,
   Settings,
-  Sparkles,
-  Star,
+  TriangleAlert,
   Undo2,
   Volume2,
   X,
-  Zap,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -27,14 +27,14 @@ const ICONS = {
   speaker: Volume2,
   mark: Bookmark,
   undo: Undo2,
-  spark: Sparkles,
   check: Check,
   chevron: ChevronRight,
   search: Search,
-  lock: Lock,
   flame: Flame,
-  bolt: Zap,
-  star: Star,
+  info: Info,
+  circle: Circle,
+  chart: ChartColumn,
+  alert: TriangleAlert,
 } satisfies Record<string, LucideIcon>
 
 export type IconName = keyof typeof ICONS

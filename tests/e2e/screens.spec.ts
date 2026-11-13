@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
-import { NOW, open, saved, user } from './fixtures'
+import { homeShown, NOW, open, saved, user } from './fixtures'
 
 const DAY = 86400_000
 const review = (due: number, extra: Record<string, number> = {}) => ({
@@ -92,14 +92,16 @@ test.describe('level screen', () => {
     await page.getByRole('button', { name: '목표로 설정' }).click()
     await expect(page.locator('.top .chip.accent')).toHaveText('목표 급수')
     await page.getByRole('link', { name: '뒤로' }).click()
-    await expect(page.getByText('N3 여정')).toBeVisible()
+    // the level rows live on the 단어장 tab now
+    await expect(page.getByRole('heading', { name: '급수별 기억 상태' })).toBeVisible()
+    await expect(page.locator('.level-row.target .level-name b')).toHaveText('N3')
   })
 
   test('garbage hash routes fall back to home', async ({ page }) => {
     await open(page, { state: user() })
     for (const h of ['#/level/9', '#/level/', '#/level/05', '#/nope', '#%%%', '#/../settings']) {
       await page.evaluate((x) => (location.hash = x), h)
-      await expect(page.getByText('N5 여정'), h).toBeVisible()
+      await expect(page.getByRole('heading', { name: /시험날 기억할 단어/ }), h).toBeVisible()
     }
     // trailing segments after a valid route are ignored
     await page.evaluate(() => (location.hash = '#/level/4/extra'))
@@ -117,19 +119,21 @@ test.describe('settings', () => {
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await page.getByRole('link', { name: '홈' }).click()
-    await expect(page.getByText('N2 여정')).toBeVisible()
-    await expect(page.locator('.hero-counts .c-new b')).toHaveText('30')
+    await expect(page.locator('.home-ctx b')).toHaveText('N2')
+    await expect(page.locator('.plan-counts .c-new b')).toHaveText('30')
     await page.getByRole('link', { name: '설정' }).click()
     await page.getByRole('button', { name: '시스템' }).click()
     await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
   })
 
-  test('export leaves out the API key; import restores a backup', async ({ page }) => {
+  test('an API key saved by an older version is dropped and never exported; import restores a backup', async ({ page }) => {
     await open(page, { state: user({ apiKey: 'sk-ant-secret' }, { xp: 77, marks: ['5-3'] }), hash: '/settings' })
+    // no API key field any more
+    await expect(page.getByText(/API 키/)).toHaveCount(0)
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '백업 내보내기' }).click()])
     expect(download.suggestedFilename()).toBe('jlpt-ruma-backup-2026-11-13.json')
     const backup = JSON.parse(await readFile((await download.path())!, 'utf8'))
-    expect(backup.settings.apiKey).toBe('')
+    expect(backup.settings).not.toHaveProperty('apiKey')
     expect(backup.xp).toBe(77)
 
     // change things, then import the backup back
@@ -139,7 +143,7 @@ test.describe('settings', () => {
     await expect(page.getByRole('button', { name: 'N5' })).toHaveClass('on')
     const s = await saved(page)
     expect(s.xp).toBe(77)
-    expect(s.settings.apiKey).toBe('sk-ant-secret') // the key on this device is kept
+    expect(JSON.stringify(s)).not.toContain('sk-ant-secret')
   })
 
   test('import rejects files that are not backups, and malformed backups that would break the app', async ({ page }) => {
@@ -160,7 +164,7 @@ test.describe('settings', () => {
     }
     expect((await saved(page)).xp).toBe(5)
     await page.getByRole('link', { name: '홈' }).click()
-    await expect(page.getByText('N5 여정')).toBeVisible()
+    await homeShown(page)
   })
 
   test('declining the import confirmation changes nothing', async ({ page }) => {
@@ -186,15 +190,104 @@ test.describe('settings', () => {
   test('an exam date in the past is reported, not crashed on', async ({ page }) => {
     await open(page, { state: user({ examDate: '2026-07-05' }) })
     await expect(page.locator('.dday')).toHaveText('시험일 지남 · 바꾸기')
-    await expect(page.getByText('시험일이 지났어요. 설정에서 다음 시험일을 골라 주세요.')).toBeVisible()
+    // no readiness figure is claimed for an exam that is over
+    await expect(page.getByText('시험일이 지났어요. 다음 시험일을 골라 주세요.')).toBeVisible()
+    await expect(page.locator('.ready-figure')).toHaveCount(0)
   })
 })
 
-test('the pace link never offers to change 100 to 100', async ({ page }) => {
-  // N1: 2,699 words, 23 days to the exam → 118 a day, capped at 100
+test('P9: home never offers more than 40 new words a day; the one lever is the smallest pace that reaches the goal', async ({ page }) => {
+  // N1: 2,699 words in 23 days cannot be reached at any allowed pace; the old link offered 100 a day
   await open(page, { state: user({ target: 1, dailyNew: 20, examDate: '2026-12-06' }) })
-  await page.getByRole('button', { name: '지금 하루 20개 → 100개로 맞추기' }).click()
-  await expect(page.getByText('시험 전에 전부 만나려면 하루 새 단어 118개')).toBeVisible()
+  await homeShown(page)
   await expect(page.getByRole('button', { name: /맞추기/ })).toHaveCount(0)
-  expect((await saved(page)).settings.dailyNew).toBe(100)
+  await expect(page.locator('.plan-lever')).toContainText('다음 시험(2027년 7월 4일)으로 미루는')
+  await expect(page.getByRole('button', { name: /바꾸기/ })).toHaveCount(0)
+  // N5 at 5 a day falls short; a faster pace within the cap reaches the goal
+  await page.evaluate(() => localStorage.clear())
+  await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ v: 2, onboarded: true, settings: { target: 5, examDate: '2026-12-06', dailyNew: 5, theme: 'light' }, cards: {}, log: {}, marks: [], xp: 0 })), 'kasane.state.v2')
+  await page.reload()
+  const lever = page.locator('.plan-lever')
+  await expect(lever).toContainText(/하루 새 단어 \d+개면 목표에 닿아요/)
+  const n = Number((await lever.innerText()).match(/하루 새 단어 (\d+)개/)![1])
+  expect(n).toBeGreaterThan(5)
+  expect(n).toBeLessThanOrEqual(40)
+  await lever.getByRole('button', { name: /바꾸기/ }).click()
+  expect((await saved(page)).settings.dailyNew).toBe(n)
+  await expect(lever).toContainText(`하루 새 단어 ${n}개로 바꿨어요`)
+  await lever.getByRole('button', { name: '되돌리기' }).click()
+  expect((await saved(page)).settings.dailyNew).toBe(5)
+})
+
+test('settings: daily new words stop at 40; lower levels and the goal can be set; the unofficial notice is shown', async ({ page }) => {
+  await open(page, { state: user({ target: 3, dailyNew: 100 }), hash: '/settings' })
+  // an old value above the cap is held to it
+  await expect(page.getByRole('button', { name: '40', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: '50', exact: true })).toHaveCount(0)
+  const lower = page.getByRole('checkbox', { name: /아래 급수 단어도 함께 \(N5·N4\)/ })
+  await expect(lower).not.toBeChecked()
+  await lower.check()
+  await page.getByRole('button', { name: '90%' }).click()
+  const s = (await saved(page)).settings
+  expect(s).toMatchObject({ includeLower: true, goal: 0.9, dailyNew: 40 })
+  await expect(page.locator('.about .notice')).toContainText('관계없는 비공식 학습 앱')
+  await expect(page.locator('.about .notice')).toContainText('승인하거나 후원하지 않아요')
+})
+
+test('P4: with lower levels included an N3 learner meets N5 words first, and the card says which level', async ({ page }) => {
+  await open(page, { state: user({ target: 3, includeLower: true }) })
+  await expect(page.locator('.ready-info')).toContainText('N5~N3 목록 기준')
+  await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+  await expect(page.locator('.flash-head .chip').filter({ hasText: 'N5' })).toBeVisible()
+})
+
+test.describe('home: readiness first, then today’s plan', () => {
+  test('shows the figure with its caveats; the ⓘ sheet explains what it cannot say', async ({ page }) => {
+    const t = NOW.getTime()
+    const cards = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`5-${i}`, review(t + ((i % 20) - 5) * DAY, { stability: 10 + (i % 30) })]))
+    await open(page, { state: user({}, { cards, log: { '2026-11-12': { c: 60, n: 0, r: 40, p: 36 } } }) })
+    const card = page.getByRole('region', { name: /시험날 기억할 단어/ })
+    await expect(card.locator('.ready-figure')).toContainText('/ 718')
+    await expect(card.locator('.ready-split')).toContainText(/지금 그만두면 \d+ · 계획대로면 \d+/)
+    await expect(card.locator('.ready-status .status')).toHaveText(/순항 중이에요|빠듯해요|목표보다 모자라요/)
+    await expect(card.locator('.ready-info')).toHaveText('N5 목록 기준 추정 · 문법·독해·청해 제외 · 합격 확률이 아니에요')
+    // the readiness card comes before the plan, and both fit in the first screen with the start button
+    const box = await page.getByRole('button', { name: '오늘의 학습 시작' }).boundingBox()
+    expect(box!.y + box!.height).toBeLessThan(844 - 70)
+    await card.locator('.ready-info').click()
+    const sheet = page.getByRole('dialog', { name: '이 숫자는 무엇인가요?' })
+    await expect(sheet).toContainText('합격 확률이 아니에요')
+    await expect(sheet).toContainText('공식 목록이 아니에요')
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+  })
+
+  test('the 기록 tab holds the stamps, forecast and heatmap that left home', async ({ page }) => {
+    await open(page, { state: user({}, { xp: 1234 }) })
+    await expect(page.locator('.heatmap')).toHaveCount(0)
+    await page.locator('.tabbar').getByRole('link', { name: '기록' }).click()
+    await expect(page.getByRole('heading', { name: '기록', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /도장 여정/ })).toBeVisible()
+    await expect(page.locator('.heatmap')).toBeVisible()
+    await expect(page.locator('.forecast-chart')).toBeVisible()
+    await expect(page.locator('.stat-grid')).toContainText('1,234')
+  })
+})
+
+test('no AI entry points are left: study card, word sheet and weak words', async ({ page }) => {
+  const leech = review(NOW.getTime() + DAY, { lapses: 3 })
+  await open(page, { state: user({ apiKey: 'sk-ant-old' }, { cards: { '5-1': leech } }), hash: '/words' })
+  await page.getByRole('button', { name: /^약한 단어/ }).click()
+  await expect(page.getByText(/이야기/)).toHaveCount(0)
+  await page.getByRole('button', { name: /^검색/ }).click()
+  await page.getByPlaceholder('일본어, 읽기, 뜻으로 검색').fill('学校')
+  await page.locator('.word-row').filter({ hasText: 'がっこう' }).first().click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog').getByText(/AI/)).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await page.evaluate(() => (location.hash = '#/study'))
+  await page.getByRole('button', { name: '정답 보기' }).click()
+  await expect(page.locator('.flash-meaning')).toBeVisible()
+  await expect(page.getByText(/AI/)).toHaveCount(0)
+  expect(JSON.stringify(await saved(page))).not.toContain('sk-ant-old')
 })

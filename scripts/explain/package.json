@@ -1,0 +1,17 @@
+{
+  "name": "luma-explain",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "단어별 설명(예문·한자·팁·관련어)을 Message Batches API로 한 번 미리 생성하는 파이프라인",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "explain": "node cli.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0"
+  }
+}

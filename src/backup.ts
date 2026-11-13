@@ -1,35 +1,40 @@
 import { useSyncExternalStore } from 'react'
-import { getState, isBackup, type State } from './store'
+import { platform } from './platform'
+import { getState, isBackup, migrate, type State } from './store'
 import { addDays, dayKey, daysBetween, parseDay } from './util'
 
 // ── export format ──
 
 export const BACKUP_FORMAT = 'jlpt-luma-backup'
-export const BACKUP_FORMAT_VERSION = 1
+/**
+ * 2 since the state's v3 (reading cards `:r`). An app that only knows 1 refuses a version-2 file as "newer"
+ * instead of failing on card ids it cannot read; files of version 1 (and plain v2 states) still import here.
+ */
+export const BACKUP_FORMAT_VERSION = 2
 declare const __APP_VERSION__: string | undefined
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'
 
 /** Fields a backup file carries next to the state; they are not part of the state itself. */
 const ENVELOPE = ['format', 'formatVersion', 'app', 'exportedAt'] as const
 
-/** The backup file's content: the state (without the API key) plus format fields next to the existing `v`. */
+/** The backup file's content: the state plus format fields next to the existing `v`. */
 export function backupFile(s: State, now = new Date()) {
+  // the save counter only orders this device's own copies (store.ts `rev`); it means nothing elsewhere
+  const { rev: _rev, ...state } = s
   return {
     format: BACKUP_FORMAT,
     formatVersion: BACKUP_FORMAT_VERSION,
-    app: `kasane ${APP_VERSION}`,
+    app: `jlpt-ruma ${APP_VERSION}`,
     exportedAt: now.toISOString(),
-    ...s,
-    // the API key stays on this device
-    settings: { ...s.settings, apiKey: '' },
+    ...state,
   }
 }
 
 export type ReadResult = { ok: true; state: State } | { ok: false; reason: 'invalid' | 'newer' }
 
 /**
- * Reads a parsed backup file. Accepts this format and the earlier plain state (`{ v: 2, … }`) files;
- * returns the state with the format fields removed.
+ * Reads a parsed backup file. Accepts this format (versions 1 and 2) and the earlier plain state (`{ v: 2, … }`)
+ * files; returns the state with the format fields removed, migrated to the current state version.
  */
 export function readBackup(x: unknown): ReadResult {
   if (typeof x !== 'object' || x === null || Array.isArray(x)) return { ok: false, reason: 'invalid' }
@@ -41,39 +46,40 @@ export function readBackup(x: unknown): ReadResult {
   }
   const rest: Record<string, unknown> = { ...o }
   for (const k of ENVELOPE) delete rest[k]
-  return isBackup(rest) ? { ok: true, state: rest } : { ok: false, reason: 'invalid' }
+  return isBackup(rest) ? { ok: true, state: migrate(rest) } : { ok: false, reason: 'invalid' }
 }
 
-function download(json: string, name: string) {
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
-  a.download = name
-  a.click()
-  // revoking right away can cancel the download on some browsers (iOS home-screen apps)
-  const href = a.href
-  setTimeout(() => URL.revokeObjectURL(href), 10_000)
+/**
+ * Hand the file to the user (a download on the web, the share sheet in the iOS app) and run `then` once it
+ * was handed over: at once on the web, after the share sheet in the app (not when the user cancelled it).
+ */
+function saveFile(json: string, name: string, then?: () => void) {
+  const done = platform.saveFile(name, json)
+  if (done === true) then?.()
+  else if (done !== false) void done.then((ok) => ok && then?.())
 }
 
 /** Download the current state as a backup file and remember when. */
 export function exportBackup() {
-  download(JSON.stringify(backupFile(getState())), `jlpt-ruma-backup-${dayKey()}.json`)
-  setMeta({ lastExport: dayKey() })
+  const day = dayKey()
+  saveFile(JSON.stringify(backupFile(getState())), `jlpt-ruma-backup-${day}.json`, () => setMeta({ lastExport: day }))
 }
 
 /**
  * Download whatever is stored, without going through the store: used by the error screen, where the
- * stored state may be what is broken. The API key is removed when the text can be parsed.
+ * stored state may be what is broken. An API key left by the removed AI feature (versions before the
+ * store dropped it on load) is taken out when the text can be parsed.
  */
 export function exportRaw(raw: string | null) {
   let json = raw ?? 'null'
   try {
     const s = JSON.parse(json)
-    if (s && typeof s === 'object' && s.settings && typeof s.settings === 'object') s.settings.apiKey = ''
-    json = JSON.stringify({ format: BACKUP_FORMAT, formatVersion: BACKUP_FORMAT_VERSION, app: `kasane ${APP_VERSION}`, exportedAt: new Date().toISOString(), ...s })
+    if (s && typeof s === 'object' && s.settings && typeof s.settings === 'object') delete s.settings.apiKey
+    json = JSON.stringify({ format: BACKUP_FORMAT, formatVersion: BACKUP_FORMAT_VERSION, app: `jlpt-ruma ${APP_VERSION}`, exportedAt: new Date().toISOString(), ...s })
   } catch {
     json = json.replace(/"apiKey"\s*:\s*"[^"]*"/g, '"apiKey":""')
   }
-  download(json, `jlpt-ruma-backup-${dayKey()}.json`)
+  saveFile(json, `jlpt-ruma-backup-${dayKey()}.json`)
 }
 
 // ── device-only notes about backups (kept outside the study state, never exported) ──

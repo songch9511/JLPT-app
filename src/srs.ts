@@ -1,8 +1,8 @@
 // Spaced repetition on top of FSRS (the open scheduler Anki uses): every answer moves a card's
 // next review further out when remembered and brings it back within minutes when forgotten.
 import { createEmptyCard, fsrs, generatorParameters, Rating, State as CardState, type Card, type Grade } from 'ts-fsrs'
-import { COUNTS, LEVELS, levelOf, wordId, type Level } from './data'
-import { getState, update, type DayLog, type SCard, type State } from './store'
+import { COUNTS, isReadingCard, LEVELS, levelInfo, levelOf, readingId, wordId, wordOfCard, type Level } from './data'
+import { getState, MAX_DAILY_NEW, update, type DayLog, type SCard, type State } from './store'
 import { addDays, dayKey, daysBetween } from './util'
 
 export { Rating }
@@ -16,7 +16,7 @@ const LEARN_AHEAD_MS = 20 * 60_000
 const MATURE_DAYS = 21
 export const LEECH_LAPSES = 2
 
-const toCard = (c: SCard): Card => ({ ...c, due: new Date(c.due), last_review: c.last_review ? new Date(c.last_review) : undefined })
+export const toCard = (c: SCard): Card => ({ ...c, due: new Date(c.due), last_review: c.last_review ? new Date(c.last_review) : undefined })
 const fromCard = (c: Card): SCard => ({
   due: c.due.getTime(),
   stability: c.stability,
@@ -35,11 +35,11 @@ const fromCard = (c: Card): SCard => ({
  * device clock goes backwards or a backup comes from a device whose clock ran ahead. Schedule such a card
  * as if it were being answered right at its last review instead.
  */
-const reviewTime = (c: SCard | undefined, now: Date) => (c?.last_review && c.last_review > now.getTime() ? new Date(c.last_review) : now)
+export const reviewTime = (c: SCard | undefined, now: Date) => (c?.last_review && c.last_review > now.getTime() ? new Date(c.last_review) : now)
 
 const isLearning = (c: SCard) => c.state === CardState.Learning || c.state === CardState.Relearning
 
-function endOfDay(now: Date): number {
+export function endOfDay(now: Date): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime()
 }
 
@@ -52,44 +52,124 @@ export interface Queue {
   learning: number
   review: number
   fresh: number
+  /** …of the new words, those introduced with a reading card (fast-track) */
+  freshReading: number
   /** the card to show now, if any */
   next: { id: string; kind: Kind } | null
   /** learning cards that come back later today (beyond the learn-ahead window) */
   waiting: number
+  /** when the first of the waiting learning cards comes due (null when none wait) */
+  nextDue: number | null
 }
 
+/**
+ * The levels whose words are studied and counted for readiness: the target alone, or with `includeLower`
+ * the target and every level below it, easiest first (03 §2.1 P4: the exam assumes the lower levels' words).
+ */
+export function studyLevels(settings: Pick<State['settings'], 'target' | 'includeLower'>): Level[] {
+  return settings.includeLower ? LEVELS.filter((l) => l >= settings.target) : [settings.target]
+}
+
+// ── card types (03 §3 C): meaning card `<id>`, fast-track reading card `<id>:r` ──
+
+/** What the per-word helpers read: the cards and whether the fast-track is on. */
+export type CardsView = { cards: State['cards']; settings: Pick<State['settings'], 'fastTrack'> }
+
+const fastOn = (s: { settings: Pick<State['settings'], 'fastTrack'> }) => s.settings?.fastTrack !== false
+
+/** Whether a card takes part in study. Reading cards rest (kept, not shown, not counted) while the fast-track is off. */
+export const isActive = (id: string, fastTrack: boolean) => fastTrack || !isReadingCard(id)
+
+/** The active cards of a word (meaning first). */
+export function wordCards(s: CardsView, word: string): { id: string; card: SCard }[] {
+  const out: { id: string; card: SCard }[] = []
+  if (s.cards[word]) out.push({ id: word, card: s.cards[word] })
+  const r = readingId(word)
+  if (s.cards[r] && fastOn(s)) out.push({ id: r, card: s.cards[r] })
+  return out
+}
+
+/** A word counts as introduced once it has an active card; words without one are still new. */
+export const isSeen = (s: CardsView, word: string) => !!s.cards[word] || (fastOn(s) && !!s.cards[readingId(word)])
+
+/**
+ * The card that introduces a word: the reading card for a word tagged S while the fast-track is on, else the
+ * meaning card. Before the level's data has loaded nothing is known about the word, so it is a meaning card;
+ * the study screen waits for the data before showing a new card.
+ */
+export function introCard(s: { settings: Pick<State['settings'], 'fastTrack'> }, l: Level, idx: number): string {
+  const id = wordId(l, idx)
+  return fastOn(s) && levelInfo(l)?.fast.has(idx) ? readingId(id) : id
+}
+
+/**
+ * The next words to introduce, as card ids: per level in the data's introduction order (frequency, 08 §2),
+ * or idx order until the level's data has loaded. Words already introduced are skipped wherever they are in
+ * the order, so a learner part-way through a level keeps every word seen and simply gets the next unseen
+ * words of the new order.
+ */
 function nextNewIds(s: State, limit: number): string[] {
   const out: string[] = []
-  const l = s.settings.target
-  for (let i = 0; i < COUNTS[l] && out.length < limit; i++) {
-    const id = wordId(l, i)
-    if (!s.cards[id]) out.push(id)
+  for (const l of studyLevels(s.settings)) {
+    const order = levelInfo(l)?.order
+    const n = order ? order.length : COUNTS[l]
+    for (let k = 0; k < n && out.length < limit; k++) {
+      const i = order ? order[k] : k
+      if (!isSeen(s, wordId(l, i))) out.push(introCard(s, l, i))
+    }
   }
   return out
 }
 
-export function newLeftToday(s: State, now: Date): number {
-  const log = s.log[dayKey(now)]
-  return Math.max(0, s.settings.dailyNew + (log?.x ?? 0) - (log?.n ?? 0))
+/** Words not yet introduced in the levels being studied. */
+export function newWordsLeft(s: State): number {
+  const b = breakdowns(s)
+  return studyLevels(s.settings).reduce((n, l) => n + b[l].new, 0)
 }
 
-/** `avoid` keeps the card just answered from reappearing immediately when something else is available. */
-export function buildQueue(s: State, now: Date, avoid?: string): Queue {
+/** New words still allowed today: the daily setting (never above MAX_DAILY_NEW) plus extras unlocked today. */
+export function newLeftToday(s: State, now: Date, dailyNew = s.settings.dailyNew): number {
+  const log = s.log[dayKey(now)]
+  return Math.max(0, Math.min(MAX_DAILY_NEW, dailyNew) + (log?.x ?? 0) - (log?.n ?? 0))
+}
+
+/**
+ * `avoid` keeps the card just answered from reappearing immediately when something else is available.
+ * `finishNow` shows learning cards that come back later today right away, so a session never has to wait
+ * for them (03 §5.2 P7).
+ */
+export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNow?: boolean } = {}): Queue {
   const t = now.getTime()
   const eod = endOfDay(now)
+  const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const ft = fastOn(s)
   const learning: [string, number][] = []
-  const review: [string, number][] = []
+  let review: [string, number][] = []
+  /** words with a card answered today: their other card waits for another day (sibling burying, 03 §3) */
+  const answeredToday = new Map<string, string>()
   for (const id in s.cards) {
+    if (!isActive(id, ft)) continue
     const c = s.cards[id]
+    if ((c.last_review ?? 0) >= sod) answeredToday.set(wordOfCard(id), id)
     if (isLearning(c)) {
       if (c.due < eod) learning.push([id, c.due])
     } else if (c.due < eod) review.push([id, c.due])
   }
   learning.sort((a, b) => a[1] - b[1])
   review.sort((a, b) => a[1] - b[1])
+  // only one card of a word a day: a review whose sibling was answered today, or a second review card of the
+  // same word, waits (learning cards are mid-step and always come back)
+  const queued = new Set(learning.map(([id]) => wordOfCard(id)))
+  review = review.filter(([id]) => {
+    const w = wordOfCard(id)
+    const other = answeredToday.get(w)
+    if ((other !== undefined && other !== id) || queued.has(w)) return false
+    queued.add(w)
+    return true
+  })
   const fresh = nextNewIds(s, newLeftToday(s, now))
 
-  const ready = learning.filter(([, due]) => due <= t + LEARN_AHEAD_MS)
+  const ready = opts.finishNow ? learning : learning.filter(([, due]) => due <= t + LEARN_AHEAD_MS)
   const dueNow = ready.filter(([, due]) => due <= t)
   const answered = s.log[dayKey(now)]?.c ?? 0
   // New words are sprinkled between reviews (every 4th card) instead of piling up at the end.
@@ -104,18 +184,34 @@ export function buildQueue(s: State, now: Date, avoid?: string): Queue {
   ]
   const next = candidates.find((c) => c.id !== avoid) ?? candidates[0] ?? null
 
-  return { learning: learning.length, review: review.length, fresh: fresh.length, next, waiting: learning.length - ready.length }
+  const waiting = learning.length - ready.length
+  const nextDue = waiting > 0 ? learning[ready.length][1] : null
+  return { learning: learning.length, review: review.length, fresh: fresh.length, freshReading: fresh.filter(isReadingCard).length, next, waiting, nextDue }
 }
 
 // ── answering ───────────────────────────────────────────────────────────────
 
-/** Returns the XP earned by this answer (card XP plus any quest it completed). */
-export function answer(id: string, grade: Grade, now = new Date()): number {
+/**
+ * How a reading card's multiple-choice answer maps onto FSRS (03 §7.5): the right reading is "알아요" (Good),
+ * a wrong one or "모르겠어요" (-1) is Again. There is no Easy: recognising among four choices is easier than
+ * recalling, so it never earns the longest interval.
+ */
+export const gradeReading = (picked: number, answer: number): Grade => (picked === answer ? Rating.Good : Rating.Again)
+
+/** Time on one card counts up to this much: a card left on screen while the learner is away is not study. */
+export const MAX_CARD_MS = 60_000
+
+/**
+ * Returns the XP earned by this answer (card XP plus any quest it completed). `activeMs` is how long the
+ * card was on screen and visible before the answer; it is added to the day's study time.
+ */
+export function answer(id: string, grade: Grade, now = new Date(), activeMs?: number): number {
   let gained = 0
   update((d) => {
     const prev = d.cards[id]
+    const at = reviewTime(prev, now)
     const card = prev ? toCard(prev) : createEmptyCard(now)
-    const { card: next } = scheduler.next(card, reviewTime(prev, now), grade)
+    const { card: next } = scheduler.next(card, at, grade)
     d.cards = { ...d.cards, [id]: fromCard(next) }
     const key = dayKey(now)
     const log = { ...(d.log[key] ?? emptyLog()) }
@@ -124,7 +220,11 @@ export function answer(id: string, grade: Grade, now = new Date()): number {
     if (prev?.state === CardState.Review) {
       log.r++
       if (grade !== Rating.Again) log.p++
+      // what the model expected, so readiness can be corrected if the learner remembers less (03 §4.1)
+      const predicted = scheduler.get_retrievability(card, at, false)
+      if (Number.isFinite(predicted)) log.e = (log.e ?? 0) + predicted
     }
+    if (activeMs !== undefined && Number.isFinite(activeMs) && activeMs > 0) log.ms = (log.ms ?? 0) + Math.min(MAX_CARD_MS, Math.round(activeMs))
     d.log = { ...d.log, [key]: log }
 
     gained = XP_PER_CARD
@@ -191,13 +291,35 @@ export function stageOf(c: SCard | undefined): Stage {
 
 export type Breakdown = Record<Stage, number>
 
-export function breakdowns(s: State): Record<Level, Breakdown> {
+const STAGE_RANK: Record<Stage, number> = { new: 0, learning: 1, young: 2, mature: 3 }
+
+/** A word's stage: the lowest stage among its active cards (03 §3: a word is only as known as its weakest card). */
+export function wordStage(s: CardsView, word: string): Stage {
+  let st: Stage | null = null
+  for (const { card } of wordCards(s, word)) {
+    const x = stageOf(card)
+    if (st === null || STAGE_RANK[x] < STAGE_RANK[st]) st = x
+  }
+  return st ?? 'new'
+}
+
+/** Words per stage and level. Counted per word, not per card, so a word with two cards counts once. */
+export function breakdowns(s: CardsView): Record<Level, Breakdown> {
   const out = Object.fromEntries(
     LEVELS.map((l) => [l, { new: COUNTS[l], learning: 0, young: 0, mature: 0 }]),
   ) as Record<Level, Breakdown>
+  const ft = fastOn(s)
+  const per = new Map<string, Stage>()
   for (const id in s.cards) {
-    const b = out[levelOf(id)]
-    b[stageOf(s.cards[id])]++
+    if (!isActive(id, ft)) continue
+    const w = wordOfCard(id)
+    const st = stageOf(s.cards[id])
+    const prev = per.get(w)
+    if (prev === undefined || STAGE_RANK[st] < STAGE_RANK[prev]) per.set(w, st)
+  }
+  for (const [w, st] of per) {
+    const b = out[levelOf(w)]
+    b[st]++
     b.new--
   }
   return out
@@ -206,11 +328,35 @@ export function breakdowns(s: State): Record<Level, Breakdown> {
 /** Cards coming due on each of the next `days` days (index 0 = today, including overdue). */
 export function forecast(s: State, now: Date, days = 7): number[] {
   const out = new Array<number>(days).fill(0)
+  const ft = fastOn(s)
   for (const id in s.cards) {
+    if (!isActive(id, ft)) continue
     const i = Math.max(0, daysBetween(now, new Date(s.cards[id].due)))
     if (i < days) out[i]++
   }
   return out
+}
+
+/**
+ * Seconds per answer measured over the last 14 days (03 §5.1); 8 s until 50 answers have been timed.
+ * Answers logged before time was recorded do not count.
+ */
+export function secondsPerAnswer(s: State, now: Date): number {
+  let ms = 0
+  let c = 0
+  for (let i = 0; i < 14; i++) {
+    const log = s.log[dayKey(addDays(now, -i))]
+    if (log?.ms) {
+      ms += log.ms
+      c += log.c
+    }
+  }
+  return c >= 50 ? ms / c / 1000 : 8
+}
+
+/** Minutes the cards still due today should take: a new word is answered about three times on its first day. */
+export function minutesFor(q: Pick<Queue, 'review' | 'learning' | 'fresh'>, secPerAnswer: number): number {
+  return Math.max(1, Math.round(((q.review + q.learning + 3 * q.fresh) * secPerAnswer) / 60))
 }
 
 /** Share of review cards remembered over the last `days` days; null until there is something to measure. */
@@ -238,27 +384,33 @@ export function streak(log: State['log'], today = new Date()): number {
   return n
 }
 
-/** Words that keep being forgotten (Anki calls them leeches), most-forgotten first. */
-export function leechIds(cards: State['cards'], limit = 40): string[] {
-  return Object.entries(cards)
-    .filter(([, c]) => c.lapses >= LEECH_LAPSES)
-    .sort((a, b) => b[1].lapses - a[1].lapses)
+/** Times a word was forgotten: the most of its active cards. */
+export function wordLapses(s: CardsView, word: string): number {
+  return Math.max(0, ...wordCards(s, word).map(({ card }) => card.lapses))
+}
+
+/**
+ * Words (word ids, never card ids) that keep being forgotten (Anki calls them leeches), most-forgotten first.
+ * A word with a forgotten meaning card and reading card is listed once.
+ */
+export function leechIds(cards: State['cards'], limit = 40, fastTrack = true): string[] {
+  const by = new Map<string, number>()
+  for (const [id, c] of Object.entries(cards))
+    if (c.lapses >= LEECH_LAPSES && isActive(id, fastTrack)) {
+      const w = wordOfCard(id)
+      by.set(w, Math.max(by.get(w) ?? 0, c.lapses))
+    }
+  return [...by]
+    .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([id]) => id)
 }
 
 // ── game layer ──────────────────────────────────────────────────────────────
 
-// XP is paid per card answered, whatever the answer, so honesty never costs points.
+// XP is paid per card answered, whatever the answer, so honesty never costs points. Levels were removed
+// (03 §6): cumulative XP is shown on the 기록 screen only.
 export const XP_PER_CARD = 10
-const XP_LEVEL_STEP = 150
-
-/** Level n starts at 150 · n(n−1)/2 XP: each level takes one more step than the last. */
-export function levelInfo(xp: number): { level: number; into: number; span: number } {
-  const level = Math.floor((1 + Math.sqrt(1 + (8 * xp) / XP_LEVEL_STEP)) / 2)
-  const base = (XP_LEVEL_STEP * level * (level - 1)) / 2
-  return { level, into: xp - base, span: XP_LEVEL_STEP * level }
-}
 
 export interface Quest {
   title: string
@@ -268,16 +420,15 @@ export interface Quest {
   done: boolean
 }
 
+/**
+ * One quest: finish today's plan (03 §6). Card-count and new-word quests rewarded fast tapping and new words
+ * over overdue reviews, so they were dropped.
+ */
 export function quests(s: State, now: Date): Quest[] {
   const log = s.log[dayKey(now)] ?? emptyLog()
   const q = buildQueue(s, now)
-  const newGoal = Math.min(10, s.settings.dailyNew)
   const cleared = log.c > 0 && !q.next && q.waiting === 0
-  return [
-    { title: '카드 20장 보기', have: Math.min(log.c, 20), need: 20, xp: 20 },
-    { title: `새 단어 ${newGoal}개 만나기`, have: Math.min(log.n, newGoal), need: newGoal, xp: 20 },
-    { title: '오늘 분량 모두 끝내기', have: cleared ? 1 : 0, need: 1, xp: 50 },
-  ].map((x) => ({ ...x, done: x.have >= x.need }))
+  return [{ title: '오늘 분량 끝내기', have: cleared ? 1 : 0, need: 1, xp: 50 }].map((x) => ({ ...x, done: x.have >= x.need }))
 }
 
 /** Sun..Sat of the current week: whether the user studied that day. */

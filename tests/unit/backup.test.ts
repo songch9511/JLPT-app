@@ -86,16 +86,15 @@ describe('store: import with undo', () => {
 })
 
 describe('backup file format', () => {
-  it('adds format fields next to `v` and leaves out the API key', async () => {
-    const { store, backup } = await bootBackup()
-    store.update((d) => {
-      d.settings.apiKey = 'sk-ant-secret'
-      d.xp = 40
-    })
+  it('adds format fields next to `v`, and an API key saved by an older version never reaches the file', async () => {
+    const old = { v: 2, onboarded: true, settings: { target: 5, apiKey: 'sk-ant-secret' }, cards: {}, log: {}, marks: [], xp: 0 }
+    const { store, backup } = await bootBackup({ now: NOW, saved: old })
+    store.update((d) => void (d.xp = 40))
     const file = backup.backupFile(store.getState(), new Date(NOW))
-    expect(file).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 1, v: 2, xp: 40, exportedAt: new Date(NOW).toISOString() })
-    expect(file.app).toMatch(/^kasane /)
-    expect(file.settings.apiKey).toBe('')
+    // a v2 state loads migrated to v3 (fast-track), so its backup is written as v3 in format version 2
+    expect(file).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 2, v: 3, xp: 40, exportedAt: new Date(NOW).toISOString() })
+    expect(file.app).toMatch(/^jlpt-ruma /)
+    expect(file.settings).not.toHaveProperty('apiKey')
   })
 
   it('reads its own files, minus the format fields', async () => {
@@ -121,7 +120,7 @@ describe('backup file format', () => {
     const state = { v: 2, onboarded: true, settings: {}, cards: {}, log: {} }
     expect(backup.readBackup({ ...state, format: 'something-else', formatVersion: 1 })).toEqual({ ok: false, reason: 'invalid' })
     expect(backup.readBackup({ ...state, format: 'jlpt-luma-backup' })).toEqual({ ok: false, reason: 'invalid' })
-    expect(backup.readBackup({ ...state, format: 'jlpt-luma-backup', formatVersion: 2 })).toEqual({ ok: false, reason: 'newer' })
+    expect(backup.readBackup({ ...state, format: 'jlpt-luma-backup', formatVersion: 3 })).toEqual({ ok: false, reason: 'newer' })
     expect(backup.readBackup({ ...state, format: 'jlpt-luma-backup', formatVersion: 1, cards: { '5-0': null } })).toEqual({ ok: false, reason: 'invalid' })
     for (const bad of [null, [], 'x', 3]) expect(backup.readBackup(bad).ok).toBe(false)
   })
