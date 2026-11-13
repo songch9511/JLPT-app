@@ -1,0 +1,15 @@
+/* iOS app only (loaded with the native chunks, never part of the web bundle). Same tokens as styles.css. */
+.form input[type='time'],
+.form select {
+  width: 100%; min-height: 48px; padding: 0 14px; border-radius: var(--r-md);
+  border: 1.5px solid var(--input-line); background: var(--bg); color: var(--text); font: inherit;
+}
+.reminder-offer { width: 100%; max-width: 520px; margin-top: var(--sp-4); text-align: left; display: flex; flex-direction: column; gap: var(--sp-2); }
+.reminder-offer h2 { font-size: var(--fs-body); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.reminder-offer .row { display: flex; gap: 10px; }
+.reminder-offer .row .btn { flex: 1; }
+.text-sheet { max-height: 80dvh; display: flex; flex-direction: column; gap: var(--sp-3); }
+.text-sheet .btn { align-self: flex-end; }
+.text-sheet pre { overflow: auto; white-space: pre-wrap; font-size: var(--fs-caption); line-height: 1.5; user-select: text; -webkit-user-select: text; }
+/* the app is not a web page: no long-press callouts on the chrome, no rubber-band reveal of the web view's ground */
+html, body { overscroll-behavior: none; -webkit-touch-callout: none; }

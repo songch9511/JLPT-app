@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { go } from '../App'
 import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
@@ -22,8 +22,12 @@ import {
   type Queue,
   type Snapshot,
 } from '../srs'
+import { platform } from '../platform'
 import { toggleMark, useStore } from '../store'
 import { dayKey, speak, useClock } from '../util'
+
+// the iOS app's offer to turn on review reminders, after a finished day (not in the web bundle)
+const ReminderOffer = import.meta.env.MODE === 'native' ? lazy(() => import('../platform/ReminderOffer')) : null
 
 /** Answers within this long of the last answer or reveal are ignored, so a double tap can't answer an unseen card. */
 const DOUBLE_TAP_MS = 350
@@ -141,6 +145,8 @@ export function Study() {
   // the first finished day is when there is something worth protecting from storage eviction
   useEffect(() => {
     if (finished) requestPersist()
+    // the day was finished in this session (not merely reopened afterwards): a success tap in the app
+    if (finished && answered > 0) platform.haptic('done')
   }, [finished])
 
   /** `fromButton`: the grade buttons appear where "정답 보기" was, so a double tap on it must not answer. */
@@ -160,6 +166,7 @@ export function Study() {
       undo.current = { snap: snapshot(), card: q.next }
       setRedo(null)
       answer(q.next.id, grade, new Date(), activeMs())
+      platform.haptic('answer')
       const interval = intervals?.[grade]
       setNote(interval ? { key: Date.now(), text: afterText(interval) } : null)
       setUndoChip(Date.now())
@@ -295,6 +302,11 @@ export function Study() {
             </button>
           )}
         </div>
+        {ReminderOffer && platform.native && cleared && (
+          <Suspense fallback={null}>
+            <ReminderOffer />
+          </Suspense>
+        )}
       </div>
     )
   }

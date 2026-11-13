@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { platform } from './platform'
 import { getState, isBackup, migrate, type State } from './store'
 import { addDays, dayKey, daysBetween, parseDay } from './util'
 
@@ -18,12 +19,14 @@ const ENVELOPE = ['format', 'formatVersion', 'app', 'exportedAt'] as const
 
 /** The backup file's content: the state plus format fields next to the existing `v`. */
 export function backupFile(s: State, now = new Date()) {
+  // the save counter only orders this device's own copies (store.ts `rev`); it means nothing elsewhere
+  const { rev: _rev, ...state } = s
   return {
     format: BACKUP_FORMAT,
     formatVersion: BACKUP_FORMAT_VERSION,
     app: `jlpt-ruma ${APP_VERSION}`,
     exportedAt: now.toISOString(),
-    ...s,
+    ...state,
   }
 }
 
@@ -46,20 +49,20 @@ export function readBackup(x: unknown): ReadResult {
   return isBackup(rest) ? { ok: true, state: migrate(rest) } : { ok: false, reason: 'invalid' }
 }
 
-function download(json: string, name: string) {
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }))
-  a.download = name
-  a.click()
-  // revoking right away can cancel the download on some browsers (iOS home-screen apps)
-  const href = a.href
-  setTimeout(() => URL.revokeObjectURL(href), 10_000)
+/**
+ * Hand the file to the user (a download on the web, the share sheet in the iOS app) and run `then` once it
+ * was handed over: at once on the web, after the share sheet in the app (not when the user cancelled it).
+ */
+function saveFile(json: string, name: string, then?: () => void) {
+  const done = platform.saveFile(name, json)
+  if (done === true) then?.()
+  else if (done !== false) void done.then((ok) => ok && then?.())
 }
 
 /** Download the current state as a backup file and remember when. */
 export function exportBackup() {
-  download(JSON.stringify(backupFile(getState())), `jlpt-ruma-backup-${dayKey()}.json`)
-  setMeta({ lastExport: dayKey() })
+  const day = dayKey()
+  saveFile(JSON.stringify(backupFile(getState())), `jlpt-ruma-backup-${day}.json`, () => setMeta({ lastExport: day }))
 }
 
 /**
@@ -76,7 +79,7 @@ export function exportRaw(raw: string | null) {
   } catch {
     json = json.replace(/"apiKey"\s*:\s*"[^"]*"/g, '"apiKey":""')
   }
-  download(json, `jlpt-ruma-backup-${dayKey()}.json`)
+  saveFile(json, `jlpt-ruma-backup-${dayKey()}.json`)
 }
 
 // ── device-only notes about backups (kept outside the study state, never exported) ──

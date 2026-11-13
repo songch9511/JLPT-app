@@ -1,0 +1,163 @@
+name: iOS TestFlight upload (signed, manual)
+
+# Archives a signed Release build and uploads it to App Store Connect (TestFlight). Manual only, and OFF
+# until the owner has done the steps in docs/plan/10-ios-build.md §4: Apple Developer Program, the app record
+# in App Store Connect, the final bundle id (npm run ios:set-id), an App Store Connect API key, and these
+# secrets/variables in the repository (Settings › Secrets and variables › Actions), ideally as secrets of
+# the "testflight" environment with a required reviewer:
+#
+#   variable IOS_RELEASE_ENABLED        "true" to allow this workflow to run at all
+#   secret   APPLE_TEAM_ID              10-character Team ID (developer.apple.com › Membership details)
+#   secret   ASC_KEY_ID                 App Store Connect API key's Key ID (Users and Access › Integrations › App Store Connect API)
+#   secret   ASC_ISSUER_ID              the Issuer ID shown above the key list (UUID)
+#   secret   ASC_KEY_P8                 the full text of the downloaded AuthKey_<KEY_ID>.p8 (-----BEGIN PRIVATE KEY----- …)
+#
+# Signing is Xcode's automatic signing driven by the API key (-allowProvisioningUpdates with
+# -authenticationKey*): xcodebuild creates or fetches the certificates and provisioning profiles for the app
+# and the widget, and registers the App Group. No certificate or profile is stored in this repository.
+# The key needs a role allowed to manage certificates/profiles (Admin; App Manager may not be enough — not
+# verified). NOT RUN YET: the first run is its first test (no Apple account existed when it was written).
+
+on:
+  workflow_dispatch:
+    inputs:
+      marketing_version:
+        description: 'Version shown in the App Store (CFBundleShortVersionString), e.g. 1.0.0'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: Signed archive and TestFlight upload
+    if: vars.IOS_RELEASE_ENABLED == 'true'
+    runs-on: macos-26
+    timeout-minutes: 60
+    environment: testflight
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - name: Check that every secret is set
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          missing=0
+          for n in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            if [ -z "${!n}" ]; then echo "::error::secret $n is not set"; missing=1; fi
+          done
+          exit $missing
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Refuse the placeholder bundle id
+        run: |
+          if grep -q "com.example.jlptruma" capacitor.config.ts ios/App/App.xcodeproj/project.pbxproj; then
+            echo "::error::bundle id is still the placeholder; run npm run ios:set-id -- <id> and commit"; exit 1
+          fi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run ios:sync
+      - name: Write the API key to a temporary file
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          umask 077
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+      - name: Temporary keychain for the signing identity xcodebuild creates
+        run: |
+          kc="$RUNNER_TEMP/signing.keychain-db"
+          pw="$(uuidgen)"
+          security create-keychain -p "$pw" "$kc"
+          security set-keychain-settings -lut 3600 "$kc"
+          security unlock-keychain -p "$pw" "$kc"
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s "$kc"
+      - name: Archive (Release, automatic signing with the API key)
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          MARKETING_VERSION: ${{ inputs.marketing_version }}
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="$MARKETING_VERSION" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            | tee build/archive.log
+      - name: Export the .ipa for App Store Connect
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          # (no indentation inside: the XML declaration must start the file)
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>app-store-connect</string>
+          <key>destination</key><string>export</string>
+          <key>signingStyle</key><string>automatic</string>
+          <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+          <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          plutil -lint build/ExportOptions.plist
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist build/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            | tee build/export.log
+          ls -la build/export
+      - name: Upload to App Store Connect (TestFlight)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          # altool finds the key as AuthKey_<KEY_ID>.p8 in API_PRIVATE_KEYS_DIR
+          keys="$RUNNER_TEMP/private_keys"; mkdir -p "$keys"; cp "$RUNNER_TEMP/AuthKey.p8" "$keys/AuthKey_${ASC_KEY_ID}.p8"
+          API_PRIVATE_KEYS_DIR="$keys" xcrun altool --upload-app --type ios \
+            --file build/export/*.ipa \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+      - name: Remove the key and the keychain
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/private_keys"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
+      - name: Keep the logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: testflight-logs
+          path: build/*.log
+          retention-days: 7

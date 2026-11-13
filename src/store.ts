@@ -66,6 +66,13 @@ export interface State {
   xp: number
   /** highest expected recall reached so far: journey stamps once earned stay (03 §6) */
   bestE?: number
+  /**
+   * Save counter, +1 on every change (added for the iOS app, docs/plan/10). The app keeps a second copy of the
+   * state outside the web view's storage and, at launch, keeps whichever copy has the higher count; a counter
+   * rather than a clock, so a device clock that moved does not decide which copy is newer. Absent in states
+   * saved before it existed (read as 0). Not exported in backups.
+   */
+  rev?: number
 }
 
 // storage keys keep the app's former name (Kasane) so existing learners keep their records
@@ -203,19 +210,55 @@ function write(raw: string): boolean {
   }
 }
 
+// ── hooks for the platform layer (src/platform): the iOS app mirrors every save to a durable file ──
+
+export interface StoreHooks {
+  /** after every save, with the saved text, whether or not localStorage took it */
+  onSave?: (raw: string) => void
+  /** after "모든 기록 초기화" */
+  onReset?: () => void
+}
+let hooks: StoreHooks = {}
+export const setStoreHooks = (h: StoreHooks) => {
+  hooks = h
+}
+
 function save(raw: string) {
   if (write(raw)) setSaveStatus({ failed: false, dismissed: false })
   // keep working in memory; a warning is shown once per run of failures
   else if (!saveStatus.failed) setSaveStatus({ failed: true, dismissed: false })
+  hooks.onSave?.(raw)
 }
 
 /** Copy-on-write update: `mutate` receives a shallow copy and must replace (not mutate) nested objects it changes. */
 export function update(mutate: (draft: State) => void) {
+  const prevRev = state.rev ?? 0
   const draft = { ...state, settings: { ...state.settings } }
   mutate(draft)
+  // counts up from the copy that was current, whatever `mutate` put there (an import brings its own number)
+  draft.rev = prevRev + 1
   state = draft
   save(JSON.stringify(state))
   subs.forEach((f) => f())
+}
+
+/**
+ * Take a saved state found outside localStorage (the iOS app's durable copy, before the first render).
+ * localStorage gets it too when it can; when it cannot (full), the app still starts from it in memory.
+ * Returns false, changing nothing, when the text is not a usable state.
+ */
+export function hydrate(raw: string): boolean {
+  let s: StoredState
+  try {
+    s = JSON.parse(raw)
+  } catch {
+    return false
+  }
+  if (!s || typeof s !== 'object' || !s.settings || typeof s.settings !== 'object') return false
+  state = migrate(s)
+  write(raw)
+  subs.forEach((f) => f())
+  return true
 }
 
 export function useStore<T>(sel: (s: State) => T): T {
@@ -299,6 +342,7 @@ export function undoImport(): boolean {
 
 export function resetAll() {
   update((d) => Object.assign(d, initial()))
+  hooks.onReset?.()
 }
 
 export function toggleMark(id: string) {

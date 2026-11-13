@@ -1,9 +1,13 @@
-import { useRef } from 'react'
+import { lazy, Suspense, useRef } from 'react'
 import { exportBackup, readBackup, useMeta } from '../backup'
 import { TITLE, UNOFFICIAL_NOTICE } from '../brand'
 import { LEVELS } from '../data'
 import { canUndoImport, GOALS, importState, MAX_DAILY_NEW, resetAll, undoImport, update, useStore, type State } from '../store'
+import { platform } from '../platform'
 import { formatDay, upcomingExams } from '../util'
+
+// reminders, haptics and voice: only in the iOS app (not even in the web bundle, see src/platform/index.ts)
+const NativeSettings = import.meta.env.MODE === 'native' ? lazy(() => import('../platform/NativeSettings')) : null
 
 export function Settings() {
   const st = useStore((s) => s.settings)
@@ -12,16 +16,23 @@ export function Settings() {
   const exams = upcomingExams(new Date(), 4)
   const set = (patch: Partial<State['settings']>) => update((d) => void Object.assign(d.settings, patch))
 
-  const importData = async (f: File) => {
+  const importData = async (f: File) => importText(await f.text())
+  const importText = (text: string) => {
     let data: unknown
     try {
-      data = JSON.parse(await f.text())
+      data = JSON.parse(text)
     } catch {
       data = null
     }
     const read = readBackup(data)
     if (!read.ok) {
-      alert(read.reason === 'newer' ? '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 새로고침한 뒤 다시 가져와 주세요.' : 'JLPT 루마 백업 파일이 아니에요.')
+      alert(
+        read.reason === 'newer'
+          ? platform.native
+            ? '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 업데이트한 뒤 다시 가져와 주세요.'
+            : '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 새로고침한 뒤 다시 가져와 주세요.'
+          : 'JLPT 루마 백업 파일이 아니에요.',
+      )
       return
     }
     if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요? 바로 되돌릴 수 있어요.')) return
@@ -121,9 +132,19 @@ export function Settings() {
         </label>
       </section>
 
+      {NativeSettings && platform.native && (
+        <Suspense fallback={null}>
+          <NativeSettings />
+        </Suspense>
+      )}
+
       <section className="card form">
         <h3>데이터</h3>
-        <p className="muted small">학습 기록은 이 기기의 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.</p>
+        <p className="muted small">
+          {platform.native
+            ? '학습 기록은 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업 파일을 내보내 두세요.'
+            : '학습 기록은 이 기기의 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'}
+        </p>
         <p className="small last-backup">
           {meta.lastExport ? `마지막 백업: ${formatDay(meta.lastExport)}` : '아직 백업한 적이 없어요.'}
         </p>
@@ -139,7 +160,10 @@ export function Settings() {
           <button className="btn ghost" onClick={exportBackup}>
             백업 내보내기
           </button>
-          <button className="btn ghost" onClick={() => file.current?.click()}>
+          <button
+            className="btn ghost"
+            onClick={() => (platform.pickFile ? void platform.pickFile().then((t) => t !== null && importText(t)) : file.current?.click())}
+          >
             백업 가져오기
           </button>
           <input
