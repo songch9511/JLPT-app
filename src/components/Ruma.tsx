@@ -1,15 +1,15 @@
 import { useId } from 'react'
 
 /**
- * 루마 (Ruma), the mascot: a round red daruma with gold stripes, a dark glass face and glowing eyes.
+ * 루마 (Ruma), the mascot: a round red daruma with gold stripes, a white face and black eyes.
  * As with a real daruma, its eyes get painted in: asleep before the day's study starts
  * (`mood="sleep"`), one eye painted once it starts, and the other eye growing with today's
  * progress until both are painted when the day's cards are done. `progress` runs from 0 to 1.
  */
-const GLOW = '#ffe3a3'
+const INK = '#2a2022'
 const GOLD = '#f0c24f'
 const BODY = 'M60 9c30 0 49 24 49 54 0 28-20 47-49 47S11 91 11 63C11 33 30 9 60 9Z'
-const VISOR = 'M60 34c16 0 28 3 34 10 6 8 6 22 0 30-6 7-18 10-34 10s-28-3-34-10c-6-8-6-22 0-30 6-7 18-10 34-10Z'
+const FACE = 'M60 34c16 0 28 3 34 10 6 8 6 22 0 30-6 7-18 10-34 10s-28-3-34-10c-6-8-6-22 0-30 6-7 18-10 34-10Z'
 const EYE_Y = 61
 const EYE_R = 9.5
 
@@ -30,13 +30,15 @@ export function Ruma({
 
   const eye = (cx: number, painted: number) =>
     mood === 'sleep' ? (
-      <path d={`M${cx - 7} ${EYE_Y + 1}q7 5 14 0`} fill="none" stroke={GLOW} strokeWidth="3.4" strokeLinecap="round" opacity=".6" />
+      <path d={`M${cx - 7} ${EYE_Y + 1}q7 5 14 0`} fill="none" stroke={INK} strokeWidth="3.4" strokeLinecap="round" />
     ) : (
       <>
-        <circle cx={cx} cy={EYE_Y} r={EYE_R} fill="#0b0809" stroke={GOLD} strokeWidth="1.8" />
+        <circle cx={cx} cy={EYE_Y} r={EYE_R} fill="#fff" stroke={GOLD} strokeWidth="2" />
         <g className="ruma-pupil" style={{ transform: `scale(${painted})` }}>
-          <circle cx={cx} cy={EYE_Y} r={EYE_R - 2.6} fill={GLOW} filter={`url(#${id}g)`} opacity=".8" />
-          <circle className="ruma-blink" cx={cx} cy={EYE_Y} r={EYE_R - 2.6} fill={GLOW} />
+          <g className="ruma-blink">
+            <circle cx={cx} cy={EYE_Y} r={EYE_R - 2.4} fill={INK} />
+            <circle cx={cx - 2.4} cy={EYE_Y - 2.6} r="2.2" fill="#fff" />
+          </g>
         </g>
       </>
     )
@@ -56,12 +58,9 @@ export function Ruma({
           <stop offset="1" stopColor="#3a0d05" stopOpacity=".34" />
         </linearGradient>
         <linearGradient id={`${id}v`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#34292b" />
-          <stop offset="1" stopColor="#120e10" />
+          <stop offset="0" stopColor="#fffdf8" />
+          <stop offset="1" stopColor="#f3e7d6" />
         </linearGradient>
-        <filter id={`${id}g`} x="-80%" y="-80%" width="260%" height="260%">
-          <feGaussianBlur stdDeviation="3" />
-        </filter>
         <filter id={`${id}f`} x="-30%" y="-100%" width="160%" height="300%">
           <feGaussianBlur stdDeviation="2.4" />
         </filter>
@@ -84,14 +83,15 @@ export function Ruma({
           <rect width="120" height="120" fill={`url(#${id}h)`} />
         </g>
         <path d={BODY} className="ruma-outline" />
-        <path d={VISOR} fill={`url(#${id}v)`} stroke={GOLD} strokeWidth="1.8" />
-        <path d="M30 46c6-5 16-7 30-7" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" opacity=".16" />
+        <path d={FACE} fill={`url(#${id}v)`} stroke={GOLD} strokeWidth="1.8" />
+        <ellipse cx="29" cy="72" rx="6" ry="4" fill="#f2a08f" opacity=".7" />
+        <ellipse cx="91" cy="72" rx="6" ry="4" fill="#f2a08f" opacity=".7" />
         {/* brows and moustache, the crane and the turtle of a daruma's face */}
-        <g className="ruma-marks" fill="none" stroke={GOLD} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M57 44q-10-5-23 3" strokeWidth="3.2" />
-          <path d="M63 44q10-5 23 3" strokeWidth="3.2" />
-          <path d="M58 76q-9 5-22-1" strokeWidth="2.6" />
-          <path d="M62 76q9 5 22-1" strokeWidth="2.6" />
+        <g className="ruma-marks" fill="none" stroke={INK} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M57 45q-10-6-24 3" strokeWidth="4.2" />
+          <path d="M63 45q10-6 24 3" strokeWidth="4.2" />
+          <path d="M58 76q-9 6-21 0" strokeWidth="3.2" />
+          <path d="M62 76q9 6 21 0" strokeWidth="3.2" />
         </g>
         {eye(45, second)}
         {eye(75, first)}
