@@ -1,0 +1,31 @@
+{
+  "name": "luma-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "루마 백엔드: Cloudflare Worker (권한 확인, RevenueCat 웹훅, 약한 단어 이야기)",
+  "scripts": {
+    "build:words": "node scripts/build-words.mjs",
+    "pretypecheck": "npm run build:words",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run build:words",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "predev": "npm run build:words",
+    "dev": "wrangler dev",
+    "predeploy": "npm run build:words && npm run typecheck && npm test",
+    "deploy": "wrangler deploy",
+    "dry-run": "npm run build:words && wrangler deploy --dry-run --outdir dist"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.12",
+    "@cloudflare/workers-types": "5.20261101.1",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0",
+    "wrangler": "4.156.1"
+  }
+}

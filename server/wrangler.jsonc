@@ -1,0 +1,56 @@
+// 루마 백엔드 Worker 설정. 배포 전에 README.md의 "배포 런북"을 따라 <...> 자리를 채웁니다.
+// 비밀 값(API 키 등)은 여기에 넣지 않습니다: `wrangler secret put <이름>`으로만 넣습니다.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "luma-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "send_metrics": false,
+  // 배포할 때 사용자 지정 도메인을 연결합니다(런북 6단계). 예: { "pattern": "api.example.com", "custom_domain": true }
+  "routes": [],
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "luma",
+      // `wrangler d1 create luma` 출력의 database_id로 바꿉니다.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      // `wrangler kv namespace create CACHE` 출력의 id로 바꿉니다.
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+  // Workers Rate Limiting 바인딩. namespace_id는 계정 안에서 고유한 양의 정수(문자열)면 됩니다.
+  "ratelimits": [
+    { "name": "RL_IP", "namespace_id": "41001", "simple": { "limit": 60, "period": 60 } },
+    { "name": "RL_USER", "namespace_id": "41002", "simple": { "limit": 20, "period": 60 } }
+  ],
+  // 매일 03:17 UTC(한국 12:17)에 오래된 사용량·웹훅 기록을 지웁니다.
+  "triggers": { "crons": ["17 3 * * *"] },
+
+  "vars": {
+    "ALLOWED_ORIGINS": "capacitor://localhost,https://localhost",
+    "RC_ENTITLEMENT_ID": "plus",
+    "ACCEPT_SANDBOX_EVENTS": "false",
+    "ENTITLEMENT_CACHE_TTL_SECONDS": "300",
+    "STORY_MODEL": "claude-haiku-5-5",
+    "STORY_EFFORT": "low",
+    "STORY_MAX_TOKENS": "4096",
+    "STORY_MAX_WORDS": "12",
+    "STORY_DAILY_LIMIT": "1",
+    "STORY_DAILY_ATTEMPT_LIMIT": "4",
+    "GLOBAL_DAILY_SPEND_LIMIT_USD": "5",
+    "DAY_OFFSET_MINUTES": "540",
+    "ANTHROPIC_TIMEOUT_MS": "30000",
+    "REVENUECAT_TIMEOUT_MS": "5000"
+  }
+  // 비밀(wrangler secret put): ANTHROPIC_API_KEY, REVENUECAT_SECRET_KEY, REVENUECAT_WEBHOOK_AUTH, USER_ID_PEPPER
+}
