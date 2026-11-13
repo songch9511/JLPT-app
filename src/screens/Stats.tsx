@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Card } from '@astryxdesign/core/Card'
 import { readiness } from '../readiness'
 import { forecast, retention } from '../srs'
 import { update, useStore, type State } from '../store'
@@ -96,50 +97,50 @@ export function Stats() {
         <h1>기록</h1>
       </header>
 
-      <section className="card" aria-labelledby="stamps-title">
+      <Card role="region" aria-labelledby="stamps-title">
         <h2 id="stamps-title" className="card-title">
           도장 여정
-          <span className="muted small">예상 기억 {STAMP_STEP}단어마다</span>
+          <span className="muted">예상 기억 {STAMP_STEP}단어마다</span>
         </h2>
         <Stamps best={best} now={stop} total={r.total} />
-        <p className="muted small">
+        <p className="hint">
           지금 그만둬도 시험날 {stop.toLocaleString()}개를 기억할 것으로 예상해요. 한 번 찍은 도장은 지워지지 않아요.
         </p>
-      </section>
+      </Card>
 
-      <section className="stat-grid">
-        <div className="card stat">
+      <section className="stat-grid" aria-label="요약">
+        <Card className="stat" padding={3}>
           <span className="stat-label">기억 유지율</span>
           <b className="num">{kept == null ? '–' : `${Math.round(kept * 100)}%`}</b>
           <small className="muted">{predicted == null ? '최근 30일' : `예측 ${Math.round(predicted * 100)}%${r.calibrated ? ' · 보정함' : ''}`}</small>
-        </div>
-        <div className="card stat">
+        </Card>
+        <Card className="stat" padding={3}>
           <span className="stat-label">최근 7일 학습</span>
           <b className="num">{Math.round(ms7 / 60_000)}분</b>
           <small className="muted">카드를 보는 동안만 셈</small>
-        </div>
-        <div className="card stat">
+        </Card>
+        <Card className="stat" padding={3}>
           <span className="stat-label">누적 XP</span>
           <b className="num">{s.xp.toLocaleString()}</b>
           <small className="muted">카드당 10</small>
-        </div>
+        </Card>
       </section>
 
-      <section className="card" aria-labelledby="forecast-title">
+      <Card role="region" aria-labelledby="forecast-title">
         <h2 id="forecast-title" className="card-title">
           7일 복습 예보
         </h2>
         <Forecast counts={forecast(s, today)} today={today} />
-        <p className="muted small">기억이 흐려질 때쯤 다시 나와요. 기억할수록 간격이 길어져요.</p>
-      </section>
+        <p className="hint">기억이 흐려질 때쯤 다시 나와요. 기억할수록 간격이 길어져요.</p>
+      </Card>
 
-      <section className="card" aria-labelledby="heat-title">
+      <Card role="region" aria-labelledby="heat-title">
         <h2 id="heat-title" className="card-title">
           학습 기록
         </h2>
         <Heatmap log={s.log} today={today} />
-        <p className="muted small">최근 {WEEKS}주 · 진할수록 카드를 많이 본 날</p>
-      </section>
+        <p className="hint">최근 {WEEKS}주 · 진할수록 카드를 많이 본 날</p>
+      </Card>
     </>
   )
 }

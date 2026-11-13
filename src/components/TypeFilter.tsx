@@ -1,4 +1,5 @@
 import type { WordType } from '../data'
+import { ChipGroup } from './ui'
 
 /** Word-type filter groups: the two that change how a word is studied, then the rest. */
 export type TypeGroup = 'all' | 'S' | 'F' | 'J' | 'N' | 'other'
@@ -16,13 +17,12 @@ export const inGroup = (k: WordType, g: TypeGroup) =>
 
 export function TypeFilter({ value, onChange, counts }: { value: TypeGroup; onChange: (g: TypeGroup) => void; counts?: Record<TypeGroup, number> }) {
   return (
-    <div className="chips type-filter" role="group" aria-label="단어 유형">
-      {TYPE_GROUPS.map(([g, label]) => (
-        <button key={g} className={`chip-btn ${value === g ? 'on' : ''}`} aria-pressed={value === g} onClick={() => onChange(g)}>
-          {label}
-          {counts && g !== 'all' ? ` ${counts[g].toLocaleString()}` : ''}
-        </button>
-      ))}
-    </div>
+    <ChipGroup
+      label="단어 유형"
+      scroll
+      value={value}
+      onChange={onChange}
+      options={TYPE_GROUPS.map(([g, label]) => [g, counts && g !== 'all' ? `${label} ${counts[g].toLocaleString()}` : label])}
+    />
   )
 }

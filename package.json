@@ -15,9 +15,12 @@
     "data": "node scripts/build-data.mjs --extras",
     "ios:sync": "npm run build:native && cap sync ios",
     "ios:assets": "node scripts/ios/make-assets.mjs",
-    "ios:set-id": "node scripts/ios/set-bundle-id.mjs"
+    "ios:set-id": "node scripts/ios/set-bundle-id.mjs",
+    "theme": "node scripts/build-theme.mjs",
+    "astryx": "astryx"
   },
   "dependencies": {
+    "@astryxdesign/core": "0.7.15",
     "@capacitor-community/text-to-speech": "8.0.2",
     "@capacitor/app": "8.1.2",
     "@capacitor/browser": "8.0.5",
@@ -29,12 +32,14 @@
     "@capacitor/share": "8.0.3",
     "@capacitor/status-bar": "8.0.4",
     "@capawesome/capacitor-file-picker": "8.1.1",
+    "@stylexjs/stylex": "0.19.2",
     "lucide-react": "^1.72.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "ts-fsrs": "^5.4.2"
   },
   "devDependencies": {
+    "@astryxdesign/cli": "0.7.15",
     "@capacitor/cli": "8.6.0",
     "@playwright/test": "1.63.0",
     "@types/react": "^19.3.0",

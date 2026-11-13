@@ -122,8 +122,8 @@ test('settings: native section shown, export through the share sheet, import thr
   await expect(page.getByText('마지막 백업: 2026년 11월 13일')).toBeVisible()
   expect(downloaded).toBe(false)
 
-  page.once('dialog', (d) => d.accept())
   await page.getByRole('button', { name: '백업 가져오기' }).click()
+  await page.getByRole('alertdialog', { name: '백업으로 바꿀까요?' }).getByRole('button', { name: '백업으로 바꾸기' }).click()
   await expect.poll(async () => page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).xp, KEY)).toBe(999)
   const [, , pick] = (await calls(page, 'FilePicker', 'pickFiles'))[0] as Call
   expect(pick).toEqual({ types: ['application/json'], limit: 1, readData: true })
@@ -179,8 +179,8 @@ test('the offer is not repeated once answered “나중에”', async ({ page })
 
 test('reset clears the durable copy of the old history', async ({ page }) => {
   await openShell(page, { state: user({}, { xp: 50, rev: 3 }), hash: '/settings', files: { 'LIBRARY/ruma/state-b.json': JSON.stringify(user({}, { xp: 40, rev: 2 })) } })
-  page.once('dialog', (d) => d.accept())
   await page.getByRole('button', { name: '모든 기록 초기화' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: '모두 지우기' }).click()
   await expect(page.getByRole('button', { name: '시작하기' })).toBeVisible()
   await expect
     .poll(async () => {

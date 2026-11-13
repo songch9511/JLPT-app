@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { BottomSheet } from '@astryxdesign/core/BottomSheet'
+import { Button } from '@astryxdesign/core/Button'
+import { Card } from '@astryxdesign/core/Card'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { ProgressBar } from '@astryxdesign/core/ProgressBar'
 import { go } from '../App'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
@@ -76,21 +81,19 @@ function ReadinessCard({ r, onInfo }: { r: Readiness; onInfo: () => void }) {
   const list = `${levelsLabel(r.levels)} 목록`
   if (r.past)
     return (
-      <section className="card readiness" aria-labelledby="ready-title">
+      <Card className="readiness" role="region" aria-labelledby="ready-title">
         <h2 id="ready-title" className="card-title">
           시험날 기억할 단어
         </h2>
         <p>시험일이 지났어요. 다음 시험일을 골라 주세요.</p>
-        <a className="link inline" href="#/settings">
-          시험일 고르기 <Icon name="chevron" size={16} />
-        </a>
-      </section>
+        <Button label="시험일 고르기" variant="ghost" className="text-action" href="#/settings" endContent={<Icon name="chevron" size={16} />} />
+      </Card>
     )
   const plan = Math.round(r.plan)
   const stop = Math.round(r.stop)
   const st = STATUS[r.status]
   return (
-    <section className="card readiness" aria-labelledby="ready-title">
+    <Card className="readiness" role="region" aria-labelledby="ready-title">
       <h2 id="ready-title" className="card-title">
         시험날 기억할 단어 <span className="muted">(예상)</span>
       </h2>
@@ -98,18 +101,15 @@ function ReadinessCard({ r, onInfo }: { r: Readiness; onInfo: () => void }) {
         <b className="num">{plan.toLocaleString()}</b>
         <span className="muted"> / {r.total.toLocaleString()}</span>
       </p>
-      <div
-        className="bar ready-bar"
-        role="progressbar"
-        aria-label="계획대로 했을 때 시험날 기억할 단어"
-        aria-valuemin={0}
-        aria-valuemax={r.total}
-        aria-valuenow={plan}
-        aria-valuetext={`${r.total}개 중 ${plan}개, 목표 ${r.goalWords}개`}
-      >
-        <i style={{ width: `${(r.plan / r.total) * 100}%` }} />
-        <span className="goal-tick" style={{ left: `${(r.goalWords / r.total) * 100}%` }} />
-      </div>
+      <ProgressBar
+        className="ready-bar"
+        label="계획대로 했을 때 시험날 기억할 단어"
+        isLabelHidden
+        value={plan}
+        max={r.total}
+        formatValueLabel={(v, max) => `${max}개 중 ${v}개, 목표 ${r.goalWords}개`}
+        marks={[{ value: r.goalWords, label: `목표 ${r.goalWords.toLocaleString()}개` }]}
+      />
       <p className="ready-goal muted small">
         목표 {r.goalWords.toLocaleString()} ({Math.round(r.goal * 100)}%)
       </p>
@@ -124,29 +124,20 @@ function ReadinessCard({ r, onInfo }: { r: Readiness; onInfo: () => void }) {
         <Icon name="info" size={16} />
         <span>{list} 기준 추정 · 문법·독해·청해 제외 · 합격 확률이 아니에요</span>
       </button>
-    </section>
+    </Card>
   )
 }
 
 /** 03 §7.3: what the number is and what it cannot say. */
-function ReadinessSheet({ r, onClose }: { r: Readiness; onClose: () => void }) {
-  const close = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    close.current?.focus()
-    const on = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    addEventListener('keydown', on)
-    return () => removeEventListener('keydown', on)
-  }, [onClose])
+function ReadinessSheet({ r, isOpen, onClose }: { r: Readiness; isOpen: boolean; onClose: () => void }) {
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet info-sheet" role="dialog" aria-modal="true" aria-labelledby="ready-help" onClick={(e) => e.stopPropagation()}>
+    <BottomSheet isOpen={isOpen} onOpenChange={(open) => !open && onClose()} label="이 숫자는 무엇인가요?" height="hug">
+      <div className="sheet info-sheet">
         <div className="sheet-head">
           <h2 id="ready-help" className="grow">
             이 숫자는 무엇인가요?
           </h2>
-          <button ref={close} className="icon-btn" onClick={onClose} aria-label="닫기">
-            <Icon name="close" />
-          </button>
+          <IconButton label="닫기" variant="ghost" icon={<Icon name="close" />} onClick={onClose} />
         </div>
         <ul className="help-list">
           <li>
@@ -164,7 +155,7 @@ function ReadinessSheet({ r, onClose }: { r: Readiness; onClose: () => void }) {
           <li>목표 {Math.round(r.goal * 100)}%는 합격선에서 나온 숫자가 아니라 앱이 정한 기준이에요. 설정에서 바꿀 수 있어요.</li>
         </ul>
       </div>
-    </div>
+    </BottomSheet>
   )
 }
 
@@ -235,7 +226,7 @@ export function Home() {
 
       <ReadinessCard r={r} onInfo={() => setInfo(true)} />
 
-      <section className="card plan" aria-labelledby="plan-title">
+      <Card className="plan" role="region" aria-labelledby="plan-title">
         <h2 id="plan-title" className="card-title">
           오늘의 계획
           {todo > 0 && <span className="muted">약 {minutes}분</span>}
@@ -267,35 +258,35 @@ export function Home() {
                 오늘 하면 시험날 예상 <b className="num">+{Math.round(r.todayGain)}</b>단어
               </p>
             )}
-            <button className="btn primary big" onClick={() => go('/study')}>
-              {started ? '이어서 하기' : '오늘의 학습 시작'}
-            </button>
+            <Button label={started ? '이어서 하기' : '오늘의 학습 시작'} variant="primary" size="lg" width="100%" onClick={() => go('/study')} />
           </>
         ) : unseen > 0 ? (
           <>
             <p className="plan-done">{cleared ? '오늘 분량을 끝냈어요.' : '오늘 할 복습이 없어요.'}</p>
-            <button
-              className={`btn ${cleared ? 'ghost' : 'primary'} big`}
+            <Button
+              label="새 단어 10개 더 하기"
+              variant={cleared ? 'secondary' : 'primary'}
+              size="lg"
+              width="100%"
               onClick={() => {
                 unlockMoreNew(10)
                 go('/study')
               }}
-            >
-              새 단어 10개 더 하기
-            </button>
+            />
           </>
         ) : nextLevel ? (
           <>
             <p className="plan-done">{cleared ? '오늘 분량을 끝냈어요.' : '오늘 할 복습이 없어요.'} 다음 급수의 새 단어를 시작할 수 있어요.</p>
-            <button
-              className="btn primary big"
+            <Button
+              label={`N${nextLevel} 시작하기`}
+              variant="primary"
+              size="lg"
+              width="100%"
               onClick={() => {
                 update((d) => void (d.settings.target = nextLevel))
                 go('/study')
               }}
-            >
-              N{nextLevel} 시작하기
-            </button>
+            />
           </>
         ) : (
           <p className="plan-done">{cleared ? '오늘 분량을 끝냈어요.' : '오늘은 할 카드가 없어요.'}</p>
@@ -303,22 +294,20 @@ export function Home() {
         {changed ? (
           <p className="plan-lever" role="status">
             하루 새 단어 {changed.to}개로 바꿨어요.
-            <button
-              className="link"
+            <Button
+              label="되돌리기"
+              variant="ghost"
+              className="text-action"
               onClick={() => {
                 update((d) => void (d.settings.dailyNew = changed.from))
                 setChanged(null)
               }}
-            >
-              되돌리기
-            </button>
+            />
           </p>
         ) : typeof pace === 'number' ? (
           <p className="plan-lever">
             하루 새 단어 {pace}개면 목표에 닿아요.
-            <button className="link" onClick={() => setPace(pace)}>
-              바꾸기 <Icon name="chevron" size={16} />
-            </button>
+            <Button label="바꾸기" variant="ghost" className="text-action" endContent={<Icon name="chevron" size={16} />} onClick={() => setPace(pace)} />
           </p>
         ) : (
           pace === 'none' && (
@@ -331,9 +320,9 @@ export function Home() {
             </p>
           )
         )}
-      </section>
+      </Card>
 
-      <section className="card week-card" aria-label="이번 주">
+      <Card className="week-card" role="region" aria-label="이번 주">
         <div className="week-top">
           <Ruma progress={restDay ? 0 : progress} mood={cleared ? 'cheer' : !started ? 'sleep' : 'idle'} size={72} />
           <p className="bubble">{bubble}</p>
@@ -352,7 +341,7 @@ export function Home() {
             {quest.title}
           </span>
         </div>
-      </section>
+      </Card>
 
       <BackupNudge today={today} />
 
@@ -369,7 +358,7 @@ export function Home() {
         </a>
       </nav>
 
-      {info && <ReadinessSheet r={r} onClose={() => setInfo(false)} />}
+      <ReadinessSheet r={r} isOpen={info} onClose={() => setInfo(false)} />
     </>
   )
 }

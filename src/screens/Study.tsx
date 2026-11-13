@@ -1,4 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Badge } from '@astryxdesign/core/Badge'
+import { Button } from '@astryxdesign/core/Button'
+import { IconButton } from '@astryxdesign/core/IconButton'
+import { ProgressBar } from '@astryxdesign/core/ProgressBar'
+import { Skeleton } from '@astryxdesign/core/Skeleton'
 import { go } from '../App'
 import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
@@ -39,6 +44,40 @@ const UNDO_CHIP_MS = 4000
 const answerLabel = (label: string, interval?: string) =>
   interval ? `${label}, ${interval.endsWith('이내') ? interval : `${interval} 뒤`} 다시` : label
 const afterText = (interval: string) => (interval.endsWith('이내') ? interval : `${interval} 뒤`)
+
+/**
+ * One answer button of the bar under the card: 60px high on both steps, so the thumb never moves. The interval it sets
+ * is shown under the label and read as part of its name ("알아요, 26일 뒤 다시"). Only the one primary is filled.
+ */
+function Grade({
+  label,
+  interval,
+  primary = false,
+  isDisabled,
+  className,
+  onClick,
+}: {
+  label: string
+  interval?: string
+  primary?: boolean
+  isDisabled?: boolean
+  className?: string
+  onClick: () => void
+}) {
+  return (
+    <Button
+      label={answerLabel(label, interval)}
+      variant={primary ? 'primary' : 'secondary'}
+      size="lg"
+      className={`grade ${className ?? ''}`}
+      isDisabled={isDisabled}
+      onClick={onClick}
+    >
+      <span className="grade-label">{label}</span>
+      {interval && <small>{interval}</small>}
+    </Button>
+  )
+}
 
 /** Browsers (iOS above all) only allow speech after the user has interacted with the page. */
 const mayPlayAudio = () => (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive ?? true
@@ -259,7 +298,7 @@ export function Study() {
           )}
         </div>
         <h1>{cleared ? '오늘 목표 달성!' : '잠깐 쉬어 가요'}</h1>
-        <p className="muted">
+        <p className="done-text">
           {cleared
             ? '루마가 두 눈을 다 떴어요. 기억이 흐려질 때쯤 다시 가져올게요.'
             : `${inMin}분 뒤에 익히는 중인 ${q.waiting}장이 돌아와요.`}
@@ -288,19 +327,9 @@ export function Study() {
           </div>
         </dl>
         <div className="done-actions">
-          {!cleared && (
-            <button className="btn primary big" onClick={() => setFinishNow(true)}>
-              남은 {q.waiting}장 지금 마무리
-            </button>
-          )}
-          <button className={`btn ${cleared ? 'primary' : 'ghost'} big`} onClick={() => go('/')}>
-            홈으로
-          </button>
-          {cleared && moreNew && (
-            <button className="btn ghost big" onClick={() => unlockMoreNew(10)}>
-              새 단어 10개 더 하기
-            </button>
-          )}
+          {!cleared && <Button label={`남은 ${q.waiting}장 지금 마무리`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
+          <Button label="홈으로" variant={cleared ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
+          {cleared && moreNew && <Button label="새 단어 10개 더 하기" size="lg" width="100%" onClick={() => unlockMoreNew(10)} />}
         </div>
         {ReminderOffer && platform.native && cleared && (
           <Suspense fallback={null}>
@@ -321,26 +350,19 @@ export function Study() {
   return (
     <div className="study">
       <header className="study-top">
-        <button className="icon-btn" onClick={() => go('/')} aria-label="나가기 (진행 상황은 저장돼요)">
-          <Icon name="close" />
-        </button>
-        <div
-          className="bar study-bar grow"
-          role="progressbar"
-          aria-label="오늘 학습"
-          aria-valuemin={0}
-          aria-valuemax={dayTotal}
-          aria-valuenow={todayCount}
-          aria-valuetext={`오늘 ${todayCount}장 봤어요, 남은 ${left}장`}
-        >
-          <i style={{ width: `${(todayCount / dayTotal) * 100}%` }} />
-        </div>
+        <IconButton label="나가기 (진행 상황은 저장돼요)" variant="ghost" icon={<Icon name="close" />} onClick={() => go('/')} />
+        <ProgressBar
+          className="study-bar grow"
+          label="오늘 학습"
+          isLabelHidden
+          value={todayCount}
+          max={dayTotal}
+          formatValueLabel={() => `오늘 ${todayCount}장 봤어요, 남은 ${left}장`}
+        />
         <span className="left-count" aria-hidden="true">
           남은 {left}장
         </span>
-        <button className="icon-btn" disabled={!undo.current} onClick={onUndo} aria-label="방금 선택 되돌리기">
-          <Icon name="undo" />
-        </button>
+        <IconButton label="방금 선택 되돌리기" variant="ghost" icon={<Icon name="undo" />} isDisabled={!undo.current} onClick={onUndo} />
       </header>
       <p className="after-note" aria-live="polite">
         {note && (
@@ -354,15 +376,13 @@ export function Study() {
         {error && (
           <div className="load-error" role="alert">
             <p>{error}</p>
-            <button className="btn ghost" onClick={() => setRetry((n) => n + 1)}>
-              다시 시도
-            </button>
+            <Button label="다시 시도" onClick={() => setRetry((n) => n + 1)} />
           </div>
         )}
         {!ready && !error && (
           <div className="skeleton" aria-busy="true" aria-label="단어를 불러오는 중">
-            <i className="sk-word" />
-            <i className="sk-meaning" />
+            <Skeleton width={120} height={48} radius={2} />
+            <Skeleton width={160} height={20} radius={2} index={1} />
           </div>
         )}
         {ready && word && next && (
@@ -373,38 +393,37 @@ export function Study() {
           >
             <div className="flash-head">
               {missed ? (
-                <span className="chip k-again" role="status">
-                  다시 나와요 · {intervals?.[Rating.Again]}
+                <span role="status">
+                  <Badge variant="red" label={`다시 나와요 · ${intervals?.[Rating.Again]}`} />
                 </span>
               ) : (
-                next.kind === 'new' && <span className="chip k-new">새 단어</span>
+                next.kind === 'new' && <Badge variant="blue" label="새 단어" />
               )}
-              {reading && <span className="chip k-read">읽기</span>}
-              {lower && <span className="chip">N{levelOf(next.id)}</span>}
+              {reading && <Badge label="읽기" />}
+              {lower && <Badge label={`N${levelOf(next.id)}`} />}
               <span className="grow" />
               {(!reading || revealed) && (
-                <button
-                  className="icon-btn"
+                <IconButton
+                  label="발음 듣기"
+                  variant="ghost"
+                  icon={<Icon name="speaker" />}
                   onClick={(e) => {
                     e.stopPropagation()
                     speak(word.r || word.w)
                   }}
-                  aria-label="발음 듣기"
-                >
-                  <Icon name="speaker" />
-                </button>
+                />
               )}
-              <button
-                className={`icon-btn ${marked ? 'marked' : ''}`}
+              <IconButton
+                label="북마크"
+                variant="ghost"
+                className={marked ? 'marked' : undefined}
+                aria-pressed={marked}
+                icon={<Icon name="mark" fill={marked} />}
                 onClick={(e) => {
                   e.stopPropagation()
                   toggleMark(word.id)
                 }}
-                aria-label="북마크"
-                aria-pressed={marked}
-              >
-                <Icon name="mark" fill={marked} />
-              </button>
+              />
             </div>
             <div className="flash-body">
               <p lang="ja" className={`flash-word ${word.w.length > 6 ? 'long' : ''}`}>
@@ -480,58 +499,39 @@ export function Study() {
 
       {undoChip > 0 && undo.current && (
         <div className="undo-chip-row">
-          <button className="undo-chip" onClick={onUndo}>
-            <Icon name="undo" size={16} /> 되돌리기
-          </button>
+          <Button label="되돌리기" variant="ghost" className="undo-chip" icon={<Icon name="undo" size={16} />} onClick={onUndo} />
         </div>
       )}
       {reading ? (
         <footer className="answer-bar">
           {picked === null ? (
-            <button className="btn ghost big wide" onClick={() => choose(-1)} disabled={!ready}>
-              모르겠어요
-            </button>
+            <Grade className="wide" label="모르겠어요" onClick={() => choose(-1)} isDisabled={!ready} />
           ) : missed ? (
-            <button className="btn primary big wide" onClick={() => submit(gradeReading(picked, question?.answer ?? 0))} aria-label={answerLabel('확인했어요 · 다음', intervals?.[Rating.Again])}>
-              확인했어요 · 다음
-              <small>{intervals?.[Rating.Again]}</small>
-            </button>
+            <Grade
+              className="wide"
+              primary
+              label="확인했어요 · 다음"
+              interval={intervals?.[Rating.Again]}
+              onClick={() => submit(gradeReading(picked, question?.answer ?? 0))}
+            />
           ) : (
-            <button className="btn primary big wide" onClick={() => submit(gradeReading(picked, question?.answer ?? -2))} aria-label={answerLabel('다음', intervals?.[Rating.Good])}>
-              다음
-              <small>{intervals?.[Rating.Good]}</small>
-            </button>
+            <Grade className="wide" primary label="다음" interval={intervals?.[Rating.Good]} onClick={() => submit(gradeReading(picked, question?.answer ?? -2))} />
           )}
         </footer>
       ) : (
         <footer className={`answer-bar ${!revealed ? 'front' : missed ? '' : 'three'}`}>
           {!revealed ? (
             <>
-              <button className="btn ghost big" onClick={onAgain} disabled={!ready}>
-                모르겠어요
-              </button>
-              <button className="btn primary big" onClick={() => reveal(true)} disabled={!ready}>
-                정답 보기
-              </button>
+              <Grade label="모르겠어요" onClick={onAgain} isDisabled={!ready} />
+              <Grade primary label="정답 보기" onClick={() => reveal(true)} isDisabled={!ready} />
             </>
           ) : missed ? (
-            <button className="btn primary big wide" onClick={() => submit(Rating.Again)}>
-              확인했어요 · 다음
-            </button>
+            <Grade className="wide" primary label="확인했어요 · 다음" onClick={() => submit(Rating.Again)} />
           ) : (
             <>
-              <button className="btn ghost big" onClick={onAgain} aria-label={answerLabel('모르겠어요', intervals?.[Rating.Again])}>
-                모르겠어요
-                <small>{intervals?.[Rating.Again]}</small>
-              </button>
-              <button className="btn primary big" onClick={() => submit(Rating.Good)} aria-label={answerLabel('알아요', intervals?.[Rating.Good])}>
-                알아요
-                <small>{intervals?.[Rating.Good]}</small>
-              </button>
-              <button className="btn ghost big" onClick={() => submit(Rating.Easy)} aria-label={answerLabel('쉬워요', intervals?.[Rating.Easy])}>
-                쉬워요
-                <small>{intervals?.[Rating.Easy]}</small>
-              </button>
+              <Grade label="모르겠어요" interval={intervals?.[Rating.Again]} onClick={onAgain} />
+              <Grade primary label="알아요" interval={intervals?.[Rating.Good]} onClick={() => submit(Rating.Good)} />
+              <Grade label="쉬워요" interval={intervals?.[Rating.Easy]} onClick={() => submit(Rating.Easy)} />
             </>
           )}
         </footer>

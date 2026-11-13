@@ -1,4 +1,5 @@
 import { Component, useState, type ReactNode } from 'react'
+import { Button } from '@astryxdesign/core/Button'
 import { exportRaw } from '../backup'
 import { platform } from '../platform'
 import { STATE_KEY } from '../store'
@@ -22,14 +23,10 @@ function Recovery({ error }: { error: Error }) {
       <p>
         앱 안에서 오류가 나서 이 화면을 보여 드려요. 학습 기록은 이 기기에 그대로 있어요. 먼저 다시 불러와 보세요.
       </p>
-      <p className="muted small">계속 이 화면이 나오면 백업을 내보내 두세요. 백업 파일에는 지금 저장된 기록이 그대로 담겨요.</p>
+      <p className="hint">계속 이 화면이 나오면 백업을 내보내 두세요. 백업 파일에는 지금 저장된 기록이 그대로 담겨요.</p>
       <div className="recovery-actions">
-        <button className="btn primary big" onClick={() => location.reload()}>
-          다시 불러오기
-        </button>
-        <button className="btn ghost big" onClick={() => exportRaw(raw())}>
-          백업 내보내기
-        </button>
+        <Button label="다시 불러오기" variant="primary" size="lg" width="100%" onClick={() => location.reload()} />
+        <Button label="백업 내보내기" size="lg" width="100%" onClick={() => exportRaw(raw())} />
       </div>
 
       <section className="recovery-danger" aria-labelledby="recovery-reset">
@@ -41,11 +38,10 @@ function Recovery({ error }: { error: Error }) {
               주세요.
             </p>
             <div className="row">
-              <button className="btn ghost" onClick={() => setConfirming(false)}>
-                취소
-              </button>
-              <button
-                className="btn ghost danger-ink"
+              <Button label="취소" onClick={() => setConfirming(false)} />
+              <Button
+                label="모두 지우기"
+                variant="destructive"
                 onClick={async () => {
                   // the iOS app's durable copy would otherwise bring the same state back at the next launch
                   await platform.clearDeviceData().catch(() => {})
@@ -56,19 +52,15 @@ function Recovery({ error }: { error: Error }) {
                   }
                   location.replace(location.pathname)
                 }}
-              >
-                모두 지우기
-              </button>
+              />
             </div>
           </>
         ) : (
-          <button className="btn danger" onClick={() => setConfirming(true)}>
-            모든 기록 지우고 처음부터 시작…
-          </button>
+          <Button label="모든 기록 지우고 처음부터 시작…" variant="destructive" onClick={() => setConfirming(true)} />
         )}
       </section>
 
-      <details className="muted small">
+      <details className="hint">
         <summary>오류 내용</summary>
         <code>{String(error?.message || error)}</code>
       </details>

@@ -27,20 +27,20 @@ Anki가 쓰는 오픈소스 스케줄러 [FSRS](https://github.com/open-spaced-r
 
 학습 기록은 브라우저(localStorage)에만 저장됩니다. 단어 설명과 이야기는 나중에 미리 만든 데이터와 서버로 제공할 예정이라 지금은 없습니다(`src/content.ts`).
 
-## 색
+## 색 · 디자인 시스템
 
-일본 전통색(伝統色)에서 고른 차분한 팔레트입니다. 토큰은 `src/styles.css`의 `:root`에 있습니다.
+일본 전통색(伝統色)에서 고른 차분한 팔레트를 [Astryx](https://github.com/meta/astryx) 디자인 시스템의 테마 `ruma`로 정의합니다(`src/themes/ruma/rumaTheme.ts`, 빌드 `npm run theme`). 토큰·컴포넌트·규칙은 **[docs/design-system.md](docs/design-system.md)** 에 있습니다. 다크 모드는 먹(墨) 바탕입니다.
 
-| 역할 | 색 | 이름 |
-| --- | --- | --- |
-| 바탕 | `#fbfaf5` | 生成り 키나리 |
-| 글자 | `#2d2a26` | 墨 스미 |
-| 강조 | `#165e83` | 藍 아이 |
-| 알아요 · 장기 기억 | `#47885e` | 緑青 로쿠쇼 |
-| 모르겠어요 | `#c4553b` | 朱 슈 |
-| XP · 외우는 중 | `#c89932` | 山吹茶 야마부키차 |
-| 익히는 중 | `#4d9aa6` | 浅葱 아사기 |
-| 연속 학습 | `#d9743f` | 柿 카키 |
+| 역할 | 라이트 | 다크 | 이름 |
+| --- | --- | --- | --- |
+| 바탕 | `#fbfaf5` | `#1b1a18` | 生成り 키나리 / 墨 |
+| 글자 | `#2d2a26` | `#ece7db` | 墨 스미 |
+| 강조(버튼 묶음마다 하나) | `#165e83` | `#86aecf` | 藍 아이 |
+| 알아요 · 장기 기억 | `#47885e` | `#7fb996` | 緑青 로쿠쇼 |
+| 모르겠어요 · 경고 | `#c4553b` | `#e08c74` | 朱 슈 |
+| XP · 익히는 중 | `#c89932` | `#d9b45a` | 山吹茶 야마부키차 |
+| 다지는 중 | `#4d9aa6` | `#6fb3bd` | 浅葱 아사기 |
+| 연속 학습 | `#d9743f` | `#e08a55` | 柿 카키 |
 
 ## 개발
 
@@ -48,6 +48,7 @@ Anki가 쓰는 오픈소스 스케줄러 [FSRS](https://github.com/open-spaced-r
 npm install
 npm run dev      # 개발 서버
 npm run build    # 타입 검사 + 프로덕션 빌드 (dist/)
+npm run theme    # src/themes/ruma/rumaTheme.ts → ruma.css·ruma.js (테마를 고친 뒤)
 npm run data     # data/raw + data/ko → public/data 재생성
 ```
 
