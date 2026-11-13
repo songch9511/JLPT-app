@@ -34,7 +34,7 @@ export function Onboarding() {
         <label>목표 급수</label>
         <div className="seg">
           {LEVELS.map((l) => (
-            <button key={l} className={target === l ? 'on' : ''} onClick={() => setTarget(l)}>
+            <button key={l} className={target === l ? 'on' : ''} aria-pressed={target === l} onClick={() => setTarget(l)}>
               N{l}
             </button>
           ))}
@@ -42,7 +42,7 @@ export function Onboarding() {
         <label>하루 새 단어</label>
         <div className="seg">
           {[10, 20, 30].map((n) => (
-            <button key={n} className={daily === n ? 'on' : ''} onClick={() => setDaily(n)}>
+            <button key={n} className={daily === n ? 'on' : ''} aria-pressed={daily === n} onClick={() => setDaily(n)}>
               {n}개
             </button>
           ))}
@@ -50,7 +50,7 @@ export function Onboarding() {
         <label>시험일</label>
         <div className="chips">
           {exams.map((d) => (
-            <button key={d} className={`chip-btn ${exam === d ? 'on' : ''}`} onClick={() => setExam(d)}>
+            <button key={d} className={`chip-btn ${exam === d ? 'on' : ''}`} aria-pressed={exam === d} onClick={() => setExam(d)}>
               {formatDay(d)}
             </button>
           ))}

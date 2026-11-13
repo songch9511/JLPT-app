@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Icon, type IconName } from './components/Icon'
+import { SaveWarning } from './components/Notices'
 import type { Level } from './data'
 import { Home } from './screens/Home'
 import { LevelScreen } from './screens/Level'
@@ -52,12 +53,25 @@ export default function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)
   }, [theme])
 
-  if (!onboarded) return <Onboarding />
-  if (route.name === 'study') return <Study />
+  if (!onboarded)
+    return (
+      <>
+        <SaveWarning />
+        <Onboarding />
+      </>
+    )
+  if (route.name === 'study')
+    return (
+      <>
+        <SaveWarning />
+        <Study />
+      </>
+    )
 
   const tab = route.name === 'level' ? 'home' : route.name
   return (
     <div className="app">
+      <SaveWarning />
       <main className="page">
         {route.name === 'home' && <Home />}
         {route.name === 'level' && <LevelScreen level={route.level} />}

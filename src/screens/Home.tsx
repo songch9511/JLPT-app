@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react'
 import { go } from '../App'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
-import { COUNTS, KO_READY, LEVELS, type Level } from '../data'
+import { BackupNudge } from '../components/Notices'
+import { COUNTS, LEVELS, type Level } from '../data'
 import {
   breakdowns,
   buildQueue,
@@ -16,7 +17,7 @@ import {
   type Breakdown,
 } from '../srs'
 import { update, useStore, type State } from '../store'
-import { addDays, dayKey, daysBetween, parseDay } from '../util'
+import { addDays, dayKey, daysBetween, parseDay, useClock } from '../util'
 
 const WEEKS = 15
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
@@ -37,19 +38,25 @@ export function Hud({ s, today }: { s: State; today: Date }) {
   const lv = levelInfo(s.xp)
   const days = streak(s.log, today)
   const lit = !!s.log[dayKey(today)]?.c
+  // each item is read as one phrase ("연속 30일") instead of the bare numbers on screen
   return (
-    <div className="hud">
-      <span className={`hud-item streak ${lit ? 'lit' : ''}`} title="연속 학습">
+    <div className="hud" role="group" aria-label="학습 현황">
+      <span className={`hud-item streak ${lit ? 'lit' : ''}`} title="연속 학습" role="img" aria-label={`연속 ${days}일`}>
         <Icon name="flame" size={20} fill />
         {days}
       </span>
-      <span className="hud-level" title={`레벨 ${lv.level} · 다음 레벨까지 ${lv.span - lv.into} XP`}>
+      <span
+        className="hud-level"
+        title={`레벨 ${lv.level} · 다음 레벨까지 ${lv.span - lv.into} XP`}
+        role="img"
+        aria-label={`레벨 ${lv.level}, 다음 레벨까지 ${(lv.span - lv.into).toLocaleString()} XP`}
+      >
         <b>Lv.{lv.level}</b>
         <span className="bar">
           <i style={{ width: `${(lv.into / lv.span) * 100}%` }} />
         </span>
       </span>
-      <span className="hud-item xp" title="누적 XP">
+      <span className="hud-item xp" title="누적 XP" role="img" aria-label={`누적 ${s.xp.toLocaleString()} XP`}>
         <Icon name="bolt" size={20} fill />
         {s.xp.toLocaleString()}
       </span>
@@ -118,6 +125,7 @@ function Journey({ level, seen }: { level: Level; seen: number }) {
 
 export function Home() {
   const s = useStore((x) => x)
+  useClock()
   const today = new Date()
   const { target, examDate, dailyNew } = s.settings
   const q = buildQueue(s, today)
@@ -143,13 +151,25 @@ export function Home() {
   // share of today's cards already answered; shown in the mascot's speech bubble
   const progress = cleared ? 1 : started ? (todayLog?.c ?? 0) / ((todayLog?.c ?? 0) + todo) : 0
   const pct = Math.round(progress * 100)
-  const bubble = cleared
-    ? '두 눈 번쩍! 오늘 목표 달성이에요.'
-    : started
-      ? `${pct}% 왔어요. ${todo}장만 더 하면 남은 눈도 떠요!`
-      : todo > 0
-        ? `쿨쿨… 오늘은 ${todo}장! 시작하면 한쪽 눈을 떠요.`
-        : '오늘은 돌아온 복습이 없어요. 새 단어를 더 해 볼까요?'
+  // every word of the target level has been met: point to the next level that still has new words
+  const levelDone = b.new === 0
+  const nextLevel = levelDone ? LEVELS.find((l) => l < target && all[l].new > 0) : undefined
+  // a day with nothing to do: the mascot sleeps rather than looking full without any study
+  const restDay = todo === 0 && !started
+  const bubble =
+    todo === 0 && levelDone
+      ? nextLevel
+        ? `N${target} 단어를 모두 만났어요. 다음은 N${nextLevel}!`
+        : cleared
+          ? '두 눈 번쩍! 오늘 분량 끝.'
+          : '오늘은 쉬는 날이에요.'
+      : cleared
+        ? '두 눈 번쩍! 오늘 분량 끝.'
+        : started
+          ? `${pct}% 왔어요. ${todo}장만 더 하면 남은 눈도 떠요!`
+          : todo > 0
+            ? `쿨쿨… 오늘은 ${todo}장! 시작하면 한쪽 눈을 떠요.`
+            : '오늘은 복습이 없어요. 새 단어를 해 볼까요?'
 
   return (
     <>
@@ -157,7 +177,7 @@ export function Home() {
 
       <section className="hero">
         <div className="hero-top">
-          <Ruma progress={todo === 0 && !started ? 1 : progress} mood={cleared ? 'cheer' : !started && todo > 0 ? 'sleep' : 'idle'} size={104} />
+          <Ruma progress={restDay ? 0 : progress} mood={cleared ? 'cheer' : !started ? 'sleep' : 'idle'} size={104} />
           <p className="bubble">{bubble}</p>
         </div>
         {todo > 0 ? (
@@ -169,7 +189,7 @@ export function Home() {
               </div>
               <div className="c-learning">
                 <b>{q.learning}</b>
-                <span>외우는 중</span>
+                <span>익히는 중</span>
               </div>
               <div className="c-new">
                 <b>{q.fresh}</b>
@@ -180,20 +200,32 @@ export function Home() {
               {started ? '이어서 하기' : '오늘의 학습 시작'}
             </button>
           </>
+        ) : b.new > 0 ? (
+          <button
+            className="btn primary big"
+            onClick={() => {
+              unlockMoreNew(10)
+              go('/study')
+            }}
+          >
+            새 단어 10개 더 하기
+          </button>
         ) : (
-          b.new > 0 && (
+          nextLevel && (
             <button
               className="btn primary big"
               onClick={() => {
-                unlockMoreNew(10)
+                update((d) => void (d.settings.target = nextLevel))
                 go('/study')
               }}
             >
-              새 단어 10개 더 하기
+              N{nextLevel} 시작하기
             </button>
           )
         )}
       </section>
+
+      <BackupNudge today={today} />
 
       <section className="card week-card">
         <div className="week">
@@ -235,14 +267,20 @@ export function Home() {
       <section className="card">
         <h3 className="card-title">
           N{target} 여정
-          <span className={`dday ${dday <= 30 && dday > 0 ? 'soon' : ''}`}>{dday > 0 ? `D-${dday}` : dday === 0 ? 'D-DAY' : '시험 종료'}</span>
+          {dday >= 0 ? (
+            <span className={`dday ${dday <= 30 ? 'soon' : ''}`}>{dday > 0 ? `D-${dday}` : 'D-DAY'}</span>
+          ) : (
+            <a className="dday" href="#/settings">
+              시험일 지남 · 바꾸기
+            </a>
+          )}
         </h3>
         <Journey level={target} seen={seen} />
         <p className="num">
           {seen.toLocaleString()} <span>/ {total.toLocaleString()} 단어를 만났어요</span>
         </p>
         <p className="muted small">{pace}</p>
-        {needPerDay != null && b.new > 0 && needPerDay !== dailyNew && (
+        {needPerDay != null && b.new > 0 && Math.min(100, needPerDay) !== dailyNew && (
           <button className="link inline" onClick={() => update((d) => void (d.settings.dailyNew = Math.min(100, needPerDay)))}>
             지금 하루 {dailyNew}개 → {Math.min(100, needPerDay)}개로 맞추기
           </button>
@@ -282,15 +320,15 @@ export function Home() {
       <section className="card">
         <h3 className="card-title">학습 기록</h3>
         <Heatmap log={s.log} today={today} />
-        <p className="muted small">최근 {WEEKS}주 · 진할수록 카드를 많이 넘긴 날</p>
+        <p className="muted small">최근 {WEEKS}주 · 진할수록 카드를 많이 본 날</p>
       </section>
 
       <section>
         <h3 className="section-title">급수별 기억 상태</h3>
         <div className="legend">
           <span className="mature">장기 기억</span>
-          <span className="young">익히는 중</span>
-          <span className="learning">외우는 중</span>
+          <span className="young">다지는 중</span>
+          <span className="learning">익히는 중</span>
         </div>
         <div className="levels">
           {LEVELS.map((l: Level) => (
@@ -298,7 +336,6 @@ export function Home() {
               <div className="level-name">
                 <b>N{l}</b>
                 {l === target && <span className="chip accent">목표</span>}
-                {!KO_READY[l] && <span className="chip">뜻: 영어</span>}
               </div>
               <StageBar b={all[l]} total={COUNTS[l]} />
               <span className="level-count">

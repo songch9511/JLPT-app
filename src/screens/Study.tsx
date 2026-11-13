@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { go } from '../App'
+import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
 import { AiExplain } from '../components/WordSheet'
 import { levelOf, meaning, useLevel } from '../data'
-import { answer, breakdowns, buildQueue, previewIntervals, Rating, restore, snapshot, streak, unlockMoreNew, type Grade, type Snapshot } from '../srs'
+import { answer, breakdowns, buildQueue, previewIntervals, Rating, restore, snapshot, streak, unlockMoreNew, type Grade, type Queue, type Snapshot } from '../srs'
 import { toggleMark, useStore } from '../store'
-import { dayKey, speak } from '../util'
+import { dayKey, speak, useClock } from '../util'
 
-const KIND_LABEL = { new: '새 단어', learning: '외우는 중', review: '복습' } as const
+const DOUBLE_TAP_MS = 350
+
+/** "알아요, 26일 뒤 다시" — the interval read as part of the button's name. */
+const answerLabel = (label: string, interval?: string) =>
+  interval ? `${label}, ${interval.endsWith('이내') ? interval : `${interval} 뒤`} 다시` : label
+
+/** Browsers (iOS above all) only allow speech after the user has interacted with the page. */
+const mayPlayAudio = () => (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive ?? true
 
 export function Study() {
   const s = useStore((x) => x)
@@ -18,13 +26,22 @@ export function Study() {
   const [answered, setAnswered] = useState(0)
   const [last, setLast] = useState<string | undefined>()
   const [pop, setPop] = useState<{ key: number; xp: number } | null>(null)
-  const undo = useRef<Snapshot | null>(null)
+  const undo = useRef<{ snap: Snapshot; card: NonNullable<Queue['next']> } | null>(null)
+  /** after an undo, the card that was undone is shown again whatever the queue would pick now */
+  const [redo, setRedo] = useState<Queue['next']>(null)
+  /** answers are ignored until this time, so a double tap can't answer a card that was never seen */
+  const lockUntil = useRef(0)
+  const [idle, setIdle] = useState(false)
+  // While nothing is due yet, re-check as time passes so waiting cards come back on their own.
+  const tick = useClock(idle)
 
   // Recomputed after every answer; `now` is taken then so waiting cards become due as time passes.
   const { q, now } = useMemo(() => {
     const now = new Date()
-    return { q: buildQueue(s, now, last), now }
-  }, [s, last])
+    const q = buildQueue(s, now, last)
+    return { q: redo ? { ...q, next: redo } : q, now }
+  }, [s, last, redo, tick])
+  useEffect(() => setIdle(!q.next), [q.next])
   const id = q.next?.id
   const { words, error } = useLevel(id ? levelOf(id) : null)
   const word = words && id ? words[Number(id.split('-')[1])] : null
@@ -38,32 +55,47 @@ export function Study() {
   }, [cardKey])
 
   useEffect(() => {
-    if (s.settings.autoSpeak && word) speak(word.r || word.w)
+    if (s.settings.autoSpeak && word && mayPlayAudio()) speak(word.r || word.w)
   }, [s.settings.autoSpeak, word])
+
+  const todayCount = s.log[dayKey(now)]?.c ?? 0
+  const finished = !q.next && q.waiting === 0 && todayCount > 0
+  // the first finished day is when there is something worth protecting from storage eviction
+  useEffect(() => {
+    if (finished) requestPersist()
+  }, [finished])
 
   const submit = useCallback(
     (grade: Grade) => {
-      if (!id) return
-      undo.current = snapshot()
-      const xp = answer(id, grade)
+      if (!q.next || Date.now() < lockUntil.current) return
+      lockUntil.current = Date.now() + DOUBLE_TAP_MS
+      undo.current = { snap: snapshot(), card: q.next }
+      setRedo(null)
+      const xp = answer(q.next.id, grade)
       setPop({ key: Date.now(), xp })
-      setLast(id)
+      setLast(q.next.id)
       setAnswered((n) => n + 1)
     },
-    [id],
+    [q.next],
   )
 
+  const autoSpeak = s.settings.autoSpeak
   const onAgain = useCallback(() => {
     // Forgetting a word should always end with seeing the answer first.
     if (!revealed) {
+      lockUntil.current = Date.now() + DOUBLE_TAP_MS
       setRevealed(true)
       setMissed(true)
+      // hear the reading once — inside the tap or key press, so the browser allows it
+      if (autoSpeak && word) speak(word.r || word.w)
     } else submit(Rating.Again)
-  }, [revealed, submit])
+  }, [revealed, submit, autoSpeak, word])
 
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (!word) return
+      if (!word || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
+      // a control the user moved to with the keyboard gets its own Enter/Space
+      if ((e.key === ' ' || e.key === 'Enter') && e.target instanceof Element && e.target.matches(':focus-visible')) return
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault()
         if (missed) submit(Rating.Again)
@@ -94,31 +126,37 @@ export function Study() {
         <p className="muted">
           {cleared
             ? '루마가 두 눈을 다 떴어요. 기억이 흐려질 때쯤 다시 가져올게요.'
-            : `외우는 중인 ${q.waiting}개는 조금 뒤에 다시 나와요.`}
+            : `익히는 중인 ${q.waiting}개는 조금 뒤에 다시 나와요.`}
         </p>
-        <div className="result-tiles">
+        <dl className="result-tiles">
           <div className="t-xp">
-            <span>오늘 XP</span>
-            <b>
-              <Icon name="bolt" size={20} fill />
-              {log?.xp ?? 0}
-            </b>
+            <dt>오늘 XP</dt>
+            <dd>
+              <b>
+                <Icon name="bolt" size={18} fill />
+                {log?.xp ?? 0}
+              </b>
+            </dd>
           </div>
           <div className="t-streak">
-            <span>연속 학습</span>
-            <b>
-              <Icon name="flame" size={20} fill />
-              {streak(s.log, now)}일
-            </b>
+            <dt>연속 학습</dt>
+            <dd>
+              <b>
+                <Icon name="flame" size={18} fill />
+                {streak(s.log, now)}일
+              </b>
+            </dd>
           </div>
           <div className="t-cards">
-            <span>넘긴 카드</span>
-            <b>{log?.c ?? 0}장</b>
+            <dt>본 카드</dt>
+            <dd>
+              <b>{log?.c ?? 0}장</b>
+            </dd>
           </div>
-        </div>
+        </dl>
         <div className="done-actions">
           <button className="btn primary big" onClick={() => go('/')}>
-            계속하기
+            홈으로
           </button>
           {moreNew && (
             <button className="btn ghost big" onClick={() => unlockMoreNew(10)}>
@@ -131,7 +169,10 @@ export function Study() {
   }
 
   const left = q.learning + q.review + q.fresh
+  // measured against the whole day, like the home screen, so resuming does not start from zero
+  const dayTotal = todayCount + left
   const marked = word ? s.marks.includes(word.id) : false
+  const xpToday = s.log[dayKey(now)]?.xp ?? 0
 
   return (
     <div className="study">
@@ -139,12 +180,23 @@ export function Study() {
         <button className="icon-btn" onClick={() => go('/')} aria-label="나가기 (진행 상황은 저장돼요)">
           <Icon name="close" />
         </button>
-        <div className="bar fat grow">
-          <i style={{ width: `${(answered / (answered + left)) * 100}%` }} />
+        <div
+          className="bar study-bar grow"
+          role="progressbar"
+          aria-label="오늘 학습"
+          aria-valuemin={0}
+          aria-valuemax={dayTotal}
+          aria-valuenow={todayCount}
+          aria-valuetext={`오늘 ${todayCount}장 봤어요, 남은 ${left}장`}
+        >
+          <i style={{ width: `${(todayCount / dayTotal) * 100}%` }} />
         </div>
-        <span className="hud-item xp">
+        <span className="left-count" aria-hidden="true">
+          남은 {left}장
+        </span>
+        <span className="hud-item xp" aria-label={`오늘 XP ${xpToday}`} role="img">
           <Icon name="bolt" size={18} fill />
-          {s.log[dayKey(now)]?.xp ?? 0}
+          {xpToday}
           {pop && (
             <em className="xp-pop" key={pop.key}>
               +{pop.xp}
@@ -156,7 +208,8 @@ export function Study() {
           disabled={!undo.current}
           onClick={() => {
             if (!undo.current) return
-            restore(undo.current)
+            restore(undo.current.snap)
+            setRedo(undo.current.card)
             undo.current = null
             setLast(undefined)
             setAnswered((n) => Math.max(0, n - 1))
@@ -167,18 +220,19 @@ export function Study() {
           <Icon name="undo" />
         </button>
       </header>
-      <div className="counts study-counts">
-        <span className="c-review">복습 {q.review}</span>
-        <span className="c-learning">외우는 중 {q.learning}</span>
-        <span className="c-new">새 단어 {q.fresh}</span>
-      </div>
 
       <div className="card-area">
         {error && <p className="error">{error}</p>}
         {word && (
-          <div className={`flash ${revealed ? 'open' : ''}`} key={cardKey} onClick={() => !revealed && setRevealed(true)}>
+          <div className={`flash ${revealed ? 'open' : ''} ${missed ? 'missed' : ''}`} key={cardKey} onClick={() => !revealed && setRevealed(true)}>
             <div className="flash-head">
-              <span className={`chip k-${q.next.kind}`}>{KIND_LABEL[q.next.kind]}</span>
+              {missed ? (
+                <span className="chip k-again" role="status">
+                  다시 나와요 · {intervals?.[Rating.Again]}
+                </span>
+              ) : (
+                q.next.kind === 'new' && <span className="chip k-new">새 단어</span>
+              )}
               <span className="grow" />
               <button
                 className="icon-btn"
@@ -197,6 +251,7 @@ export function Study() {
                   toggleMark(word.id)
                 }}
                 aria-label="북마크"
+                aria-pressed={marked}
               >
                 <Icon name="mark" fill={marked} />
               </button>
@@ -236,15 +291,15 @@ export function Study() {
           </button>
         ) : (
           <>
-            <button className="btn ghost big" onClick={onAgain} disabled={!word}>
+            <button className="btn ghost big" onClick={onAgain} disabled={!word} aria-label={answerLabel('모르겠어요', intervals?.[Rating.Again])}>
               모르겠어요
               <small>{intervals?.[Rating.Again]}</small>
             </button>
-            <button className="btn primary big" onClick={() => submit(Rating.Good)} disabled={!word}>
+            <button className="btn primary big" onClick={() => submit(Rating.Good)} disabled={!word} aria-label={answerLabel('알아요', intervals?.[Rating.Good])}>
               알아요
               <small>{intervals?.[Rating.Good]}</small>
             </button>
-            <button className="btn ghost big" onClick={() => submit(Rating.Easy)} disabled={!word}>
+            <button className="btn ghost big" onClick={() => submit(Rating.Easy)} disabled={!word} aria-label={answerLabel('쉬워요', intervals?.[Rating.Easy])}>
               쉬워요
               <small>{intervals?.[Rating.Easy]}</small>
             </button>

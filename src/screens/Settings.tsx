@@ -1,34 +1,31 @@
 import { useRef } from 'react'
+import { exportBackup, readBackup, useMeta } from '../backup'
 import { LEVELS } from '../data'
-import { getState, replaceState, resetAll, update, useStore, type State } from '../store'
-import { dayKey, formatDay, upcomingExams } from '../util'
+import { canUndoImport, importState, resetAll, undoImport, update, useStore, type State } from '../store'
+import { formatDay, upcomingExams } from '../util'
 
 export function Settings() {
   const st = useStore((s) => s.settings)
+  const meta = useMeta()
   const file = useRef<HTMLInputElement>(null)
   const exams = upcomingExams(new Date(), 4)
   const set = (patch: Partial<State['settings']>) => update((d) => void Object.assign(d.settings, patch))
 
-  const exportData = () => {
-    const { settings, ...rest } = getState()
-    // The API key stays on this device.
-    const blob = new Blob([JSON.stringify({ ...rest, settings: { ...settings, apiKey: '' } })], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `jlpt-ruma-backup-${dayKey()}.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-
   const importData = async (f: File) => {
+    let data: unknown
     try {
-      const data = JSON.parse(await f.text()) as State
-      if (data.v !== 2 || !data.cards || !data.settings) throw new Error()
-      if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요?')) return
-      replaceState({ ...data, settings: { ...data.settings, apiKey: st.apiKey } })
+      data = JSON.parse(await f.text())
     } catch {
-      alert('JLPT 루마 백업 파일이 아니에요.')
+      data = null
     }
+    const read = readBackup(data)
+    if (!read.ok) {
+      alert(read.reason === 'newer' ? '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 새로고침한 뒤 다시 가져와 주세요.' : 'JLPT 루마 백업 파일이 아니에요.')
+      return
+    }
+    if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요? 바로 되돌릴 수 있어요.')) return
+    // the API key on this device is kept
+    importState({ ...read.state, settings: { ...read.state.settings, apiKey: st.apiKey } })
   }
 
   return (
@@ -42,7 +39,7 @@ export function Settings() {
         <label>목표 급수</label>
         <div className="seg">
           {LEVELS.map((l) => (
-            <button key={l} className={st.target === l ? 'on' : ''} onClick={() => set({ target: l })}>
+            <button key={l} className={st.target === l ? 'on' : ''} aria-pressed={st.target === l} onClick={() => set({ target: l })}>
               N{l}
             </button>
           ))}
@@ -50,7 +47,7 @@ export function Settings() {
         <label>하루 새 단어</label>
         <div className="seg">
           {[5, 10, 20, 30, 50].map((n) => (
-            <button key={n} className={st.dailyNew === n ? 'on' : ''} onClick={() => set({ dailyNew: n })}>
+            <button key={n} className={st.dailyNew === n ? 'on' : ''} aria-pressed={st.dailyNew === n} onClick={() => set({ dailyNew: n })}>
               {n}
             </button>
           ))}
@@ -61,7 +58,7 @@ export function Settings() {
         <label htmlFor="exam">시험일</label>
         <div className="chips">
           {exams.map((d) => (
-            <button key={d} className={`chip-btn ${st.examDate === d ? 'on' : ''}`} onClick={() => set({ examDate: d })}>
+            <button key={d} className={`chip-btn ${st.examDate === d ? 'on' : ''}`} aria-pressed={st.examDate === d} onClick={() => set({ examDate: d })}>
               {formatDay(d)}
             </button>
           ))}
@@ -80,7 +77,7 @@ export function Settings() {
               ['dark', '다크'],
             ] as const
           ).map(([k, label]) => (
-            <button key={k} className={st.theme === k ? 'on' : ''} onClick={() => set({ theme: k })}>
+            <button key={k} className={st.theme === k ? 'on' : ''} aria-pressed={st.theme === k} onClick={() => set({ theme: k })}>
               {label}
             </button>
           ))}
@@ -111,8 +108,19 @@ export function Settings() {
       <section className="card form">
         <h3>데이터</h3>
         <p className="muted small">학습 기록은 이 기기의 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.</p>
+        <p className="small last-backup">
+          {meta.lastExport ? `마지막 백업: ${formatDay(meta.lastExport)}` : '아직 백업한 적이 없어요.'}
+        </p>
+        {canUndoImport() && (
+          <p className="note row-note" role="status">
+            <span className="grow">백업 파일의 기록으로 바꿨어요.</span>
+            <button className="link" onClick={() => undoImport()}>
+              가져오기 되돌리기
+            </button>
+          </p>
+        )}
         <div className="row">
-          <button className="btn ghost" onClick={exportData}>
+          <button className="btn ghost" onClick={exportBackup}>
             백업 내보내기
           </button>
           <button className="btn ghost" onClick={() => file.current?.click()}>
@@ -140,8 +148,6 @@ export function Settings() {
 
       <p className="muted small center">
         복습 간격: FSRS (ts-fsrs, MIT) · 단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반)
-        <br />
-        한국어 뜻은 N5 · N4 제공
       </p>
     </>
   )

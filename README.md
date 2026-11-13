@@ -56,6 +56,5 @@ npm run data     # data/raw + data/ko → public/data 재생성
 ## 단어 데이터
 
 - 단어 목록: [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) (MIT, tanos.co.uk 기반) — `data/raw/`
-- 한국어 뜻: `data/ko/n{급수}-*.json` (`{ "<idx>": "뜻" }`). 현재 N5 · N4 제공, N3~N1은 영어 뜻으로 표시됩니다.
-- 한국어 뜻을 추가하려면 `node scripts/make-chunks.mjs <급수>`로 번역용 TSV를 만들고, 결과를 `data/ko/`에 넣은 뒤
-  `npm run data`를 실행하고 `src/data.ts`의 `KO_READY`를 갱신합니다.
+- 한국어 뜻: `data/ko/n{급수}-*.json` (`{ "<idx>": "뜻" }`). N5~N1 전체(8,130개)에 들어 있습니다. 모델이 번역한 것으로 표본만 확인했습니다.
+- 뜻을 고치려면 `data/ko/`의 해당 항목을 수정하고 `npm run data`를 실행합니다. (`node scripts/make-chunks.mjs <급수>`는 번역용 TSV를 만듭니다.)
