@@ -4,28 +4,34 @@
     <linearGradient id="d" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#3a0d05" stop-opacity="0"/><stop offset="1" stop-color="#3a0d05" stop-opacity=".34"/></linearGradient>
     <linearGradient id="v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf8"/><stop offset="1" stop-color="#f3e7d6"/></linearGradient>
     <clipPath id="b"><path d="M60 9c30 0 49 24 49 54 0 28-20 47-49 47S11 91 11 63C11 33 30 9 60 9Z"/></clipPath>
+    <filter id="s" x="-30%" y="-150%" width="160%" height="400%"><feGaussianBlur stdDeviation="9"/></filter>
+    <pattern id="w" width="88" height="44" patternUnits="userSpaceOnUse"><path transform="scale(2)" fill="none" stroke="#fff" stroke-width="1.3" d="M0 22a22 22 0 0 1 44 0M6 22a16 16 0 0 1 32 0M12 22a10 10 0 0 1 20 0M-22 11a22 22 0 0 1 44 0M22 11a22 22 0 0 1 44 0M-16 11a16 16 0 0 1 32 0M28 11a16 16 0 0 1 32 0M-10 11a10 10 0 0 1 20 0M34 11a10 10 0 0 1 20 0"/></pattern>
+    <linearGradient id="d2" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="120"><stop offset=".55" stop-color="#3a0d05" stop-opacity="0"/><stop offset="1" stop-color="#3a0d05" stop-opacity=".34"/></linearGradient>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#22789f"/><stop offset="1" stop-color="#0f4a69"/></radialGradient>
   </defs>
-  <rect width="512" height="512" fill="#165e83"/>
-  <g transform="translate(88 90) scale(2.8)">
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#w)" opacity="0.09"/>
+  
+  <g transform="translate(-62.0 18.3) scale(5.3)">
+    <rect x="-60" y="63" width="240" height="70" fill="#e0442f"/><rect x="-60" y="63" width="240" height="70" fill="url(#d2)"/>
     <g clip-path="url(#b)">
       <rect width="120" height="120" fill="#e0442f"/>
-      <g fill="none" stroke="#f0c24f" stroke-linecap="round">
-        <path d="M14 80q3 14 13 24M106 80q-3 14-13 24" stroke-width="5.5"/>
-        <path d="M25 87q3 11 11 19M95 87q-3 11-11 19" stroke-width="5"/>
-        <path d="M37 91q2 8 7 14M83 91q-2 8-7 14" stroke-width="4.5"/>
-      </g>
-      <path d="M60 89.5q1.6 7 8.5 8.5-6.9 1.6-8.5 8.5-1.6-6.9-8.5-8.5 6.9-1.5 8.5-8.500Z" fill="#f0c24f" stroke="#f0c24f" stroke-width="1.5" stroke-linejoin="round"/>
       <path d="M22 30q38-17 76 0" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="4" stroke-linecap="round"/>
       <rect width="120" height="120" fill="url(#d)"/><rect width="120" height="120" fill="url(#h)"/>
+    </g>
+    <g fill="none" stroke="#f0c24f" stroke-linecap="round">
+      <path d="M14 80q3 14 13 24M106 80q-3 14-13 24" stroke-width="5.5"/>
+      <path d="M25 87q3 11 11 19M95 87q-3 11-11 19" stroke-width="5"/>
+      <path d="M37 91q2 8 7 14M83 91q-2 8-7 14" stroke-width="4.5"/>
     </g>
     <path d="M60 34c16 0 28 3 34 10 6 8 6 22 0 30-6 7-18 10-34 10s-28-3-34-10c-6-8-6-22 0-30 6-7 18-10 34-10Z" fill="url(#v)" stroke="#f0c24f" stroke-width="1.8"/>
     <ellipse cx="30" cy="72.5" rx="7" ry="4.2" fill="#f7a9b4"/><ellipse cx="90" cy="72.5" rx="7" ry="4.2" fill="#f7a9b4"/>
     <path d="M27 74.5l1.6-4M30 74.5l1.6-4M33 74.5l1.6-4M87 74.5l1.6-4M90 74.5l1.6-4M93 74.5l1.6-4" fill="none" stroke="#e8798b" stroke-width="1.1" stroke-linecap="round"/>
     <g fill="none" stroke="#2a2022" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M36 52q5-3.5 10-2.5M84 52q-5-3.5-10-2.5" stroke-width="2.4"/>
-      <path d="M55 69q2.5 3.6 5 0q2.5 3.6 5 0" stroke-width="2.2"/>
+      <path d="M36 51q5-3.5 10-2.5M84 51q-5-3.5-10-2.5" stroke-width="2.8"/>
+      <path d="M55 69q2.5 3.6 5 0q2.5 3.6 5 0" stroke-width="2.4"/>
     </g>
-    <circle cx="45" cy="64" r="6.5" fill="#2a2022"/><circle cx="75" cy="64" r="6.5" fill="#2a2022"/>
-    <circle cx="43" cy="61.8" r="2.1" fill="#fff"/><circle cx="73" cy="61.8" r="2.1" fill="#fff"/>
+    <circle cx="45" cy="63.5" r="7.2" fill="#2a2022"/><circle cx="75" cy="63.5" r="7.2" fill="#2a2022"/>
+    <circle cx="42.8" cy="61" r="2.4" fill="#fff"/><circle cx="72.8" cy="61" r="2.4" fill="#fff"/>
   </g>
 </svg>
