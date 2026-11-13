@@ -6,18 +6,21 @@ import { Home } from './screens/Home'
 import { LevelScreen } from './screens/Level'
 import { Onboarding } from './screens/Onboarding'
 import { Settings } from './screens/Settings'
+import { Stats } from './screens/Stats'
 import { Study } from './screens/Study'
 import { Words } from './screens/Words'
 import { useStore } from './store'
 
 type Route =
-  | { name: 'home' | 'study' | 'words' | 'settings' }
+  | { name: 'home' | 'study' | 'stats' | 'settings' }
+  | { name: 'words'; tab?: 'weak' }
   | { name: 'level'; level: Level }
 
 function parse(hash: string): Route {
   const [, a, b] = hash.split('/')
   if (a === 'level' && ['1', '2', '3', '4', '5'].includes(b)) return { name: 'level', level: Number(b) as Level }
-  if (a === 'study' || a === 'words' || a === 'settings') return { name: a }
+  if (a === 'words') return b === 'weak' ? { name: 'words', tab: 'weak' } : { name: 'words' }
+  if (a === 'study' || a === 'stats' || a === 'settings') return { name: a }
   return { name: 'home' }
 }
 
@@ -28,6 +31,7 @@ export const go = (path: string) => {
 const TABS: { path: string; name: Route['name']; label: string; icon: IconName }[] = [
   { path: '/', name: 'home', label: '홈', icon: 'home' },
   { path: '/words', name: 'words', label: '단어장', icon: 'book' },
+  { path: '/stats', name: 'stats', label: '기록', icon: 'chart' },
   { path: '/settings', name: 'settings', label: '설정', icon: 'gear' },
 ]
 
@@ -68,14 +72,16 @@ export default function App() {
       </>
     )
 
-  const tab = route.name === 'level' ? 'home' : route.name
+  // a level's word list belongs to the 단어장 tab, where the level rows are
+  const tab = route.name === 'level' ? 'words' : route.name
   return (
     <div className="app">
       <SaveWarning />
       <main className="page">
         {route.name === 'home' && <Home />}
         {route.name === 'level' && <LevelScreen level={route.level} />}
-        {route.name === 'words' && <Words />}
+        {route.name === 'words' && <Words key={route.tab ?? 'search'} initialTab={route.tab} />}
+        {route.name === 'stats' && <Stats />}
         {route.name === 'settings' && <Settings />}
       </main>
       <nav className="tabbar">

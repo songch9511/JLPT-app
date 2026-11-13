@@ -38,7 +38,8 @@ export function loadLevel(l: Level): Promise<Word[]> {
   return p
 }
 
-export function useLevel(l: Level | null): { words: Word[] | null; error: string | null } {
+/** `attempt` changes to load again after a failure. */
+export function useLevel(l: Level | null, attempt = 0): { words: Word[] | null; error: string | null } {
   const [res, setRes] = useState<{ l: Level | null; words: Word[] | null; error: string | null }>({
     l,
     words: null,
@@ -54,7 +55,7 @@ export function useLevel(l: Level | null): { words: Word[] | null; error: string
     return () => {
       live = false
     }
-  }, [l])
+  }, [l, attempt])
   return res.l === l ? res : { words: null, error: null }
 }
 

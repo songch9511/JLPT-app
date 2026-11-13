@@ -86,16 +86,14 @@ describe('store: import with undo', () => {
 })
 
 describe('backup file format', () => {
-  it('adds format fields next to `v` and leaves out the API key', async () => {
-    const { store, backup } = await bootBackup()
-    store.update((d) => {
-      d.settings.apiKey = 'sk-ant-secret'
-      d.xp = 40
-    })
+  it('adds format fields next to `v`, and an API key saved by an older version never reaches the file', async () => {
+    const old = { v: 2, onboarded: true, settings: { target: 5, apiKey: 'sk-ant-secret' }, cards: {}, log: {}, marks: [], xp: 0 }
+    const { store, backup } = await bootBackup({ now: NOW, saved: old })
+    store.update((d) => void (d.xp = 40))
     const file = backup.backupFile(store.getState(), new Date(NOW))
     expect(file).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 1, v: 2, xp: 40, exportedAt: new Date(NOW).toISOString() })
-    expect(file.app).toMatch(/^kasane /)
-    expect(file.settings.apiKey).toBe('')
+    expect(file.app).toMatch(/^jlpt-ruma /)
+    expect(file.settings).not.toHaveProperty('apiKey')
   })
 
   it('reads its own files, minus the format fields', async () => {

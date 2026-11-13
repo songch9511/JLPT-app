@@ -12,16 +12,14 @@ const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev
 /** Fields a backup file carries next to the state; they are not part of the state itself. */
 const ENVELOPE = ['format', 'formatVersion', 'app', 'exportedAt'] as const
 
-/** The backup file's content: the state (without the API key) plus format fields next to the existing `v`. */
+/** The backup file's content: the state plus format fields next to the existing `v`. */
 export function backupFile(s: State, now = new Date()) {
   return {
     format: BACKUP_FORMAT,
     formatVersion: BACKUP_FORMAT_VERSION,
-    app: `kasane ${APP_VERSION}`,
+    app: `jlpt-ruma ${APP_VERSION}`,
     exportedAt: now.toISOString(),
     ...s,
-    // the API key stays on this device
-    settings: { ...s.settings, apiKey: '' },
   }
 }
 
@@ -62,14 +60,15 @@ export function exportBackup() {
 
 /**
  * Download whatever is stored, without going through the store: used by the error screen, where the
- * stored state may be what is broken. The API key is removed when the text can be parsed.
+ * stored state may be what is broken. An API key left by the removed AI feature (versions before the
+ * store dropped it on load) is taken out when the text can be parsed.
  */
 export function exportRaw(raw: string | null) {
   let json = raw ?? 'null'
   try {
     const s = JSON.parse(json)
-    if (s && typeof s === 'object' && s.settings && typeof s.settings === 'object') s.settings.apiKey = ''
-    json = JSON.stringify({ format: BACKUP_FORMAT, formatVersion: BACKUP_FORMAT_VERSION, app: `kasane ${APP_VERSION}`, exportedAt: new Date().toISOString(), ...s })
+    if (s && typeof s === 'object' && s.settings && typeof s.settings === 'object') delete s.settings.apiKey
+    json = JSON.stringify({ format: BACKUP_FORMAT, formatVersion: BACKUP_FORMAT_VERSION, app: `jlpt-ruma ${APP_VERSION}`, exportedAt: new Date().toISOString(), ...s })
   } catch {
     json = json.replace(/"apiKey"\s*:\s*"[^"]*"/g, '"apiKey":""')
   }

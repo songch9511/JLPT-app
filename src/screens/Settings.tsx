@@ -1,7 +1,8 @@
 import { useRef } from 'react'
 import { exportBackup, readBackup, useMeta } from '../backup'
+import { TITLE, UNOFFICIAL_NOTICE } from '../brand'
 import { LEVELS } from '../data'
-import { canUndoImport, importState, resetAll, undoImport, update, useStore, type State } from '../store'
+import { canUndoImport, GOALS, importState, MAX_DAILY_NEW, resetAll, undoImport, update, useStore, type State } from '../store'
 import { formatDay, upcomingExams } from '../util'
 
 export function Settings() {
@@ -24,8 +25,7 @@ export function Settings() {
       return
     }
     if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요? 바로 되돌릴 수 있어요.')) return
-    // the API key on this device is kept
-    importState({ ...read.state, settings: { ...read.state.settings, apiKey: st.apiKey } })
+    importState(read.state)
   }
 
   return (
@@ -44,17 +44,36 @@ export function Settings() {
             </button>
           ))}
         </div>
+        {st.target < 5 && (
+          <label className="switch">
+            <span>
+              아래 급수 단어도 함께 (N{LEVELS.filter((l) => l > st.target).join('·N')})
+              <small className="muted">시험은 아래 급수 단어를 안다고 보고 나와요. 켜면 쉬운 급수부터 새 단어가 나오고, 시험 준비도에도 함께 세요.</small>
+            </span>
+            <input type="checkbox" checked={st.includeLower} onChange={(e) => set({ includeLower: e.target.checked })} />
+          </label>
+        )}
         <label>하루 새 단어</label>
         <div className="seg">
-          {[5, 10, 20, 30, 50].map((n) => (
+          {[5, 10, 20, 30, MAX_DAILY_NEW].map((n) => (
             <button key={n} className={st.dailyNew === n ? 'on' : ''} aria-pressed={st.dailyNew === n} onClick={() => set({ dailyNew: n })}>
               {n}
             </button>
           ))}
         </div>
         <p className="muted small">
-          지금 {st.dailyNew}개. 새 단어가 많을수록 며칠 뒤 복습도 늘어나요. 복습이 부담되면 줄이세요.
+          지금 {st.dailyNew}개. 새 단어가 많을수록 며칠 뒤 복습도 늘어나요. 복습이 밀리지 않도록 하루 {MAX_DAILY_NEW}개까지만 정할 수
+          있어요.
         </p>
+        <label>시험날 목표</label>
+        <div className="seg">
+          {GOALS.map((g) => (
+            <button key={g} className={st.goal === g ? 'on' : ''} aria-pressed={st.goal === g} onClick={() => set({ goal: g })}>
+              {Math.round(g * 100)}%
+            </button>
+          ))}
+        </div>
+        <p className="muted small">시험날 기억할 단어의 목표 비율이에요. 합격선에서 나온 숫자가 아니라 앱이 정한 기준이에요.</p>
         <label htmlFor="exam">시험일</label>
         <div className="chips">
           {exams.map((d) => (
@@ -86,23 +105,6 @@ export function Settings() {
           <span>카드가 나올 때 발음 자동 재생</span>
           <input type="checkbox" checked={st.autoSpeak} onChange={(e) => set({ autoSpeak: e.target.checked })} />
         </label>
-      </section>
-
-      <section className="card form">
-        <h3>AI</h3>
-        <label htmlFor="key">Anthropic API 키</label>
-        <input
-          id="key"
-          type="password"
-          value={st.apiKey}
-          onChange={(e) => set({ apiKey: e.target.value })}
-          placeholder="sk-ant-…"
-          autoComplete="off"
-        />
-        <p className="muted small">
-          예문 · 한자 풀이 · 암기 팁과 약한 단어 이야기에 쓰여요. 키는 이 기기에만 저장되고, 요청은 이 브라우저에서
-          Anthropic API로 바로 보내요. 한 번 받은 단어 설명은 저장해 두고 다시 요청하지 않아요.
-        </p>
       </section>
 
       <section className="card form">
@@ -146,9 +148,18 @@ export function Settings() {
         </button>
       </section>
 
-      <p className="muted small center">
-        복습 간격: FSRS (ts-fsrs, MIT) · 단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반)
-      </p>
+      <section className="card about" aria-labelledby="about-title">
+        <h3 id="about-title">정보</h3>
+        <p>
+          <b>{TITLE}</b>
+        </p>
+        <p className="notice">{UNOFFICIAL_NOTICE}</p>
+        <ul className="muted small credits">
+          <li>단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반). JLPT는 공식 어휘 목록을 공개하지 않아서 비공식 목록이에요.</li>
+          <li>한국어 뜻은 기계 번역이라 틀린 곳이 있을 수 있어요.</li>
+          <li>복습 간격: FSRS (ts-fsrs, MIT)</li>
+        </ul>
+      </section>
     </>
   )
 }

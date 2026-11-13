@@ -4,13 +4,17 @@ export const KEY = 'kasane.state.v2'
 /** Friday 2026-11-13 09:00 in Seoul (the browser context runs in Asia/Seoul). */
 export const NOW = new Date('2026-11-13T09:00:00+09:00')
 
-type Settings = { target: number; examDate: string; dailyNew: number; theme: string; apiKey: string; autoSpeak: boolean }
+type Settings = { target: number; examDate: string; dailyNew: number; theme: string; autoSpeak: boolean; includeLower: boolean; goal: number }
 
-export function user(settings: Partial<Settings> = {}, extra: Record<string, unknown> = {}) {
+/**
+ * A saved state as an existing learner has it. Without `includeLower` it is a learner from before that
+ * setting: only the target level is studied (pass `includeLower: true` for a new learner's behaviour).
+ */
+export function user(settings: Partial<Settings> & Record<string, unknown> = {}, extra: Record<string, unknown> = {}) {
   return {
     v: 2,
     onboarded: true,
-    settings: { target: 5, examDate: '2026-12-06', dailyNew: 10, theme: 'light', apiKey: '', autoSpeak: false, ...settings },
+    settings: { target: 5, examDate: '2026-12-06', dailyNew: 10, theme: 'light', autoSpeak: false, ...settings },
     cards: {},
     log: {},
     marks: [],
@@ -65,6 +69,9 @@ export async function answer(page: Page, choice: '알아요' | '쉬워요' | '�
   }
   await expect.poll(async () => (await todayLog(page))?.c ?? 0).toBe(before + 1)
 }
+
+/** The home screen has rendered (its headline is the exam readiness card). */
+export const homeShown = (page: Page) => expect(page.getByRole('heading', { name: /시험날 기억할 단어/ })).toBeVisible()
 
 /** Current word on the study card. */
 export const currentWord = (page: Page) => page.locator('.flash-word').innerText()

@@ -8,7 +8,8 @@ describe('store: loading', () => {
     const { store } = await boot({ now: NOW })
     const s = store.getState()
     expect(s.onboarded).toBe(false)
-    expect(s.settings).toEqual({ target: 5, examDate: '2026-12-06', dailyNew: 20, theme: 'system', apiKey: '', autoSpeak: false })
+    // a new learner studies the lower levels too (03 decision 2)
+    expect(s.settings).toEqual({ target: 5, examDate: '2026-12-06', dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, goal: 0.8 })
     expect(s.cards).toEqual({})
     expect(s.marks).toEqual([])
     expect(s.xp).toBe(0)
@@ -19,19 +20,23 @@ describe('store: loading', () => {
     expect(store.getState().settings.examDate).toBe('2027-07-04')
   })
 
-  it('fills settings added in later versions and keeps what was saved', async () => {
+  it('fills settings added in later versions and keeps what was saved; drops the removed API key', async () => {
     const saved = {
       v: 2,
       onboarded: true,
-      settings: { target: 3, examDate: '2027-07-04', dailyNew: 10, theme: 'dark' }, // no apiKey / autoSpeak
+      settings: { target: 3, examDate: '2027-07-04', dailyNew: 10, theme: 'dark', apiKey: 'sk-ant-old' }, // no autoSpeak / includeLower / goal
       cards: { '3-0': card({ due: Date.parse(NOW) + DAY }) },
       log: {},
       xp: 120,
       // no marks
     }
-    const { store } = await boot({ now: NOW, saved })
+    const { store, ls } = await boot({ now: NOW, saved })
     const s = store.getState()
-    expect(s.settings).toEqual({ target: 3, examDate: '2027-07-04', dailyNew: 10, theme: 'dark', apiKey: '', autoSpeak: false })
+    // a learner from before `includeLower` keeps studying the target level only, so the plan does not suddenly grow
+    expect(s.settings).toEqual({ target: 3, examDate: '2027-07-04', dailyNew: 10, theme: 'dark', autoSpeak: false, includeLower: false, goal: 0.8 })
+    expect(JSON.stringify(s)).not.toContain('sk-ant-old')
+    // and out of storage at once, not only at the next save
+    expect(ls.getItem(KEY)).not.toContain('sk-ant-old')
     expect(s.marks).toEqual([])
     expect(s.xp).toBe(120)
     expect(Object.keys(s.cards)).toEqual(['3-0'])
@@ -186,5 +191,36 @@ describe('store: storage full', () => {
     expect(JSON.parse(storage.getItem(KEY)!).xp).toBe(42)
     expect(storage.getItem('kasane.ai.5-0')).toBeNull()
     expect(storage.getItem('other.app.key')).toBe('keep')
+  })
+})
+
+describe('store: additive fields without a version bump', () => {
+  it('an old saved state (v2, no ms/e/includeLower/goal, dailyNew 100 from the old “맞추기” link) loads and is normalised', async () => {
+    const saved = {
+      v: 2,
+      onboarded: true,
+      settings: { target: 1, examDate: '2026-12-06', dailyNew: 100, theme: 'light', apiKey: 'sk-ant-x', autoSpeak: true },
+      cards: { '1-0': card({ due: Date.parse(NOW) + DAY }) },
+      log: { '2026-11-12': { c: 5, n: 5, r: 0, p: 0, xp: 50 } },
+      marks: ['1-0'],
+      xp: 50,
+    }
+    const { store, srs } = await boot({ now: NOW, saved })
+    const s = store.getState()
+    expect(s.v).toBe(2)
+    expect(s.settings).toEqual({ target: 1, examDate: '2026-12-06', dailyNew: 40, theme: 'light', autoSpeak: true, includeLower: false, goal: 0.8 })
+    expect(s.log['2026-11-12']).toEqual({ c: 5, n: 5, r: 0, p: 0, xp: 50 })
+    expect(s.cards['1-0']).toEqual(saved.cards['1-0'])
+    // answering adds the new fields alongside the old ones
+    srs.answer('1-1', srs.Rating.Good, new Date(NOW), 4000)
+    expect(store.getState().log['2026-11-13']).toMatchObject({ c: 1, ms: 4000 })
+  })
+
+  it('importing an old backup goes through the same normalisation', async () => {
+    const { store } = await boot({ now: NOW })
+    store.replaceState({ v: 2, onboarded: true, settings: { target: 2, dailyNew: 50, apiKey: 'k', goal: 0.55 }, cards: {}, log: {} } as never)
+    const st = store.getState().settings as Record<string, unknown>
+    expect(st).toMatchObject({ target: 2, dailyNew: 40, includeLower: false, goal: 0.8 })
+    expect(st).not.toHaveProperty('apiKey')
   })
 })

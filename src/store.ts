@@ -32,6 +32,10 @@ export interface DayLog {
   xp?: number
   /** quests already rewarded this day (bitmask by quest index) */
   q?: number
+  /** active study time in ms: from a card appearing to its answer, at most 60 s per card (03 §5.1) */
+  ms?: number
+  /** sum of the predicted recall of the review answers counted in `r`, to compare with `p` (03 §4.1) */
+  e?: number
 }
 
 export interface State {
@@ -42,16 +46,25 @@ export interface State {
     examDate: string
     dailyNew: number
     theme: 'system' | 'light' | 'dark'
-    apiKey: string
     autoSpeak: boolean
+    /** also study (and count towards readiness) the levels below the target, e.g. N5·N4 for an N3 learner */
+    includeLower: boolean
+    /** share of the readiness word set the learner aims to remember on the exam day (0.7 · 0.8 · 0.9) */
+    goal: number
   }
   cards: Record<string, SCard>
   log: Record<string, DayLog>
   marks: string[]
   xp: number
+  /** highest expected recall reached so far: journey stamps once earned stay (03 §6) */
+  bestE?: number
 }
 
 // storage keys keep the app's former name (Kasane) so existing learners keep their records
+/** New words a day never go above this, whatever the setting or an older saved value says (03 §5.1). */
+export const MAX_DAILY_NEW = 40
+export const GOALS = [0.7, 0.8, 0.9] as const
+
 const KEY = 'kasane.state.v2'
 export const STATE_KEY = KEY
 /** The state as it was just before the last import, so the import can be undone. */
@@ -61,7 +74,8 @@ function initial(): State {
   return {
     v: 2,
     onboarded: false,
-    settings: { target: 5, examDate: upcomingExams()[0], dailyNew: 20, theme: 'system', apiKey: '', autoSpeak: false },
+    // new learners include the lower levels; states saved before this setting existed keep it off (normalize)
+    settings: { target: 5, examDate: upcomingExams()[0], dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, goal: 0.8 },
     cards: {},
     log: {},
     marks: [],
@@ -69,13 +83,39 @@ function initial(): State {
   }
 }
 
+/**
+ * A saved or imported state, completed with defaults for fields added since it was written. Additive
+ * changes only, so the format stays `v: 2`: a missing `includeLower` means a learner from before the
+ * setting (kept off so their plan does not suddenly grow); `dailyNew` is held to MAX_DAILY_NEW; the
+ * API key of the removed AI feature is dropped.
+ */
+function normalize(s: State): State {
+  const base = initial()
+  const { apiKey: _apiKey, ...settings } = { ...base.settings, ...s.settings } as State['settings'] & { apiKey?: unknown }
+  if (s.settings.includeLower === undefined) settings.includeLower = false
+  const daily = Number(settings.dailyNew)
+  settings.dailyNew = Number.isFinite(daily) ? Math.min(MAX_DAILY_NEW, Math.max(0, Math.round(daily))) : base.settings.dailyNew
+  if (!GOALS.includes(settings.goal as (typeof GOALS)[number])) settings.goal = base.settings.goal
+  settings.includeLower = settings.includeLower === true
+  return { ...base, ...s, settings }
+}
+
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY)
     if (raw) {
       const s = JSON.parse(raw) as State
-      const base = initial()
-      return { ...base, ...s, settings: { ...base.settings, ...s.settings } }
+      if (s && typeof s === 'object' && s.settings && typeof s.settings === 'object') {
+        const next = normalize(s)
+        // an API key from the removed AI feature is taken out of storage right away, not at the next answer
+        if ('apiKey' in s.settings)
+          try {
+            localStorage.setItem(KEY, JSON.stringify(next))
+          } catch {
+            /* dropped from memory at least; the next save removes it */
+          }
+        return next
+      }
     }
   } catch {
     /* storage unavailable or corrupt: start fresh */
@@ -168,8 +208,11 @@ export function useStore<T>(sel: (s: State) => T): T {
 }
 
 export function replaceState(next: State) {
-  const base = initial()
-  update((d) => Object.assign(d, base, next, { settings: { ...base.settings, ...next.settings } }))
+  const full = normalize(next)
+  update((d) => {
+    for (const k of Object.keys(d)) delete (d as unknown as Record<string, unknown>)[k]
+    Object.assign(d, full)
+  })
 }
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x)

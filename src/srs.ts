@@ -2,7 +2,7 @@
 // next review further out when remembered and brings it back within minutes when forgotten.
 import { createEmptyCard, fsrs, generatorParameters, Rating, State as CardState, type Card, type Grade } from 'ts-fsrs'
 import { COUNTS, LEVELS, levelOf, wordId, type Level } from './data'
-import { getState, update, type DayLog, type SCard, type State } from './store'
+import { getState, MAX_DAILY_NEW, update, type DayLog, type SCard, type State } from './store'
 import { addDays, dayKey, daysBetween } from './util'
 
 export { Rating }
@@ -16,7 +16,7 @@ const LEARN_AHEAD_MS = 20 * 60_000
 const MATURE_DAYS = 21
 export const LEECH_LAPSES = 2
 
-const toCard = (c: SCard): Card => ({ ...c, due: new Date(c.due), last_review: c.last_review ? new Date(c.last_review) : undefined })
+export const toCard = (c: SCard): Card => ({ ...c, due: new Date(c.due), last_review: c.last_review ? new Date(c.last_review) : undefined })
 const fromCard = (c: Card): SCard => ({
   due: c.due.getTime(),
   stability: c.stability,
@@ -35,11 +35,11 @@ const fromCard = (c: Card): SCard => ({
  * device clock goes backwards or a backup comes from a device whose clock ran ahead. Schedule such a card
  * as if it were being answered right at its last review instead.
  */
-const reviewTime = (c: SCard | undefined, now: Date) => (c?.last_review && c.last_review > now.getTime() ? new Date(c.last_review) : now)
+export const reviewTime = (c: SCard | undefined, now: Date) => (c?.last_review && c.last_review > now.getTime() ? new Date(c.last_review) : now)
 
 const isLearning = (c: SCard) => c.state === CardState.Learning || c.state === CardState.Relearning
 
-function endOfDay(now: Date): number {
+export function endOfDay(now: Date): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime()
 }
 
@@ -56,25 +56,46 @@ export interface Queue {
   next: { id: string; kind: Kind } | null
   /** learning cards that come back later today (beyond the learn-ahead window) */
   waiting: number
+  /** when the first of the waiting learning cards comes due (null when none wait) */
+  nextDue: number | null
+}
+
+/**
+ * The levels whose words are studied and counted for readiness: the target alone, or with `includeLower`
+ * the target and every level below it, easiest first (03 §2.1 P4: the exam assumes the lower levels' words).
+ */
+export function studyLevels(settings: Pick<State['settings'], 'target' | 'includeLower'>): Level[] {
+  return settings.includeLower ? LEVELS.filter((l) => l >= settings.target) : [settings.target]
 }
 
 function nextNewIds(s: State, limit: number): string[] {
   const out: string[] = []
-  const l = s.settings.target
-  for (let i = 0; i < COUNTS[l] && out.length < limit; i++) {
-    const id = wordId(l, i)
-    if (!s.cards[id]) out.push(id)
-  }
+  for (const l of studyLevels(s.settings))
+    for (let i = 0; i < COUNTS[l] && out.length < limit; i++) {
+      const id = wordId(l, i)
+      if (!s.cards[id]) out.push(id)
+    }
   return out
 }
 
-export function newLeftToday(s: State, now: Date): number {
-  const log = s.log[dayKey(now)]
-  return Math.max(0, s.settings.dailyNew + (log?.x ?? 0) - (log?.n ?? 0))
+/** Words not yet introduced in the levels being studied. */
+export function newWordsLeft(s: State): number {
+  const b = breakdowns(s)
+  return studyLevels(s.settings).reduce((n, l) => n + b[l].new, 0)
 }
 
-/** `avoid` keeps the card just answered from reappearing immediately when something else is available. */
-export function buildQueue(s: State, now: Date, avoid?: string): Queue {
+/** New words still allowed today: the daily setting (never above MAX_DAILY_NEW) plus extras unlocked today. */
+export function newLeftToday(s: State, now: Date, dailyNew = s.settings.dailyNew): number {
+  const log = s.log[dayKey(now)]
+  return Math.max(0, Math.min(MAX_DAILY_NEW, dailyNew) + (log?.x ?? 0) - (log?.n ?? 0))
+}
+
+/**
+ * `avoid` keeps the card just answered from reappearing immediately when something else is available.
+ * `finishNow` shows learning cards that come back later today right away, so a session never has to wait
+ * for them (03 §5.2 P7).
+ */
+export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNow?: boolean } = {}): Queue {
   const t = now.getTime()
   const eod = endOfDay(now)
   const learning: [string, number][] = []
@@ -89,7 +110,7 @@ export function buildQueue(s: State, now: Date, avoid?: string): Queue {
   review.sort((a, b) => a[1] - b[1])
   const fresh = nextNewIds(s, newLeftToday(s, now))
 
-  const ready = learning.filter(([, due]) => due <= t + LEARN_AHEAD_MS)
+  const ready = opts.finishNow ? learning : learning.filter(([, due]) => due <= t + LEARN_AHEAD_MS)
   const dueNow = ready.filter(([, due]) => due <= t)
   const answered = s.log[dayKey(now)]?.c ?? 0
   // New words are sprinkled between reviews (every 4th card) instead of piling up at the end.
@@ -104,18 +125,27 @@ export function buildQueue(s: State, now: Date, avoid?: string): Queue {
   ]
   const next = candidates.find((c) => c.id !== avoid) ?? candidates[0] ?? null
 
-  return { learning: learning.length, review: review.length, fresh: fresh.length, next, waiting: learning.length - ready.length }
+  const waiting = learning.length - ready.length
+  const nextDue = waiting > 0 ? learning[ready.length][1] : null
+  return { learning: learning.length, review: review.length, fresh: fresh.length, next, waiting, nextDue }
 }
 
 // ── answering ───────────────────────────────────────────────────────────────
 
-/** Returns the XP earned by this answer (card XP plus any quest it completed). */
-export function answer(id: string, grade: Grade, now = new Date()): number {
+/** Time on one card counts up to this much: a card left on screen while the learner is away is not study. */
+export const MAX_CARD_MS = 60_000
+
+/**
+ * Returns the XP earned by this answer (card XP plus any quest it completed). `activeMs` is how long the
+ * card was on screen and visible before the answer; it is added to the day's study time.
+ */
+export function answer(id: string, grade: Grade, now = new Date(), activeMs?: number): number {
   let gained = 0
   update((d) => {
     const prev = d.cards[id]
+    const at = reviewTime(prev, now)
     const card = prev ? toCard(prev) : createEmptyCard(now)
-    const { card: next } = scheduler.next(card, reviewTime(prev, now), grade)
+    const { card: next } = scheduler.next(card, at, grade)
     d.cards = { ...d.cards, [id]: fromCard(next) }
     const key = dayKey(now)
     const log = { ...(d.log[key] ?? emptyLog()) }
@@ -124,7 +154,11 @@ export function answer(id: string, grade: Grade, now = new Date()): number {
     if (prev?.state === CardState.Review) {
       log.r++
       if (grade !== Rating.Again) log.p++
+      // what the model expected, so readiness can be corrected if the learner remembers less (03 §4.1)
+      const predicted = scheduler.get_retrievability(card, at, false)
+      if (Number.isFinite(predicted)) log.e = (log.e ?? 0) + predicted
     }
+    if (activeMs !== undefined && Number.isFinite(activeMs) && activeMs > 0) log.ms = (log.ms ?? 0) + Math.min(MAX_CARD_MS, Math.round(activeMs))
     d.log = { ...d.log, [key]: log }
 
     gained = XP_PER_CARD
@@ -213,6 +247,28 @@ export function forecast(s: State, now: Date, days = 7): number[] {
   return out
 }
 
+/**
+ * Seconds per answer measured over the last 14 days (03 §5.1); 8 s until 50 answers have been timed.
+ * Answers logged before time was recorded do not count.
+ */
+export function secondsPerAnswer(s: State, now: Date): number {
+  let ms = 0
+  let c = 0
+  for (let i = 0; i < 14; i++) {
+    const log = s.log[dayKey(addDays(now, -i))]
+    if (log?.ms) {
+      ms += log.ms
+      c += log.c
+    }
+  }
+  return c >= 50 ? ms / c / 1000 : 8
+}
+
+/** Minutes the cards still due today should take: a new word is answered about three times on its first day. */
+export function minutesFor(q: Pick<Queue, 'review' | 'learning' | 'fresh'>, secPerAnswer: number): number {
+  return Math.max(1, Math.round(((q.review + q.learning + 3 * q.fresh) * secPerAnswer) / 60))
+}
+
 /** Share of review cards remembered over the last `days` days; null until there is something to measure. */
 export function retention(s: State, now: Date, days = 30): number | null {
   let r = 0
@@ -249,16 +305,9 @@ export function leechIds(cards: State['cards'], limit = 40): string[] {
 
 // ── game layer ──────────────────────────────────────────────────────────────
 
-// XP is paid per card answered, whatever the answer, so honesty never costs points.
+// XP is paid per card answered, whatever the answer, so honesty never costs points. Levels were removed
+// (03 §6): cumulative XP is shown on the 기록 screen only.
 export const XP_PER_CARD = 10
-const XP_LEVEL_STEP = 150
-
-/** Level n starts at 150 · n(n−1)/2 XP: each level takes one more step than the last. */
-export function levelInfo(xp: number): { level: number; into: number; span: number } {
-  const level = Math.floor((1 + Math.sqrt(1 + (8 * xp) / XP_LEVEL_STEP)) / 2)
-  const base = (XP_LEVEL_STEP * level * (level - 1)) / 2
-  return { level, into: xp - base, span: XP_LEVEL_STEP * level }
-}
 
 export interface Quest {
   title: string
@@ -268,16 +317,15 @@ export interface Quest {
   done: boolean
 }
 
+/**
+ * One quest: finish today's plan (03 §6). Card-count and new-word quests rewarded fast tapping and new words
+ * over overdue reviews, so they were dropped.
+ */
 export function quests(s: State, now: Date): Quest[] {
   const log = s.log[dayKey(now)] ?? emptyLog()
   const q = buildQueue(s, now)
-  const newGoal = Math.min(10, s.settings.dailyNew)
   const cleared = log.c > 0 && !q.next && q.waiting === 0
-  return [
-    { title: '카드 20장 보기', have: Math.min(log.c, 20), need: 20, xp: 20 },
-    { title: `새 단어 ${newGoal}개 만나기`, have: Math.min(log.n, newGoal), need: newGoal, xp: 20 },
-    { title: '오늘 분량 모두 끝내기', have: cleared ? 1 : 0, need: 1, xp: 50 },
-  ].map((x) => ({ ...x, done: x.have >= x.need }))
+  return [{ title: '오늘 분량 끝내기', have: cleared ? 1 : 0, need: 1, xp: 50 }].map((x) => ({ ...x, done: x.have >= x.need }))
 }
 
 /** Sun..Sat of the current week: whether the user studied that day. */

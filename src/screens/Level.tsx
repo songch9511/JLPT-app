@@ -4,7 +4,7 @@ import { WordSheet } from '../components/WordSheet'
 import { COUNTS, meaning, useLevel, type Level, type Word } from '../data'
 import { breakdowns, STAGE_LABEL, stageOf, type Stage } from '../srs'
 import { update, useStore } from '../store'
-import { StageBar } from './Home'
+import { StageBar } from '../components/LevelList'
 
 const PAGE = 100
 const FILTERS: ('all' | Stage)[] = ['all', 'learning', 'young', 'mature', 'new']
@@ -26,7 +26,7 @@ export function LevelScreen({ level }: { level: Level }) {
   return (
     <>
       <header className="top">
-        <a className="icon-btn" href="#/" aria-label="뒤로">
+        <a className="icon-btn" href="#/words" aria-label="뒤로">
           <Icon name="back" />
         </a>
         <div className="grow">
