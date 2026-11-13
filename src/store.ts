@@ -51,6 +51,7 @@ export interface State {
   xp: number
 }
 
+// storage keys keep the app's former name (Kasane) so existing learners keep their records
 const KEY = 'kasane.state.v2'
 
 function initial(): State {
