@@ -452,15 +452,11 @@ button:disabled { cursor: default; opacity: 0.4; }
 .ruma-sparks path:nth-child(3) { animation-delay: 0.8s; }
 @keyframes twinkle { 50% { transform: scale(0.4); opacity: 0.4; } }
 
-/* mascot colour fill */
+/* mascot */
 .ruma-outline { fill: none; stroke: #7a3a2c; stroke-opacity: 0.28; stroke-width: 1.5; }
-.ruma-eyes > rect, .ruma-eyes > g > rect { transform-box: fill-box; transform-origin: center; animation: blink 4.6s ease-in-out infinite; }
+.ruma-pupil { transform-box: fill-box; transform-origin: center; transition: transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.ruma-blink { transform-box: fill-box; transform-origin: center; animation: blink 4.6s ease-in-out infinite; }
 @keyframes blink { 0%, 44%, 50%, 100% { transform: scaleY(1); } 47% { transform: scaleY(0.12); } }
-.ruma.sleep .ruma-eyes { opacity: 0.6; }
-.ruma-liquid { transition: transform 0.9s cubic-bezier(0.3, 1.2, 0.5, 1); }
-.ruma-liquid .wave { animation: wave 2.4s linear infinite; }
-.ruma-liquid .wave.back { animation-duration: 3.6s; animation-direction: reverse; }
-@keyframes wave { to { transform: translateX(60px); } }
 
 /* asleep until the day's study starts */
 .ruma.sleep .ruma-body { animation: breathe 3.6s ease-in-out infinite; }

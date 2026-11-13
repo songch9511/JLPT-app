@@ -1,21 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <radialGradient id="h" cx="34%" cy="24%" r="62%"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-    <linearGradient id="d" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#3a0d05" stop-opacity="0"/><stop offset="1" stop-color="#3a0d05" stop-opacity=".32"/></linearGradient>
+    <radialGradient id="h" cx="34%" cy="20%" r="62%"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="d" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#3a0d05" stop-opacity="0"/><stop offset="1" stop-color="#3a0d05" stop-opacity=".34"/></linearGradient>
     <linearGradient id="v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34292b"/><stop offset="1" stop-color="#120e10"/></linearGradient>
-    <filter id="g" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2"/></filter>
+    <filter id="g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3"/></filter>
     <clipPath id="b"><path d="M60 9c30 0 49 24 49 54 0 28-20 47-49 47S11 91 11 63C11 33 30 9 60 9Z"/></clipPath>
   </defs>
   <rect width="512" height="512" fill="#165e83"/>
   <g transform="translate(88 90) scale(2.8)">
-    <g clip-path="url(#b)"><rect width="120" height="120" fill="#e4553c"/><rect width="120" height="120" fill="url(#d)"/><rect width="120" height="120" fill="url(#h)"/></g>
-    <path d="M60 41c14 0 26 2 32 9 6 8 6 22 0 30-6 7-18 9-32 9s-26-2-32-9c-6-8-6-22 0-30 6-7 18-9 32-9Z" fill="url(#v)" stroke="#000" stroke-opacity=".28" stroke-width="1.5"/>
-    <path d="M33 53c5-5 15-7 27-7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".2"/>
-    <g fill="#ffe3a3">
-      <g filter="url(#g)" opacity=".75"><rect x="39" y="55.5" width="12" height="18" rx="6"/><rect x="69" y="55.5" width="12" height="18" rx="6"/></g>
-      <rect x="39" y="55.5" width="12" height="18" rx="6"/><rect x="69" y="55.5" width="12" height="18" rx="6"/>
+    <g clip-path="url(#b)">
+      <rect width="120" height="120" fill="#e0442f"/>
+      <g fill="none" stroke="#f0c24f" stroke-linecap="round">
+        <path d="M14 80q3 14 13 24M106 80q-3 14-13 24" stroke-width="5.5"/>
+        <path d="M25 87q3 11 11 19M95 87q-3 11-11 19" stroke-width="5"/>
+        <path d="M37 91q2 8 7 14M83 91q-2 8-7 14" stroke-width="4.5"/>
+      </g>
+      <path d="M60 89.5q1.6 7 8.5 8.5-6.9 1.6-8.5 8.5-1.6-6.9-8.5-8.5 6.9-1.5 8.5-8.500Z" fill="#f0c24f" stroke="#f0c24f" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M22 30q38-17 76 0" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="4" stroke-linecap="round"/>
+      <rect width="120" height="120" fill="url(#d)"/><rect width="120" height="120" fill="url(#h)"/>
     </g>
-    <path d="M19 50q-3 9-2 19M101 50q3 9 2 19" fill="none" stroke="#f0c24f" stroke-width="3" stroke-linecap="round"/>
-    <path d="M60 93q1.3 5.7 7 7-5.7 1.3-7 7-1.3-5.7-7-7 5.7-1.3 7-7Z" fill="#f0c24f" stroke="#f0c24f" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M60 34c16 0 28 3 34 10 6 8 6 22 0 30-6 7-18 10-34 10s-28-3-34-10c-6-8-6-22 0-30 6-7 18-10 34-10Z" fill="url(#v)" stroke="#f0c24f" stroke-width="1.8"/>
+    <path d="M30 46c6-5 16-7 30-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".16"/>
+    <g fill="none" stroke="#f0c24f" stroke-linecap="round">
+      <path d="M57 44q-10-5-23 3M63 44q10-5 23 3" stroke-width="3.2"/>
+      <path d="M58 76q-9 5-22-1M62 76q9 5 22-1" stroke-width="2.6"/>
+    </g>
+    <g>
+      <circle cx="45" cy="61" r="9.5" fill="#0b0809" stroke="#f0c24f" stroke-width="1.8"/><circle cx="75" cy="61" r="9.5" fill="#0b0809" stroke="#f0c24f" stroke-width="1.8"/>
+      <g fill="#ffe3a3"><g filter="url(#g)" opacity=".8"><circle cx="45" cy="61" r="6.9"/><circle cx="75" cy="61" r="6.9"/></g><circle cx="45" cy="61" r="6.9"/><circle cx="75" cy="61" r="6.9"/></g>
+    </g>
   </g>
 </svg>
