@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { go } from '../App'
 import { Daruma } from '../components/Daruma'
 import { Icon } from '../components/Icon'
-import { COUNTS, KO_READY, LEVELS, type Level } from '../data'
+import { COUNTS, LEVELS, type Level } from '../data'
 import {
   breakdowns,
   buildQueue,
@@ -298,7 +298,6 @@ export function Home() {
               <div className="level-name">
                 <b>N{l}</b>
                 {l === target && <span className="chip accent">목표</span>}
-                {!KO_READY[l] && <span className="chip">뜻: 영어</span>}
               </div>
               <StageBar b={all[l]} total={COUNTS[l]} />
               <span className="level-count">

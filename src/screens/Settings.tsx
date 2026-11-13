@@ -140,8 +140,6 @@ export function Settings() {
 
       <p className="muted small center">
         복습 간격: FSRS (ts-fsrs, MIT) · 단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반)
-        <br />
-        한국어 뜻은 N5 · N4 제공
       </p>
     </>
   )

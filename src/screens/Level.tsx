@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
 import { WordSheet } from '../components/WordSheet'
-import { COUNTS, KO_READY, meaning, useLevel, type Level, type Word } from '../data'
+import { COUNTS, meaning, useLevel, type Level, type Word } from '../data'
 import { breakdowns, STAGE_LABEL, stageOf, type Stage } from '../srs'
 import { update, useStore } from '../store'
 import { StageBar } from './Home'
@@ -41,8 +41,6 @@ export function LevelScreen({ level }: { level: Level }) {
           </button>
         )}
       </header>
-
-      {!KO_READY[level] && <p className="note">이 급수는 아직 한국어 뜻이 준비되지 않아 영어 뜻으로 표시돼요.</p>}
 
       <section className="card">
         <StageBar b={b} total={COUNTS[level]} />

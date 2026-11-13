@@ -79,6 +79,3 @@ export async function wordsById(ids: string[]): Promise<Word[]> {
   }
   return out
 }
-
-/** Levels whose Korean meanings are filled in; the rest fall back to English glosses. */
-export const KO_READY: Record<Level, boolean> = { 5: true, 4: true, 3: false, 2: false, 1: false }
