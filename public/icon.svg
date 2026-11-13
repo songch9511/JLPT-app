@@ -25,8 +25,7 @@
       <path d="M36 52q5-3.5 10-2.5M84 52q-5-3.5-10-2.5" stroke-width="2.4"/>
       <path d="M55 69q2.5 3.6 5 0q2.5 3.6 5 0" stroke-width="2.2"/>
     </g>
-    <circle cx="45" cy="64" r="5.6" fill="#2a2022"/><circle cx="75" cy="64" r="5.6" fill="#2a2022"/>
-    <circle cx="43.2" cy="62" r="1.9" fill="#fff"/><circle cx="73.2" cy="62" r="1.9" fill="#fff"/>
-    <circle cx="47" cy="66.2" r=".9" fill="#fff"/><circle cx="77" cy="66.2" r=".9" fill="#fff"/>
+    <circle cx="45" cy="64" r="6.5" fill="#2a2022"/><circle cx="75" cy="64" r="6.5" fill="#2a2022"/>
+    <circle cx="43" cy="61.8" r="2.1" fill="#fff"/><circle cx="73" cy="61.8" r="2.1" fill="#fff"/>
   </g>
 </svg>

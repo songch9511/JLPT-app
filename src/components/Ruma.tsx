@@ -2,16 +2,16 @@ import { useId } from 'react'
 
 /**
  * 루마 (Ruma), the mascot: a round red daruma with gold stripes, a white face and a small, soft doodle face.
- * As with a real daruma, its eyes get painted in: asleep before the day's study starts
- * (`mood="sleep"`), one eye painted once it starts, and the other eye growing with today's
- * progress until both are painted when the day's cards are done. `progress` runs from 0 to 1.
+ * Like a daruma getting its eyes, it is asleep before the day's study starts (`mood="sleep"`),
+ * opens one eye once it starts and the other when the day's cards are done.
+ * `progress` runs from 0 to 1.
  */
 const INK = '#2a2022'
 const GOLD = '#f0c24f'
 const BODY = 'M60 9c30 0 49 24 49 54 0 28-20 47-49 47S11 91 11 63C11 33 30 9 60 9Z'
 const FACE = 'M60 34c16 0 28 3 34 10 6 8 6 22 0 30-6 7-18 10-34 10s-28-3-34-10c-6-8-6-22 0-30 6-7 18-10 34-10Z'
 const EYE_Y = 64
-const EYE_R = 6
+const EYE_R = 6.5
 
 export function Ruma({
   progress,
@@ -24,28 +24,15 @@ export function Ruma({
 }) {
   const id = useId()
   const p = Math.min(1, Math.max(0, progress))
-  // The eye on the viewer's right is painted first, as tradition has it; the other fills in with progress.
-  const first = p > 0 ? 1 : 0
-  const second = p >= 1 ? 1 : p > 0 ? 0.3 + p * 0.5 : 0
-
-  const eye = (cx: number, painted: number) =>
-    mood === 'sleep' ? (
+  // The eye on the viewer's right opens first, as a daruma's first eye is painted; the other opens when the day is done.
+  const eye = (cx: number, open: boolean) =>
+    mood === 'sleep' || !open ? (
       <path d={`M${cx - 5.5} ${EYE_Y}q5.5 4.5 11 0`} fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
     ) : (
-      <>
-        <circle cx={cx} cy={EYE_Y} r={EYE_R} fill="#fff" stroke={INK} strokeWidth="2" />
-        <g className="ruma-pupil" style={{ transform: `scale(${painted})` }}>
-          <g className="ruma-blink">
-            <circle cx={cx} cy={EYE_Y} r={EYE_R - 0.4} fill={INK} />
-            {painted >= 1 && (
-              <>
-                <circle cx={cx - 1.8} cy={EYE_Y - 2} r="1.9" fill="#fff" />
-                <circle cx={cx + 2} cy={EYE_Y + 2.2} r=".9" fill="#fff" />
-              </>
-            )}
-          </g>
-        </g>
-      </>
+      <g className="ruma-blink">
+        <circle cx={cx} cy={EYE_Y} r={EYE_R} fill={INK} />
+        <circle cx={cx - 2} cy={EYE_Y - 2.2} r="2.1" fill="#fff" />
+      </g>
     )
 
   return (
@@ -105,8 +92,8 @@ export function Ruma({
             <path d="M55 69q2.5 3.6 5 0q2.5 3.6 5 0" strokeWidth="2.2" />
           )}
         </g>
-        {eye(45, second)}
-        {eye(75, first)}
+        {eye(45, p >= 1)}
+        {eye(75, p > 0)}
       </g>
       {mood === 'sleep' && (
         <g className="ruma-zzz" fill="none" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">

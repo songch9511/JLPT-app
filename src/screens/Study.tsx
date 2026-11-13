@@ -93,7 +93,7 @@ export function Study() {
         <h1>{cleared ? '오늘 목표 달성!' : '잠깐 쉬어 가요'}</h1>
         <p className="muted">
           {cleared
-            ? '루마의 두 눈이 모두 그려졌어요. 기억이 흐려질 때쯤 다시 가져올게요.'
+            ? '루마가 두 눈을 다 떴어요. 기억이 흐려질 때쯤 다시 가져올게요.'
             : `외우는 중인 ${q.waiting}개는 조금 뒤에 다시 나와요.`}
         </p>
         <div className="result-tiles">
