@@ -20,7 +20,7 @@ test.describe('error screen', () => {
     await expect(page.getByRole('heading', { name: '화면을 여는 중에 문제가 생겼어요' })).toBeVisible()
     await expect(page.getByRole('button', { name: '다시 불러오기' })).toBeVisible()
     const { name, body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
-    expect(name).toBe('kasane-backup-2026-11-13.json')
+    expect(name).toBe('jlpt-ruma-backup-2026-11-13.json')
     expect(body).toMatchObject({ format: 'jlpt-luma-backup', v: 2, xp: 33 })
     expect(body.cards['9-0']).toBeTruthy() // exactly what is stored, broken part included
     expect(body.settings.apiKey).toBe('')

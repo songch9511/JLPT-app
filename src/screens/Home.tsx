@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { go } from '../App'
-import { Daruma } from '../components/Daruma'
+import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
 import { BackupNudge } from '../components/Notices'
 import { COUNTS, LEVELS, type Level } from '../data'
@@ -148,7 +148,7 @@ export function Home() {
   else if (needPerDay == null) pace = '시험일이 지났어요. 설정에서 다음 시험일을 골라 주세요.'
   else pace = `시험 전에 전부 만나려면 하루 새 단어 ${needPerDay}개`
 
-  // share of today's cards already answered; the mascot fills with colour to match
+  // share of today's cards already answered; shown in the mascot's speech bubble
   const progress = cleared ? 1 : started ? (todayLog?.c ?? 0) / ((todayLog?.c ?? 0) + todo) : 0
   const pct = Math.round(progress * 100)
   // every word of the target level has been met: point to the next level that still has new words
@@ -161,14 +161,14 @@ export function Home() {
       ? nextLevel
         ? `N${target} 단어를 모두 만났어요. 다음은 N${nextLevel}!`
         : cleared
-          ? '다 채웠어요! 오늘 분량 끝.'
+          ? '두 눈 번쩍! 오늘 분량 끝.'
           : '오늘은 쉬는 날이에요.'
       : cleared
-        ? '다 채웠어요! 오늘 분량 끝.'
+        ? '두 눈 번쩍! 오늘 분량 끝.'
         : started
-          ? `${pct}% 채워졌어요. ${todo}장만 더 하면 가득!`
+          ? `${pct}% 왔어요. ${todo}장만 더 하면 남은 눈도 떠요!`
           : todo > 0
-            ? `쿨쿨… 오늘은 ${todo}장이에요.`
+            ? `쿨쿨… 오늘은 ${todo}장! 시작하면 한쪽 눈을 떠요.`
             : '오늘은 복습이 없어요. 새 단어를 해 볼까요?'
 
   return (
@@ -177,7 +177,7 @@ export function Home() {
 
       <section className="hero">
         <div className="hero-top">
-          <Daruma fill={restDay ? 0 : progress} mood={cleared ? 'cheer' : !started ? 'sleep' : 'idle'} size={104} />
+          <Ruma progress={restDay ? 0 : progress} mood={cleared ? 'cheer' : !started ? 'sleep' : 'idle'} size={104} />
           <p className="bubble">{bubble}</p>
         </div>
         {todo > 0 ? (

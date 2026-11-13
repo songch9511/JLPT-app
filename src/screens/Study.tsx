@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { go } from '../App'
 import { requestPersist } from '../backup'
-import { Daruma } from '../components/Daruma'
+import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
 import { AiExplain } from '../components/WordSheet'
 import { levelOf, meaning, useLevel } from '../data'
@@ -121,11 +121,11 @@ export function Study() {
             ))}
           </div>
         )}
-        <Daruma fill={cleared ? 1 : (log?.c ?? 0) / ((log?.c ?? 0) + q.waiting)} mood={cleared ? 'cheer' : 'idle'} size={150} />
+        <Ruma progress={cleared ? 1 : (log?.c ?? 0) / ((log?.c ?? 0) + q.waiting)} mood={cleared ? 'cheer' : 'idle'} size={150} />
         <h1>{cleared ? '오늘 목표 달성!' : '잠깐 쉬어 가요'}</h1>
         <p className="muted">
           {cleared
-            ? '다루마가 가득 찼어요. 기억이 흐려질 때쯤 다시 가져올게요.'
+            ? '루마가 두 눈을 다 떴어요. 기억이 흐려질 때쯤 다시 가져올게요.'
             : `익히는 중인 ${q.waiting}개는 조금 뒤에 다시 나와요.`}
         </p>
         <dl className="result-tiles">

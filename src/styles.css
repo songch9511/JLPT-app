@@ -1,4 +1,4 @@
-/* Kasane — game-style UI: chunky pressable surfaces, bright accents, rounded type. */
+/* JLPT Ruma — game-style UI: chunky pressable surfaces, bright accents, rounded type. */
 :root {
   /* Colour system drawn from traditional Japanese colours (伝統色), kept low in saturation. */
   --bg: #fbfaf5; /* 生成り kinari — unbleached cloth */
@@ -226,9 +226,9 @@ button:disabled { cursor: default; opacity: 0.4; }
 .c-review, .c-review b { color: var(--know-deep); }
 .c-learning, .c-learning b { color: var(--gold-deep); }
 .c-new, .c-new b { color: var(--accent); }
-.daruma { flex: none; overflow: visible; }
-.daruma-body { transform-origin: 60px 108px; animation: wobble 3.2s ease-in-out infinite; }
-.daruma.cheer .daruma-body { animation: hop 0.7s ease-in-out infinite; }
+.ruma { flex: none; overflow: visible; }
+.ruma-body { transform-origin: 60px 108px; animation: wobble 3.2s ease-in-out infinite; }
+.ruma.cheer .ruma-body { animation: hop 0.7s ease-in-out infinite; }
 @keyframes wobble { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
 @keyframes hop { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
 
@@ -404,7 +404,7 @@ a.dday { color: var(--accent); background: var(--accent-soft); }
 @keyframes fall { to { transform: translateY(105dvh) rotate(540deg); } }
 
 .onboard { align-items: stretch; }
-.onboard .daruma { align-self: center; }
+.onboard .ruma { align-self: center; }
 .how { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 8px; }
 .how li { display: flex; flex-direction: column; padding: 10px 14px; border-radius: 16px; background: var(--surface); border: 2px solid var(--line); }
 .how span { color: var(--muted); font-size: 14px; }
@@ -498,25 +498,22 @@ a.dday { color: var(--accent); background: var(--accent-soft); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
-.daruma-sparks path { transform-box: fill-box; transform-origin: center; animation: twinkle 1.2s ease-in-out infinite; }
-.daruma-sparks path:nth-child(2) { animation-delay: 0.4s; }
-.daruma-sparks path:nth-child(3) { animation-delay: 0.8s; }
+.ruma-sparks path { transform-box: fill-box; transform-origin: center; animation: twinkle 1.2s ease-in-out infinite; }
+.ruma-sparks path:nth-child(2) { animation-delay: 0.4s; }
+.ruma-sparks path:nth-child(3) { animation-delay: 0.8s; }
 @keyframes twinkle { 50% { transform: scale(0.4); opacity: 0.4; } }
 
-/* mascot colour fill */
-.daruma-empty { fill: var(--surface); }
-.daruma-outline { fill: none; stroke: color-mix(in srgb, #dd5a44 55%, var(--line)); stroke-width: 2.5; }
-.daruma-liquid { transition: transform 0.9s cubic-bezier(0.3, 1.2, 0.5, 1); }
-.daruma-liquid .wave { animation: wave 2.4s linear infinite; }
-.daruma-liquid .wave.back { animation-duration: 3.6s; animation-direction: reverse; }
-@keyframes wave { to { transform: translateX(60px); } }
+/* mascot */
+.ruma-outline { fill: none; stroke: #7a3a2c; stroke-opacity: 0.28; stroke-width: 1.5; }
+.ruma-blink { transform-box: fill-box; transform-origin: center; animation: blink 4.6s ease-in-out infinite; }
+@keyframes blink { 0%, 44%, 50%, 100% { transform: scaleY(1); } 47% { transform: scaleY(0.12); } }
 
 /* asleep until the day's study starts */
-.daruma.sleep .daruma-body { animation: breathe 3.6s ease-in-out infinite; }
+.ruma.sleep .ruma-body { animation: breathe 3.6s ease-in-out infinite; }
 @keyframes breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.025, 0.97); } }
-.daruma-zzz { stroke: var(--muted); }
-.daruma-zzz path { opacity: 0; animation: zzz 3.6s ease-in-out infinite; }
-.daruma-zzz path:nth-child(2) { animation-delay: 0.6s; }
-.daruma-zzz path:nth-child(3) { animation-delay: 1.2s; }
+.ruma-zzz { stroke: var(--muted); }
+.ruma-zzz path { opacity: 0; animation: zzz 3.6s ease-in-out infinite; }
+.ruma-zzz path:nth-child(2) { animation-delay: 0.6s; }
+.ruma-zzz path:nth-child(3) { animation-delay: 1.2s; }
 @keyframes zzz { 0% { opacity: 0; transform: translate(-4px, 6px); } 30%, 60% { opacity: 1; } 100% { opacity: 0; transform: translate(3px, -6px); } }
-@media (prefers-reduced-motion: reduce) { .daruma-zzz path { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ruma-zzz path { opacity: 1; } }

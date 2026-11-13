@@ -56,7 +56,7 @@ function download(json: string, name: string) {
 
 /** Download the current state as a backup file and remember when. */
 export function exportBackup() {
-  download(JSON.stringify(backupFile(getState())), `kasane-backup-${dayKey()}.json`)
+  download(JSON.stringify(backupFile(getState())), `jlpt-ruma-backup-${dayKey()}.json`)
   setMeta({ lastExport: dayKey() })
 }
 
@@ -73,7 +73,7 @@ export function exportRaw(raw: string | null) {
   } catch {
     json = json.replace(/"apiKey"\s*:\s*"[^"]*"/g, '"apiKey":""')
   }
-  download(json, `kasane-backup-${dayKey()}.json`)
+  download(json, `jlpt-ruma-backup-${dayKey()}.json`)
 }
 
 // ── device-only notes about backups (kept outside the study state, never exported) ──

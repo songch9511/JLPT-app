@@ -127,7 +127,7 @@ test.describe('settings', () => {
   test('export leaves out the API key; import restores a backup', async ({ page }) => {
     await open(page, { state: user({ apiKey: 'sk-ant-secret' }, { xp: 77, marks: ['5-3'] }), hash: '/settings' })
     const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '백업 내보내기' }).click()])
-    expect(download.suggestedFilename()).toBe('kasane-backup-2026-11-13.json')
+    expect(download.suggestedFilename()).toBe('jlpt-ruma-backup-2026-11-13.json')
     const backup = JSON.parse(await readFile((await download.path())!, 'utf8'))
     expect(backup.settings.apiKey).toBe('')
     expect(backup.xp).toBe(77)
@@ -155,7 +155,7 @@ test.describe('settings', () => {
       await page.locator('input[type=file]').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from(body) })
       const d = await msg
       expect(d.type(), body).toBe('alert')
-      expect(d.message()).toBe('카사네 백업 파일이 아니에요.')
+      expect(d.message()).toBe('JLPT 루마 백업 파일이 아니에요.')
       await d.accept()
     }
     expect((await saved(page)).xp).toBe(5)

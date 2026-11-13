@@ -51,6 +51,7 @@ export interface State {
   xp: number
 }
 
+// storage keys keep the app's former name (Kasane) so existing learners keep their records
 const KEY = 'kasane.state.v2'
 export const STATE_KEY = KEY
 /** The state as it was just before the last import, so the import can be undone. */

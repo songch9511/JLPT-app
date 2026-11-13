@@ -20,7 +20,7 @@ export function Settings() {
     }
     const read = readBackup(data)
     if (!read.ok) {
-      alert(read.reason === 'newer' ? '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 새로고침한 뒤 다시 가져와 주세요.' : '카사네 백업 파일이 아니에요.')
+      alert(read.reason === 'newer' ? '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 새로고침한 뒤 다시 가져와 주세요.' : 'JLPT 루마 백업 파일이 아니에요.')
       return
     }
     if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요? 바로 되돌릴 수 있어요.')) return

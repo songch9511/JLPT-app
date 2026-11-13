@@ -29,7 +29,7 @@ test('onboarding → home → a full day of study → done screen → home', asy
   expect(Object.values(s.cards).every((c) => (c as { state: number }).state === 2)).toBe(true)
 
   await page.getByRole('button', { name: '홈으로' }).click()
-  await expect(page.locator('.bubble')).toHaveText('다 채웠어요! 오늘 분량 끝.')
+  await expect(page.locator('.bubble')).toHaveText('두 눈 번쩍! 오늘 분량 끝.')
   await expect(page.locator('.quests .quest.done')).toHaveCount(3)
   await expect(page.locator('.hud-item.streak')).toHaveText('1')
   await expect(page.locator('.hud-item.streak')).toHaveClass(/lit/)
@@ -102,7 +102,7 @@ test('the next day’s reviews appear (clock moves forward)', async ({ page }) =
   for (let i = 0; i < 10; i++) await answer(page, '알아요')
   await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
   await page.getByRole('button', { name: '홈으로' }).click()
-  await expect(page.locator('.bubble')).toContainText('다 채웠어요')
+  await expect(page.locator('.bubble')).toContainText('두 눈 번쩍')
 
   // the five words graduated with a ~2 day interval
   await page.clock.setSystemTime(new Date(NOW.getTime() + 3 * 86400_000))
@@ -119,7 +119,7 @@ test('home rolls over to the new day while the app stays open', async ({ page })
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   for (let i = 0; i < 5; i++) await answer(page, '쉬워요')
   await page.getByRole('button', { name: '홈으로' }).click()
-  await expect(page.locator('.bubble')).toContainText('다 채웠어요')
+  await expect(page.locator('.bubble')).toContainText('두 눈 번쩍')
   // the app is left open past midnight (e.g. a PWA left in the background)
   await page.clock.runFor('20:00')
   await expect(page.locator('.hero-counts .c-new b')).toHaveText('5')
@@ -302,7 +302,7 @@ test.describe('nothing new left in the target level', () => {
   test('offers the next level and the mascot sleeps on a day with nothing to do', async ({ page }) => {
     await open(page, { state: user({ target: 5 }, { cards: allOfN5() }) })
     await expect(page.locator('.bubble')).toHaveText('N5 단어를 모두 만났어요. 다음은 N4!')
-    await expect(page.locator('.hero .daruma')).toHaveClass(/sleep/)
+    await expect(page.locator('.hero .ruma')).toHaveClass(/sleep/)
     await page.getByRole('button', { name: 'N4 시작하기' }).click()
     await expect(page).toHaveURL(/#\/study$/)
     await expect(page.locator('.flash')).toBeVisible()
@@ -312,7 +312,7 @@ test.describe('nothing new left in the target level', () => {
   test('a day with no reviews but new words left suggests them', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 0 }) })
     await expect(page.locator('.bubble')).toHaveText('오늘은 복습이 없어요. 새 단어를 해 볼까요?')
-    await expect(page.locator('.hero .daruma')).toHaveClass(/sleep/)
+    await expect(page.locator('.hero .ruma')).toHaveClass(/sleep/)
     await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toBeVisible()
   })
 })
