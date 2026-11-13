@@ -4,9 +4,11 @@ import { Daruma } from '../components/Daruma'
 import { Icon } from '../components/Icon'
 import { AiExplain } from '../components/WordSheet'
 import { levelOf, meaning, useLevel } from '../data'
-import { answer, breakdowns, buildQueue, previewIntervals, Rating, restore, snapshot, streak, unlockMoreNew, type Grade, type Snapshot } from '../srs'
+import { answer, breakdowns, buildQueue, previewIntervals, Rating, restore, snapshot, streak, unlockMoreNew, type Grade, type Queue, type Snapshot } from '../srs'
 import { toggleMark, useStore } from '../store'
-import { dayKey, speak } from '../util'
+import { dayKey, speak, useClock } from '../util'
+
+const DOUBLE_TAP_MS = 350
 
 const KIND_LABEL = { new: '새 단어', learning: '외우는 중', review: '복습' } as const
 
@@ -18,13 +20,22 @@ export function Study() {
   const [answered, setAnswered] = useState(0)
   const [last, setLast] = useState<string | undefined>()
   const [pop, setPop] = useState<{ key: number; xp: number } | null>(null)
-  const undo = useRef<Snapshot | null>(null)
+  const undo = useRef<{ snap: Snapshot; card: NonNullable<Queue['next']> } | null>(null)
+  /** after an undo, the card that was undone is shown again whatever the queue would pick now */
+  const [redo, setRedo] = useState<Queue['next']>(null)
+  /** answers are ignored until this time, so a double tap can't answer a card that was never seen */
+  const lockUntil = useRef(0)
+  const [idle, setIdle] = useState(false)
+  // While nothing is due yet, re-check as time passes so waiting cards come back on their own.
+  const tick = useClock(idle)
 
   // Recomputed after every answer; `now` is taken then so waiting cards become due as time passes.
   const { q, now } = useMemo(() => {
     const now = new Date()
-    return { q: buildQueue(s, now, last), now }
-  }, [s, last])
+    const q = buildQueue(s, now, last)
+    return { q: redo ? { ...q, next: redo } : q, now }
+  }, [s, last, redo, tick])
+  useEffect(() => setIdle(!q.next), [q.next])
   const id = q.next?.id
   const { words, error } = useLevel(id ? levelOf(id) : null)
   const word = words && id ? words[Number(id.split('-')[1])] : null
@@ -43,19 +54,22 @@ export function Study() {
 
   const submit = useCallback(
     (grade: Grade) => {
-      if (!id) return
-      undo.current = snapshot()
-      const xp = answer(id, grade)
+      if (!q.next || Date.now() < lockUntil.current) return
+      lockUntil.current = Date.now() + DOUBLE_TAP_MS
+      undo.current = { snap: snapshot(), card: q.next }
+      setRedo(null)
+      const xp = answer(q.next.id, grade)
       setPop({ key: Date.now(), xp })
-      setLast(id)
+      setLast(q.next.id)
       setAnswered((n) => n + 1)
     },
-    [id],
+    [q.next],
   )
 
   const onAgain = useCallback(() => {
     // Forgetting a word should always end with seeing the answer first.
     if (!revealed) {
+      lockUntil.current = Date.now() + DOUBLE_TAP_MS
       setRevealed(true)
       setMissed(true)
     } else submit(Rating.Again)
@@ -63,7 +77,9 @@ export function Study() {
 
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (!word) return
+      if (!word || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
+      // a control the user moved to with the keyboard gets its own Enter/Space
+      if ((e.key === ' ' || e.key === 'Enter') && e.target instanceof Element && e.target.matches(':focus-visible')) return
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault()
         if (missed) submit(Rating.Again)
@@ -156,7 +172,8 @@ export function Study() {
           disabled={!undo.current}
           onClick={() => {
             if (!undo.current) return
-            restore(undo.current)
+            restore(undo.current.snap)
+            setRedo(undo.current.card)
             undo.current = null
             setLast(undefined)
             setAnswered((n) => Math.max(0, n - 1))

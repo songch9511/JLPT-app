@@ -30,6 +30,13 @@ const fromCard = (c: Card): SCard => ({
   last_review: c.last_review?.getTime(),
 })
 
+/**
+ * FSRS refuses to schedule a card at a time before its last review (it throws), which happens when the
+ * device clock goes backwards or a backup comes from a device whose clock ran ahead. Schedule such a card
+ * as if it were being answered right at its last review instead.
+ */
+const reviewTime = (c: SCard | undefined, now: Date) => (c?.last_review && c.last_review > now.getTime() ? new Date(c.last_review) : now)
+
 const isLearning = (c: SCard) => c.state === CardState.Learning || c.state === CardState.Relearning
 
 function endOfDay(now: Date): number {
@@ -108,7 +115,7 @@ export function answer(id: string, grade: Grade, now = new Date()): number {
   update((d) => {
     const prev = d.cards[id]
     const card = prev ? toCard(prev) : createEmptyCard(now)
-    const { card: next } = scheduler.next(card, now, grade)
+    const { card: next } = scheduler.next(card, reviewTime(prev, now), grade)
     d.cards = { ...d.cards, [id]: fromCard(next) }
     const key = dayKey(now)
     const log = { ...(d.log[key] ?? emptyLog()) }
@@ -155,7 +162,7 @@ export function unlockMoreNew(n: number, now = new Date()) {
 /** How long until the card returns for each answer, e.g. "10분", "4일". */
 export function previewIntervals(s: State, id: string, now: Date): Record<Grade, string> {
   const prev = s.cards[id]
-  const rec = scheduler.repeat(prev ? toCard(prev) : createEmptyCard(now), now)
+  const rec = scheduler.repeat(prev ? toCard(prev) : createEmptyCard(now), reviewTime(prev, now))
   const fmt = (g: Grade) => formatInterval(rec[g].card.due.getTime() - now.getTime())
   return { [Rating.Again]: fmt(Rating.Again), [Rating.Hard]: fmt(Rating.Hard), [Rating.Good]: fmt(Rating.Good), [Rating.Easy]: fmt(Rating.Easy) } as Record<Grade, string>
 }

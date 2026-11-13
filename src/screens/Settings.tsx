@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { LEVELS } from '../data'
-import { getState, replaceState, resetAll, update, useStore, type State } from '../store'
+import { getState, isBackup, replaceState, resetAll, update, useStore, type State } from '../store'
 import { dayKey, formatDay, upcomingExams } from '../util'
 
 export function Settings() {
@@ -22,8 +22,8 @@ export function Settings() {
 
   const importData = async (f: File) => {
     try {
-      const data = JSON.parse(await f.text()) as State
-      if (data.v !== 2 || !data.cards || !data.settings) throw new Error()
+      const data: unknown = JSON.parse(await f.text())
+      if (!isBackup(data)) throw new Error()
       if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요?')) return
       replaceState({ ...data, settings: { ...data.settings, apiKey: st.apiKey } })
     } catch {

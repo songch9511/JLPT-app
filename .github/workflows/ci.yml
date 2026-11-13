@@ -1,0 +1,32 @@
+name: CI
+
+# Type-check, unit tests and build on every pull request.
+# The Playwright e2e suite (npm run test:e2e) is not run here yet: it has only been verified locally
+# and needs a browser download on the runner. Add it as a separate job once it has run green there.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Type-check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build

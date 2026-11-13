@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 export function dayKey(d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
@@ -59,4 +61,24 @@ export function speak(text: string) {
   if (voice) u.voice = voice
   speechSynthesis.cancel()
   speechSynthesis.speak(u)
+}
+
+/**
+ * Re-render once a minute and whenever the app returns to the foreground, so screens that show "today"
+ * roll over at midnight and pick up cards that came due while the app stayed open. Returns a value that
+ * changes on every tick, for use as a memo dependency.
+ */
+export function useClock(active = true): number {
+  const [t, setT] = useState(0)
+  useEffect(() => {
+    if (!active) return
+    const bump = () => setT(Date.now())
+    const id = setInterval(bump, 60_000)
+    document.addEventListener('visibilitychange', bump)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', bump)
+    }
+  }, [active])
+  return t
 }

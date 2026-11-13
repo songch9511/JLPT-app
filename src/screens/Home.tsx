@@ -16,7 +16,7 @@ import {
   type Breakdown,
 } from '../srs'
 import { update, useStore, type State } from '../store'
-import { addDays, dayKey, daysBetween, parseDay } from '../util'
+import { addDays, dayKey, daysBetween, parseDay, useClock } from '../util'
 
 const WEEKS = 15
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
@@ -118,6 +118,7 @@ function Journey({ level, seen }: { level: Level; seen: number }) {
 
 export function Home() {
   const s = useStore((x) => x)
+  useClock()
   const today = new Date()
   const { target, examDate, dailyNew } = s.settings
   const q = buildQueue(s, today)
@@ -242,7 +243,7 @@ export function Home() {
           {seen.toLocaleString()} <span>/ {total.toLocaleString()} 단어를 만났어요</span>
         </p>
         <p className="muted small">{pace}</p>
-        {needPerDay != null && b.new > 0 && needPerDay !== dailyNew && (
+        {needPerDay != null && b.new > 0 && Math.min(100, needPerDay) !== dailyNew && (
           <button className="link inline" onClick={() => update((d) => void (d.settings.dailyNew = Math.min(100, needPerDay)))}>
             지금 하루 {dailyNew}개 → {Math.min(100, needPerDay)}개로 맞추기
           </button>
