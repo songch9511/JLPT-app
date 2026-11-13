@@ -10,8 +10,8 @@
   </defs>
   <rect width="512" height="512" fill="url(#bg)"/>
   <rect width="512" height="512" fill="url(#w)" opacity="0.09"/>
-  <ellipse cx="256" cy="474" rx="123" ry="17" fill="#000" opacity=".32" filter="url(#s)"/>
-  <g transform="translate(10.0 15.1) scale(4.1)">
+  
+  <g transform="translate(-62.0 -3.7) scale(5.3)">
     <g clip-path="url(#b)">
       <rect width="120" height="120" fill="#e0442f"/>
       <g fill="none" stroke="#f0c24f" stroke-linecap="round">
