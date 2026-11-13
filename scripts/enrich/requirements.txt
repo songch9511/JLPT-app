@@ -1,0 +1,13 @@
+# Pinned Python dependencies for scripts/enrich/freq.py (installed by fetch-sources.sh).
+# wordfreq data: CC BY-SA 4.0 (see docs/plan/08-word-data.md).
+wordfreq[cjk]==3.1.1
+ftfy==6.3.1
+ipadic==1.0.0
+jieba==0.42.1
+langcodes==3.5.1
+locate==1.1.1
+mecab-ko-dic==1.0.0
+mecab-python3==1.0.12
+msgpack==1.2.4
+regex==2026.11.9
+wcwidth==0.9.4
