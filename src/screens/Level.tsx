@@ -59,6 +59,7 @@ export function LevelScreen({ level }: { level: Level }) {
           <button
             key={f}
             className={filter === f ? 'on' : ''}
+            aria-pressed={filter === f}
             onClick={() => {
               setFilter(f)
               setShown(PAGE)

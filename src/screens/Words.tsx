@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AiError, weakStory, type Story } from '../ai'
+import { weakStory, type Story } from '../ai'
 import { Icon } from '../components/Icon'
-import { WordSheet } from '../components/WordSheet'
+import { AiErrorNote, WordSheet } from '../components/WordSheet'
 import { meaning, useAllWords, type Word } from '../data'
 import { leechIds } from '../srs'
 import { useStore } from '../store'
@@ -31,7 +31,7 @@ export function Words() {
   const cards = useStore((s) => s.cards)
   const [story, setStory] = useState<Story | null>(null)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
 
   const byId = useMemo(() => new Map(all?.map((w) => [w.id, w])), [all])
   const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter((w): w is Word => !!w)
@@ -57,7 +57,7 @@ export function Words() {
     try {
       setStory(await weakStory(weakWords.slice(0, 12)))
     } catch (e) {
-      setError(e instanceof AiError ? e.message : '알 수 없는 오류가 발생했어요.')
+      setError(e instanceof Error ? e : new Error(String(e)))
     } finally {
       setBusy(false)
     }
@@ -76,7 +76,7 @@ export function Words() {
             ['weak', `약한 단어 ${weak.length || ''}`],
           ] as [Tab, string][]
         ).map(([k, label]) => (
-          <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>
+          <button key={k} className={tab === k ? 'on' : ''} aria-pressed={tab === k} onClick={() => setTab(k)}>
             {label}
           </button>
         ))}
@@ -90,6 +90,7 @@ export function Words() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="일본어, 읽기, 뜻으로 검색"
+              aria-label="단어 검색"
               autoCapitalize="off"
               autoCorrect="off"
             />
@@ -148,16 +149,12 @@ export function Words() {
               <button className="btn ghost" onClick={makeStory} disabled={busy}>
                 {busy ? '이야기를 쓰는 중…' : story ? '다른 이야기 만들기' : '이야기 만들기'}
               </button>
-              {error && (
-                <p className="error">
-                  {error} <a href="#/settings">설정으로</a>
-                </p>
-              )}
+              {error && <AiErrorNote error={error} />}
             </div>
           )}
           <div className="word-list">
             {weakWords.map((w) => (
-              <Row key={w.id} w={w} onOpen={setOpen} extra={`잊음 ${cards[w.id]?.lapses ?? 0}회`} />
+              <Row key={w.id} w={w} onOpen={setOpen} extra={`${cards[w.id]?.lapses ?? 0}번 잊음`} />
             ))}
           </div>
           {weak.length === 0 && <p className="empty">복습에서 두 번 이상 잊어버린 단어가 여기에 모여요.</p>}

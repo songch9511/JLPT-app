@@ -87,7 +87,7 @@ test('no key: points to settings without calling the API', async ({ page }) => {
   await open(page, { state: user({ apiKey: '   ' }), hash: '/words' })
   const sheet = await openSheet(page)
   await sheet.getByRole('button', { name: /AI 예문/ }).click()
-  await expect(sheet.locator('.error')).toContainText('설정에서 Anthropic API 키를 먼저 입력해 주세요.')
+  await expect(sheet.locator('.error')).toContainText('AI 설명은 설정에서 켤 수 있어요.')
   await sheet.getByRole('link', { name: '설정으로' }).click()
   await expect(page.getByRole('heading', { name: '설정' })).toBeVisible()
   expect(calls).toHaveLength(0)

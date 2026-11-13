@@ -52,6 +52,9 @@ export interface State {
 }
 
 const KEY = 'kasane.state.v2'
+export const STATE_KEY = KEY
+/** The state as it was just before the last import, so the import can be undone. */
+export const PREV_KEY = 'kasane.state.prev'
 
 function initial(): State {
   return {
@@ -92,21 +95,56 @@ if (typeof window !== 'undefined')
 
 export const getState = () => state
 
-function save(raw: string) {
+// ── save status: the app keeps working in memory when saving fails, but the user has to know ──
+
+/** `failed`: the last save did not reach storage. `dismissed`: the user closed the warning for this run of failures. */
+export interface SaveStatus {
+  failed: boolean
+  dismissed: boolean
+}
+let saveStatus: SaveStatus = { failed: false, dismissed: false }
+const saveSubs = new Set<() => void>()
+function setSaveStatus(next: SaveStatus) {
+  if (next.failed === saveStatus.failed && next.dismissed === saveStatus.dismissed) return
+  saveStatus = next
+  saveSubs.forEach((f) => f())
+}
+export const getSaveStatus = () => saveStatus
+/** Hide the warning until a save succeeds and then fails again. */
+export const dismissSaveWarning = () => setSaveStatus({ failed: saveStatus.failed, dismissed: true })
+export function useSaveStatus(): SaveStatus {
+  return useSyncExternalStore(
+    (f) => {
+      saveSubs.add(f)
+      return () => saveSubs.delete(f)
+    },
+    () => saveStatus,
+  )
+}
+
+function write(raw: string): boolean {
   try {
     localStorage.setItem(KEY, raw)
+    return true
   } catch {
     // Storage full: AI explanations (kasane.ai.*) can be fetched again, study progress cannot.
     try {
       const ai: string[] = []
       for (let i = 0; i < localStorage.length; i++) if (localStorage.key(i)?.startsWith('kasane.ai.')) ai.push(localStorage.key(i)!)
-      if (!ai.length) return
+      if (!ai.length) return false
       ai.forEach((k) => localStorage.removeItem(k))
       localStorage.setItem(KEY, raw)
+      return true
     } catch {
-      /* keep working in memory */
+      return false
     }
   }
+}
+
+function save(raw: string) {
+  if (write(raw)) setSaveStatus({ failed: false, dismissed: false })
+  // keep working in memory; a warning is shown once per run of failures
+  else if (!saveStatus.failed) setSaveStatus({ failed: true, dismissed: false })
 }
 
 /** Copy-on-write update: `mutate` receives a shallow copy and must replace (not mutate) nested objects it changes. */
@@ -149,6 +187,44 @@ export function isBackup(x: unknown): x is State {
   if (x.log !== undefined && (!isObj(x.log) || !Object.values(x.log).every((l) => isObj(l)))) return false
   if (x.marks !== undefined && !Array.isArray(x.marks)) return false
   if (x.xp !== undefined && !isNum(x.xp)) return false
+  return true
+}
+
+// ── import with undo ──
+
+/** The state before an import made in this session (also kept under PREV_KEY in case of a reload). */
+let beforeImport: string | null = null
+
+/** Replace the state with a validated backup, keeping the current state so the import can be undone. */
+export function importState(next: State) {
+  beforeImport = JSON.stringify(state)
+  try {
+    localStorage.setItem(PREV_KEY, beforeImport)
+  } catch {
+    /* the in-memory copy still allows undo in this session */
+  }
+  replaceState(next)
+}
+
+/** Whether an import made in this session can be undone. */
+export const canUndoImport = () => beforeImport !== null
+
+export function undoImport(): boolean {
+  if (beforeImport === null) return false
+  let prev: unknown
+  try {
+    prev = JSON.parse(beforeImport)
+  } catch {
+    return false
+  }
+  if (!isBackup(prev)) return false
+  beforeImport = null
+  replaceState(prev)
+  try {
+    localStorage.removeItem(PREV_KEY)
+  } catch {
+    /* nothing to clean up */
+  }
   return true
 }
 

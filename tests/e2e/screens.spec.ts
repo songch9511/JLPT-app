@@ -32,7 +32,7 @@ test.describe('words', () => {
     await expect(sheet.locator('.sheet-word')).toHaveText('学校')
     await expect(sheet.locator('.sheet-reading')).toHaveText('がっこう')
     await expect(sheet.locator('.sheet-meaning')).toHaveText('학교')
-    await expect(sheet).toContainText('아직 안 본')
+    await expect(sheet).toContainText('새 단어')
     await sheet.getByRole('button', { name: '북마크' }).click()
     await page.keyboard.press('Escape')
     await expect(sheet).toBeHidden()
@@ -56,7 +56,7 @@ test.describe('words', () => {
     await open(page, { state: user({}, { cards }), hash: '/words' })
     await page.getByRole('button', { name: /^약한 단어/ }).click()
     await expect(page.locator('.word-row')).toHaveCount(1)
-    await expect(page.locator('.word-row')).toContainText('잊음 3회')
+    await expect(page.locator('.word-row')).toContainText('3번 잊음')
   })
 })
 
@@ -77,11 +77,11 @@ test.describe('level screen', () => {
     await expect(page.locator('.word-row')).toHaveCount(100)
     await page.getByRole('button', { name: /더 보기 \(618개 남음\)/ }).click()
     await expect(page.locator('.word-row')).toHaveCount(200)
-    for (const [label, n] of [['장기 기억', 1], ['익히는 중', 1], ['외우는 중', 1]] as const) {
+    for (const [label, n] of [['장기 기억', 1], ['다지는 중', 1], ['익히는 중', 1]] as const) {
       await page.locator('.seg.scroll').getByRole('button', { name: label }).click()
       await expect(page.locator('.word-row')).toHaveCount(n)
     }
-    await page.locator('.seg.scroll').getByRole('button', { name: '아직 안 본' }).click()
+    await page.locator('.seg.scroll').getByRole('button', { name: '새 단어' }).click()
     await expect(page.locator('.word-row')).toHaveCount(100)
   })
 
@@ -185,7 +185,7 @@ test.describe('settings', () => {
 
   test('an exam date in the past is reported, not crashed on', async ({ page }) => {
     await open(page, { state: user({ examDate: '2026-07-05' }) })
-    await expect(page.locator('.dday')).toHaveText('시험 종료')
+    await expect(page.locator('.dday')).toHaveText('시험일 지남 · 바꾸기')
     await expect(page.getByText('시험일이 지났어요. 설정에서 다음 시험일을 골라 주세요.')).toBeVisible()
   })
 })

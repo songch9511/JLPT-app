@@ -181,7 +181,7 @@ export function formatInterval(ms: number): string {
 // ── stats ───────────────────────────────────────────────────────────────────
 
 export type Stage = 'new' | 'learning' | 'young' | 'mature'
-export const STAGE_LABEL: Record<Stage, string> = { new: '아직 안 본', learning: '외우는 중', young: '익히는 중', mature: '장기 기억' }
+export const STAGE_LABEL: Record<Stage, string> = { new: '새 단어', learning: '익히는 중', young: '다지는 중', mature: '장기 기억' }
 
 export function stageOf(c: SCard | undefined): Stage {
   if (!c) return 'new'
@@ -274,7 +274,7 @@ export function quests(s: State, now: Date): Quest[] {
   const newGoal = Math.min(10, s.settings.dailyNew)
   const cleared = log.c > 0 && !q.next && q.waiting === 0
   return [
-    { title: '카드 20장 넘기기', have: Math.min(log.c, 20), need: 20, xp: 20 },
+    { title: '카드 20장 보기', have: Math.min(log.c, 20), need: 20, xp: 20 },
     { title: `새 단어 ${newGoal}개 만나기`, have: Math.min(log.n, newGoal), need: newGoal, xp: 20 },
     { title: '오늘 분량 모두 끝내기', have: cleared ? 1 : 0, need: 1, xp: 50 },
   ].map((x) => ({ ...x, done: x.have >= x.need }))

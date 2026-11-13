@@ -21,6 +21,22 @@ export interface Story {
 
 export class AiError extends Error {}
 
+/** The AI code could not be loaded: usually a new version was deployed while this page stayed open. */
+export class StaleAppError extends AiError {
+  constructor() {
+    super('앱이 새 버전으로 바뀌었어요. 새로고침하면 AI 설명을 다시 쓸 수 있어요.')
+  }
+}
+
+async function client() {
+  try {
+    return await import('./ai-client')
+  } catch {
+    // the old chunk is gone from the server after a deploy; only a reload fetches the new one
+    throw new StaleAppError()
+  }
+}
+
 export const hasKey = () => !!getState().settings.apiKey.trim()
 
 const cacheKey = (id: string) => `kasane.ai.${id}`
@@ -35,12 +51,12 @@ export function cachedExplain(id: string): Explain | null {
 }
 
 function requireKey() {
-  if (!hasKey()) throw new AiError('설정에서 Anthropic API 키를 먼저 입력해 주세요.')
+  if (!hasKey()) throw new AiError('AI 설명은 설정에서 켤 수 있어요.')
 }
 
 export async function explainWord(w: Word): Promise<Explain> {
   requireKey()
-  const out = await (await import('./ai-client')).explain(w)
+  const out = await (await client()).explain(w)
   try {
     localStorage.setItem(cacheKey(w.id), JSON.stringify(out))
   } catch {
@@ -51,5 +67,5 @@ export async function explainWord(w: Word): Promise<Explain> {
 
 export async function weakStory(words: Word[]): Promise<Story> {
   requireKey()
-  return (await import('./ai-client')).story(words)
+  return (await client()).story(words)
 }

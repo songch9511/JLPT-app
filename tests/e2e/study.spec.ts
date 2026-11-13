@@ -28,8 +28,8 @@ test('onboarding → home → a full day of study → done screen → home', asy
   expect(Object.keys(s.cards)).toHaveLength(10)
   expect(Object.values(s.cards).every((c) => (c as { state: number }).state === 2)).toBe(true)
 
-  await page.getByRole('button', { name: '계속하기' }).click()
-  await expect(page.locator('.bubble')).toHaveText('가득 찼다! 오늘 목표 달성이에요.')
+  await page.getByRole('button', { name: '홈으로' }).click()
+  await expect(page.locator('.bubble')).toHaveText('다 채웠어요! 오늘 분량 끝.')
   await expect(page.locator('.quests .quest.done')).toHaveCount(3)
   await expect(page.locator('.hud-item.streak')).toHaveText('1')
   await expect(page.locator('.hud-item.streak')).toHaveClass(/lit/)
@@ -46,7 +46,7 @@ test('leaving mid-session keeps progress and “이어서 하기” resumes it',
   await expect(page.locator('.hero-counts .c-new b')).toHaveText('2')
   await page.reload()
   await page.getByRole('button', { name: '이어서 하기' }).click()
-  await expect(page.locator('.study-counts .c-new')).toHaveText('새 단어 2')
+  await expect(page.locator('.left-count')).toHaveText('남은 2장')
   await answer(page, '쉬워요')
   await answer(page, '쉬워요')
   await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
@@ -67,7 +67,7 @@ test('undo restores the answer, the XP and shows the same card again', async ({ 
   expect(await currentWord(page)).toBe(first)
   expect(await todayLog(page)).toBeUndefined()
   expect((await saved(page)).xp).toBe(0)
-  await expect(page.locator('.study-counts .c-new')).toHaveText('새 단어 5')
+  await expect(page.locator('.left-count')).toHaveText('남은 5장')
 })
 
 test('undo brings back the card that was undone even after its predecessor became due', async ({ page }) => {
@@ -101,8 +101,8 @@ test('the next day’s reviews appear (clock moves forward)', async ({ page }) =
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   for (let i = 0; i < 10; i++) await answer(page, '알아요')
   await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
-  await page.getByRole('button', { name: '계속하기' }).click()
-  await expect(page.locator('.bubble')).toContainText('가득 찼다')
+  await page.getByRole('button', { name: '홈으로' }).click()
+  await expect(page.locator('.bubble')).toContainText('다 채웠어요')
 
   // the five words graduated with a ~2 day interval
   await page.clock.setSystemTime(new Date(NOW.getTime() + 3 * 86400_000))
@@ -118,8 +118,8 @@ test('home rolls over to the new day while the app stays open', async ({ page })
   await open(page, { state: user({ dailyNew: 5 }), time: new Date('2026-11-13T23:50:00+09:00') })
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   for (let i = 0; i < 5; i++) await answer(page, '쉬워요')
-  await page.getByRole('button', { name: '계속하기' }).click()
-  await expect(page.locator('.bubble')).toContainText('가득 찼다')
+  await page.getByRole('button', { name: '홈으로' }).click()
+  await expect(page.locator('.bubble')).toContainText('다 채웠어요')
   // the app is left open past midnight (e.g. a PWA left in the background)
   await page.clock.runFor('20:00')
   await expect(page.locator('.hero-counts .c-new b')).toHaveText('5')
@@ -215,4 +215,122 @@ test('two open tabs do not overwrite each other’s progress', async ({ page, co
   expect(s.settings.theme).toBe('dark')
   // and the first tab sees the other tab's change
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+})
+
+test.describe('progress bar', () => {
+  test('counts the whole day, so resuming does not start from zero', async ({ page }) => {
+    await open(page, { state: user({ dailyNew: 5 }) })
+    await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+    const bar = page.getByRole('progressbar', { name: '오늘 학습' })
+    await expect(bar).toHaveAttribute('aria-valuenow', '0')
+    await expect(page.locator('.left-count')).toHaveText('남은 5장')
+    for (let i = 0; i < 3; i++) await answer(page, '쉬워요')
+    await page.getByRole('button', { name: /나가기/ }).click()
+    await page.getByRole('button', { name: '이어서 하기' }).click()
+    await expect(bar).toHaveAttribute('aria-valuenow', '3')
+    await expect(bar).toHaveAttribute('aria-valuemax', '5')
+    await expect(page.locator('.left-count')).toHaveText('남은 2장')
+    const fill = await bar.locator('i').evaluate((el) => el.getBoundingClientRect().width / el.parentElement!.getBoundingClientRect().width)
+    expect(fill).toBeCloseTo(0.6, 1)
+    // the old three-colour count row is gone
+    await expect(page.locator('.study-counts')).toHaveCount(0)
+  })
+})
+
+test.describe('a forgotten card', () => {
+  const spy = () => {
+    const w = window as unknown as { __spoken: string[] }
+    w.__spoken = []
+    if ('speechSynthesis' in window) {
+      speechSynthesis.speak = (u: SpeechSynthesisUtterance) => void w.__spoken.push(u.text)
+      speechSynthesis.cancel = () => {}
+    }
+  }
+  const spoken = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken)
+
+  test('says when it comes back, marks the card and stays silent when auto-speak is off', async ({ page }) => {
+    await page.addInitScript(spy)
+    await open(page, { state: user({ dailyNew: 5 }) })
+    await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+    await expect(page.locator('.flash .chip')).toHaveText('새 단어')
+    await expect(page.locator('.flash')).not.toHaveClass(/missed/)
+    await page.getByRole('button', { name: /^모르겠어요/ }).click()
+    await expect(page.locator('.flash .chip')).toHaveText('다시 나와요 · 1분')
+    await expect(page.locator('.flash')).toHaveClass(/missed/)
+    expect(await spoken(page)).toEqual([])
+  })
+
+  test('with auto-speak on, the reading is played once more when the card is missed', async ({ page }) => {
+    await page.addInitScript(spy)
+    await open(page, { state: user({ dailyNew: 5, autoSpeak: true }) })
+    await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+    await expect.poll(async () => (await spoken(page)).length).toBe(1) // the card appeared after a tap
+    await page.waitForTimeout(READ_MS)
+    await page.getByRole('button', { name: /^모르겠어요/ }).click()
+    await expect(page.locator('.flash-meaning')).toBeVisible()
+    const [first] = await spoken(page)
+    await expect.poll(() => spoken(page)).toEqual([first, first])
+    // confirming moves on without another play
+    await page.waitForTimeout(READ_MS)
+    await page.getByRole('button', { name: '확인했어요 · 다음' }).click()
+    await expect.poll(async () => (await spoken(page)).length).toBe(3) // only the next card's own auto-speak
+  })
+
+  test('auto-speak waits for a user gesture: opening the study page directly plays nothing', async ({ page }) => {
+    await page.addInitScript(spy)
+    // the page has not been interacted with yet (Playwright's own navigation counts as activation)
+    await page.addInitScript(() => Object.defineProperty(navigator, 'userActivation', { configurable: true, value: { hasBeenActive: false } }))
+    await open(page, { state: user({ dailyNew: 5, autoSpeak: true }), hash: '/study' })
+    await expect(page.locator('.flash')).toBeVisible()
+    await page.waitForTimeout(300)
+    expect(await spoken(page)).toEqual([])
+  })
+
+  test('answer buttons carry the interval in their accessible name', async ({ page }) => {
+    await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
+    await expect(page.getByRole('button', { name: '모르겠어요, 1분 뒤 다시' })).toBeVisible()
+  })
+})
+
+test.describe('nothing new left in the target level', () => {
+  const allOfN5 = () => {
+    const due = NOW.getTime() + 5 * 86400_000
+    const c = { due, stability: 10, difficulty: 5, elapsed_days: 3, scheduled_days: 8, learning_steps: 0, reps: 3, lapses: 0, state: 2, last_review: due - 8 * 86400_000 }
+    return Object.fromEntries(Array.from({ length: 718 }, (_, i) => [`5-${i}`, c]))
+  }
+
+  test('offers the next level and the mascot sleeps on a day with nothing to do', async ({ page }) => {
+    await open(page, { state: user({ target: 5 }, { cards: allOfN5() }) })
+    await expect(page.locator('.bubble')).toHaveText('N5 단어를 모두 만났어요. 다음은 N4!')
+    await expect(page.locator('.hero .daruma')).toHaveClass(/sleep/)
+    await page.getByRole('button', { name: 'N4 시작하기' }).click()
+    await expect(page).toHaveURL(/#\/study$/)
+    await expect(page.locator('.flash')).toBeVisible()
+    expect((await saved(page)).settings.target).toBe(4)
+  })
+
+  test('a day with no reviews but new words left suggests them', async ({ page }) => {
+    await open(page, { state: user({ dailyNew: 0 }) })
+    await expect(page.locator('.bubble')).toHaveText('오늘은 복습이 없어요. 새 단어를 해 볼까요?')
+    await expect(page.locator('.hero .daruma')).toHaveClass(/sleep/)
+    await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toBeVisible()
+  })
+})
+
+test('at 320px the three answer buttons stay on one line each', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 })
+  await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
+  await expect(page.locator('.flash')).toBeVisible()
+  await page.waitForTimeout(400) // let the card's slide-in finish
+  for (const b of await page.locator('.answer-bar .btn').all()) {
+    // the label is the first text node; one client rect = one line
+    const h = await b.evaluate((el) => {
+      const r = document.createRange()
+      r.selectNodeContents(el.firstChild!)
+      return r.getClientRects().length
+    })
+    expect(h).toBe(1)
+  }
+  // nothing sticks out sideways (documentElement.scrollWidth keeps the slide-in's overflow in Chromium, so check boxes)
+  expect(await page.evaluate(() => [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > 320.5).length)).toBe(0)
 })

@@ -1,15 +1,32 @@
 import { useEffect, useState } from 'react'
-import { AiError, cachedExplain, explainWord, hasKey, type Explain } from '../ai'
+import { AiError, cachedExplain, explainWord, hasKey, StaleAppError, type Explain } from '../ai'
 import { meaning, type Word } from '../data'
 import { formatInterval, STAGE_LABEL, stageOf } from '../srs'
 import { toggleMark, useStore } from '../store'
 import { speak } from '../util'
 import { Icon } from './Icon'
 
+/** An AI failure as a message, with the one action that fixes it: reload after a deploy, or the settings. */
+export function AiErrorNote({ error }: { error: Error }) {
+  const stale = error instanceof StaleAppError
+  return (
+    <p className="error" role="alert">
+      {error instanceof AiError ? error.message : '알 수 없는 오류가 발생했어요.'}{' '}
+      {stale ? (
+        <button className="link inline-btn" onClick={() => location.reload()}>
+          새로고침
+        </button>
+      ) : (
+        !hasKey() && <a href="#/settings">설정으로</a>
+      )}
+    </p>
+  )
+}
+
 export function AiExplain({ word }: { word: Word }) {
   const [data, setData] = useState<Explain | null>(() => cachedExplain(word.id))
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     setData(cachedExplain(word.id))
@@ -23,7 +40,7 @@ export function AiExplain({ word }: { word: Word }) {
     try {
       setData(await explainWord(word))
     } catch (e) {
-      setError(e instanceof AiError ? e.message : '알 수 없는 오류가 발생했어요.')
+      setError(e instanceof Error ? e : new Error(String(e)))
     } finally {
       setBusy(false)
     }
@@ -75,11 +92,7 @@ export function AiExplain({ word }: { word: Word }) {
         <Icon name="spark" size={18} />
         {busy ? 'AI가 설명을 쓰는 중…' : 'AI 예문 · 한자 풀이 · 암기 팁'}
       </button>
-      {error && (
-        <p className="error">
-          {error} {!hasKey() && <a href="#/settings">설정으로</a>}
-        </p>
-      )}
+      {error && <AiErrorNote error={error} />}
     </div>
   )
 }
@@ -102,13 +115,13 @@ export function WordSheet({ word, onClose }: { word: Word; onClose: () => void }
           <span className="muted small">
             {STAGE_LABEL[stageOf(card)]}
             {card && ` · 다음 복습 ${card.due <= Date.now() ? '지금' : formatInterval(card.due - Date.now()) + ' 뒤'}`}
-            {card && card.lapses > 0 && ` · 잊은 횟수 ${card.lapses}`}
+            {card && card.lapses > 0 && ` · ${card.lapses}번 잊음`}
           </span>
           <span className="grow" />
           <button className="icon-btn" onClick={() => speak(word.r || word.w)} aria-label="발음 듣기">
             <Icon name="speaker" />
           </button>
-          <button className={`icon-btn ${marked ? 'marked' : ''}`} onClick={() => toggleMark(word.id)} aria-label="북마크">
+          <button className={`icon-btn ${marked ? 'marked' : ''}`} onClick={() => toggleMark(word.id)} aria-label="북마크" aria-pressed={marked}>
             <Icon name="mark" fill={marked} />
           </button>
           <button className="icon-btn" onClick={onClose} aria-label="닫기">
