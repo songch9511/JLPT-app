@@ -22,7 +22,6 @@
     <ellipse cx="29" cy="72" rx="6" ry="4" fill="#f2a08f" opacity=".7"/><ellipse cx="91" cy="72" rx="6" ry="4" fill="#f2a08f" opacity=".7"/>
     <g fill="none" stroke="#2a2022" stroke-linecap="round">
       <path d="M57 45q-10-6-24 3M63 45q10-6 24 3" stroke-width="4.2"/>
-      <path d="M58 76q-9 6-21 0M62 76q9 6 21 0" stroke-width="3.2"/>
     </g>
     <g>
       <circle cx="45" cy="61" r="9.5" fill="#fff" stroke="#f0c24f" stroke-width="2"/><circle cx="75" cy="61" r="9.5" fill="#fff" stroke="#f0c24f" stroke-width="2"/>

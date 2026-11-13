@@ -86,12 +86,10 @@ export function Ruma({
         <path d={FACE} fill={`url(#${id}v)`} stroke={GOLD} strokeWidth="1.8" />
         <ellipse cx="29" cy="72" rx="6" ry="4" fill="#f2a08f" opacity=".7" />
         <ellipse cx="91" cy="72" rx="6" ry="4" fill="#f2a08f" opacity=".7" />
-        {/* brows and moustache, the crane and the turtle of a daruma's face */}
+        {/* bold brows, as on a daruma's face */}
         <g className="ruma-marks" fill="none" stroke={INK} strokeLinecap="round" strokeLinejoin="round">
           <path d="M57 45q-10-6-24 3" strokeWidth="4.2" />
           <path d="M63 45q10-6 24 3" strokeWidth="4.2" />
-          <path d="M58 76q-9 6-21 0" strokeWidth="3.2" />
-          <path d="M62 76q9 6 21 0" strokeWidth="3.2" />
         </g>
         {eye(45, second)}
         {eye(75, first)}
