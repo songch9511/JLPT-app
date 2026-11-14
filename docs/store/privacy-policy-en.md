@@ -29,10 +29,10 @@ We process **no** personal data. To work, the app creates and stores the followi
 
 | Kept on the device | Used for | Where |
 | --- | --- | --- |
-| Study records: review schedule and memory state per word, daily study counts, bookmarks, XP | scheduling reviews, the exam-day estimate of remembered words, the records screen | the app's own storage (web view storage and a file in the app's private folder) |
-| Settings: target level, exam date, new words per day, theme, voice settings | your study plan | same |
+| Study records: review schedule and memory state per word, daily study counts, bookmarks, XP | scheduling reviews, the counts on Home and the records screen | the app's own storage (web view storage and a file in the app's private folder) |
+| Settings: target level, new words per day, theme, voice settings | your study plan | same |
 | Reminder settings and scheduled reminders | review reminders | same; scheduled notifications sit in iOS Notification Center |
-| A summary for the widget (reviews for the next 7 days, the exam-day estimate) | the Home Screen widget | a shared container only this app and its widget can read (App Group) |
+| A summary for the widget (reviews and new words for the next 7 days, words met so far) | the Home Screen widget | a shared container only this app and its widget can read (App Group) |
 | Date of your last backup | the backup reminder | the app's own storage |
 
 ### 3. What happens on your device

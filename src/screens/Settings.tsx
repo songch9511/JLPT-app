@@ -1,12 +1,13 @@
 import { lazy, Suspense, useRef, useState } from 'react'
 import { exportBackup, readBackup, useMeta } from '../backup'
 import { APP_VERSION, TITLE, UNOFFICIAL_NOTICE } from '../brand'
-import { Banner, Button, Card, ChipGroup, Choice, ConfirmDialog, MessageDialog, RowLink, Switch } from '../components/ui'
+import { Banner, Button, Card, Choice, ConfirmDialog, MessageDialog, RowLink, Switch } from '../components/ui'
 import { LEVELS } from '../data'
-import { canUndoImport, examDateOk, GOALS, importState, MAX_DAILY_NEW, MAX_EXAM_DAYS, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
+import { replayTips } from '../guide'
+import { canUndoImport, importState, MAX_DAILY_NEW, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
 import { docHref, type DocName } from './Doc'
-import { addDays, dayKey, formatDay, upcomingExams } from '../util'
+import { formatDay } from '../util'
 
 // reminders, haptics and voice: only in the iOS app (not even in the web bundle, see src/platform/index.ts)
 const NativeSettings = import.meta.env.MODE === 'native' ? lazy(() => import('../platform/NativeSettings')) : null
@@ -24,12 +25,13 @@ export function Settings() {
   const meta = useMeta()
   const orphans = useStore(orphanCount)
   const file = useRef<HTMLInputElement>(null)
-  const exams = upcomingExams(new Date(), 4)
   const set = (patch: Partial<State['settings']>) => update((d) => void Object.assign(d.settings, patch))
   /** in-app dialogs instead of the browser's confirm()/alert() (05 batch 4) */
   const [confirmReset, setConfirmReset] = useState(false)
   const [pending, setPending] = useState<State | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
+  const onboarded = useStore((s) => s.onboarded)
+  const [replayed, setReplayed] = useState(false)
 
   const importData = async (f: File) => importText(await f.text())
   const importText = (text: string) => {
@@ -59,14 +61,14 @@ export function Settings() {
         <h1>설정</h1>
       </header>
 
-      <Card className="form" role="region" aria-labelledby="goal-title">
-        <h2 className="card-title" id="goal-title">학습 목표</h2>
+      <Card className="form" role="region" aria-labelledby="learn-title">
+        <h2 className="card-title" id="learn-title">학습 계획</h2>
         <p className="field-label">목표 급수</p>
         <Choice label="목표 급수" value={st.target} options={LEVELS.map((l) => [l, `N${l}`])} onChange={(target) => set({ target })} />
         {st.target < 5 && (
           <Switch
             label={`아래 급수 단어도 함께 (N${LEVELS.filter((l) => l > st.target).join('·N')})`}
-            description="시험은 아래 급수 단어를 안다고 보고 나와요. 켜면 쉬운 급수부터 새 단어가 나오고, 시험 준비도에도 함께 세요."
+            description="JLPT의 각 급수는 아래 급수 단어를 안다고 보고 나와요. 켜면 쉬운 급수부터 새 단어가 나와요."
             value={st.includeLower}
             onChange={(includeLower) => set({ includeLower })}
           />
@@ -77,22 +79,6 @@ export function Settings() {
           지금 {st.dailyNew}개. 새 단어가 많을수록 며칠 뒤 복습도 늘어나요. 복습이 밀리지 않도록 하루 {MAX_DAILY_NEW}개까지만 정할 수
           있어요.
         </p>
-        <p className="field-label">시험날 목표</p>
-        <Choice label="시험날 목표" value={st.goal} options={GOALS.map((g) => [g, `${Math.round(g * 100)}%`])} onChange={(goal) => set({ goal })} />
-        <p className="hint">시험날 기억할 단어의 목표 비율이에요. 합격선에서 나온 숫자가 아니라 앱이 정한 기준이에요.</p>
-        <label className="field-label" htmlFor="exam">
-          시험일
-        </label>
-        <ChipGroup label="시험일" value={st.examDate} options={exams.map((d) => [d, formatDay(d)])} onChange={(examDate) => set({ examDate })} />
-        <input
-          id="exam"
-          className="date-input"
-          type="date"
-          value={st.examDate}
-          max={dayKey(addDays(new Date(), MAX_EXAM_DAYS))}
-          // a date beyond what the plan can be worked out for (a mistyped year) is not taken
-          onChange={(e) => examDateOk(e.target.value) && set({ examDate: e.target.value })}
-        />
       </Card>
 
       <Card className="form" role="region" aria-labelledby="method-title">
@@ -103,6 +89,23 @@ export function Settings() {
           value={st.fastTrack}
           onChange={(fastTrack) => set({ fastTrack })}
         />
+        {onboarded && (
+          <p className="replay-tips" role="status">
+            {replayed ? (
+              '루마가 홈과 학습 화면에서 다시 알려 드릴게요.'
+            ) : (
+              <Button
+                label="루마의 안내 다시 보기"
+                variant="ghost"
+                className="text-action"
+                onClick={() => {
+                  replayTips()
+                  setReplayed(true)
+                }}
+              />
+            )}
+          </p>
+        )}
       </Card>
 
       <Card className="form" role="region" aria-labelledby="display-title">

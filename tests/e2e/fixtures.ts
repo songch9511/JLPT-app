@@ -22,7 +22,7 @@ export const keyFor = (state: unknown) => {
 /** Friday 2026-11-13 09:00 in Seoul (the browser context runs in Asia/Seoul). */
 export const NOW = new Date('2026-11-13T09:00:00+09:00')
 
-type Settings = { target: number; examDate: string; dailyNew: number; theme: string; autoSpeak: boolean; includeLower: boolean; goal: number; fastTrack: boolean }
+type Settings = { target: number; dailyNew: number; theme: string; autoSpeak: boolean; includeLower: boolean; fastTrack: boolean }
 
 /**
  * A saved state as an existing learner has it — saved by the version before stable ids (v2, positional ids like
@@ -31,6 +31,7 @@ type Settings = { target: number; examDate: string; dailyNew: number; theme: str
  * setting: only the target level is studied (pass `includeLower: true` for a new learner's behaviour).
  * The cognate fast-track is off unless asked for (`fastTrack: true`), so scenarios about the meaning card,
  * its three answers and their intervals see meaning cards only; fasttrack.spec.ts covers reading cards.
+ * Like every state saved before 2026-11-14 it carries an exam date, which the app now drops on load.
  */
 export function user(settings: Partial<Settings> & Record<string, unknown> = {}, extra: Record<string, unknown> = {}) {
   return {
@@ -120,8 +121,8 @@ export async function answer(page: Page, choice: '알아요' | '쉬워요' | '�
   await expect.poll(async () => (await todayLog(page))?.c ?? 0).toBe(before + 1)
 }
 
-/** The home screen has rendered (its headline is the exam readiness card). */
-export const homeShown = (page: Page) => expect(page.getByRole('heading', { name: /시험날 기억할 단어/ })).toBeVisible()
+/** The home screen has rendered (today's plan is there). */
+export const homeShown = (page: Page) => expect(page.getByRole('heading', { name: '오늘의 계획' })).toBeVisible()
 
 /** Current word on the study card. */
 export const currentWord = (page: Page) => page.locator('.flash-word').innerText()

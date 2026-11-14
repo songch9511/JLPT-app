@@ -503,14 +503,13 @@ describe('P13: study time is recorded', () => {
     expect(store.getState().log['2026-11-13']).toMatchObject({ c: 3, ms: 7_400 + 60_000 })
   })
 
-  it('records the predicted recall of review answers next to how many were remembered', async () => {
+  it('counts review answers and how many were remembered; no longer records a predicted recall (log.e)', async () => {
     const { srs, store } = await withCards({ [L('5-0')]: card({ due: T, last_review: T - 3 * DAY, stability: 3 }), [L('5-1')]: card({ due: T, last_review: T - 10 * DAY, stability: 3 }) })
     srs.answer(L('5-0'), srs.Rating.Good, at(NOW), 3000)
     srs.answer(L('5-1'), srs.Rating.Again, at(NOW), 3000)
     const l = store.getState().log['2026-11-13']
     expect(l).toMatchObject({ r: 2, p: 1 })
-    expect(l.e).toBeGreaterThan(0.9) // ≈ 0.90 + 0.7
-    expect(l.e).toBeLessThan(2)
+    expect('e' in l).toBe(false)
   })
 
   it('secondsPerAnswer uses the last 14 days once 50 timed answers exist, else 8 s', async () => {

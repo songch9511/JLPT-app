@@ -74,7 +74,7 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 - **쓰지 않은 것**: `@capacitor/preferences`(위 3.2 이유), `@capacitor/splash-screen`(런치 화면 스토리보드로 충분, 플러그인 하나 줄임).
 
 ### 3.5 위젯
-- **결과: 만들었습니다(소형·중형).** "오늘 복습할 단어 수 / 끝났으면 済"와 "시험날 기억할 단어(예상) / 전체, 목표"를 보입니다. 앱이 7일치 하루별 값을 App Group 공유 UserDefaults에 쓰고(`WidgetBridgePlugin`), 위젯 타임라인이 자정마다 다음 날 값으로 바꿉니다.
+- **결과: 만들었습니다(소형·중형).** "오늘 복습할 단어 수 / 끝났으면 済"와 (중형) "공부하는 급수의 만난 단어 / 전체, 장기 기억"을 보입니다. 처음에는 중형 오른쪽이 "시험날 기억할 단어(예상) / 전체, 목표"였으나 2026-11-14 소유자 결정으로 바꿨습니다. 스냅숏 키(`ruma.widget.snapshot`)와 버전(1)은 그대로이고, 새 필드 `met`·`mature`는 위젯에서 선택 값이며, 옛 위젯이 요구하던 `plan`·`goal`·`examDate`는 앱이 비활성 값(`null`·0·빈 글자)으로 계속 씁니다(`src/platform/widget.ts`). 앱이 7일치 하루별 값을 App Group 공유 UserDefaults에 쓰고(`WidgetBridgePlugin`), 위젯 타임라인이 자정마다 다음 날 값으로 바꿉니다.
 - Xcode 없이 확장 타깃을 넣으려고 `scripts/ios/patch-pbxproj.py`로 `project.pbxproj`를 수정했습니다(멱등, 수정 기록으로 보관). 독립 파서로 구조를 확인했지만 **실제 컴파일은 `ios.yml` 첫 실행이 처음**입니다.
 - 실패하면: CI 로그(아티팩트 `xcodebuild-log`)를 보고 고치거나, v1에서 빼려면 Xcode에서 RumaWidget 타깃과 "Embed Foundation Extensions" 단계를 지우면 됩니다(앱 쪽 JS는 위젯이 없어도 오류 없이 무시).
 - App Group ID는 빌드 설정 `RUMA_APP_GROUP`(= `group.<번들 ID>`) 하나에서 Info.plist와 entitlements로 들어갑니다.
@@ -105,7 +105,7 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 ## 5. 기기 테스트 체크리스트 (TestFlight 빌드, 실제 iPhone)
 
 설치·오프라인
-- [ ] 비행기 모드에서 **첫 실행** → 온보딩 → 학습 → 단어장에서 N1 단어 검색까지 모두 동작
+- [ ] 비행기 모드에서 **첫 실행** → 시작 화면(라이트·다크 모두 바탕색이 웹 첫 화면과 이어지는지) → 홈에서 루마의 질문 → 첫 학습 → 단어장에서 N1 단어 검색까지 모두 동작
 - [ ] 첫 실행에 알림 권한 창이 뜨지 않음
 - [ ] 런치 화면: 라이트·다크 모드 모두 루마가 가운데, 흰 화면 깜박임이 짧음
 

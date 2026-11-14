@@ -66,8 +66,8 @@ export interface Queue {
 }
 
 /**
- * The levels whose words are studied and counted for readiness: the target alone, or with `includeLower`
- * the target and every level below it, easiest first (03 §2.1 P4: the exam assumes the lower levels' words).
+ * The levels whose words are studied: the target alone, or with `includeLower` the target and every level below
+ * it, easiest first (03 §2.1 P4: each level assumes the words of the levels below).
  */
 export function studyLevels(settings: Pick<State['settings'], 'target' | 'includeLower'>): Level[] {
   return settings.includeLower ? LEVELS.filter((l) => l >= settings.target) : [settings.target]
@@ -277,8 +277,6 @@ export function unlockMoreReviews(n: number, now = new Date()) {
 }
 
 export interface Spread {
-  /** the day each active card is (first) reviewed on under the plan, 0 = today; learning cards on their due day */
-  day: Map<string, number>
   /** reviews already due and still waiting at the end of each day (index 0 = today) */
   held: number[]
   /** days, today included, until nothing due waits any more; 0 when nothing is held today */
@@ -286,22 +284,20 @@ export interface Spread {
 }
 
 const DAY_MS = 86_400_000
-let spreadMemo: { args: unknown[]; value: Spread }[] = []
+let spreadMemo: { args: unknown[]; value: Spread } | null = null
 
 /**
- * The backlog policy as a schedule: every review card in due order (the order `buildQueue` shows them; see
- * backlog-sim.ts for why) goes to the first day, from its due day on, that still has room — `todayRoom` today
- * (the quota left, or 0 to model skipping today) and the cap on every later day. This is a selection policy
- * derived from the cards: due dates are never rewritten. It counts only the next review of each card; the reviews
- * that follow it and those of new words are assumed to fit in the days (stated in 03 §4.3).
+ * The backlog policy as a schedule, for Home's "n일이면 따라잡아요": every review card in due order (the order
+ * `buildQueue` shows them; see backlog-sim.ts for why) goes to the first day, from its due day on, that still has
+ * room — today's quota left today and the cap on every later day. This is a selection policy derived from the
+ * cards: due dates are never rewritten. It counts only the next review of each card; the reviews that follow it
+ * and those of new words are assumed to fit in the days.
  */
-export function spreadReviews(s: State, now: Date, todayRoom = reviewQuota(s, now).left): Spread {
+export function spreadReviews(s: State, now: Date): Spread {
+  const todayRoom = reviewQuota(s, now).left
   const args = [s.cards, s.log, s.settings.fastTrack, dayKey(now), todayRoom, levelInfoVersion()]
-  const hit = spreadMemo.find((m) => m.args.every((a, i) => a === args[i]))
-  if (hit) return hit.value
+  if (spreadMemo && spreadMemo.args.every((a, i) => a === args[i])) return spreadMemo.value
   const cap = reviewCap(s, now)
-  const { order, learning } = spreadOrder(s, now)
-  const day = new Map<string, number>(learning)
   // first day >= release with room, via "next free day" links (days fill up in order)
   const room: number[] = []
   const nextFree: number[] = []
@@ -319,14 +315,13 @@ export function spreadReviews(s: State, now: Date, todayRoom = reviewQuota(s, no
   }
   const released: number[] = []
   const assigned: number[] = []
-  for (const [id, rel] of order) {
+  for (const rel of spreadOrder(s, now)) {
     let d = find(rel)
     while (roomOf(d) === 0) {
       nextFree[d] = d + 1
       d = find(d + 1)
     }
     room[d]--
-    day.set(id, d)
     released[rel] = (released[rel] ?? 0) + 1
     assigned[d] = (assigned[d] ?? 0) + 1
   }
@@ -339,14 +334,14 @@ export function spreadReviews(s: State, now: Date, todayRoom = reviewQuota(s, no
     // the backlog of today: cleared on the first day that ends with nothing waiting
     if (held[0] > 0 && catchUp === 0 && waiting === 0) catchUp = d + 1
   }
-  const value = { day, held, catchUp }
-  spreadMemo = [{ args, value }, ...spreadMemo.slice(0, 1)]
+  const value = { held, catchUp }
+  spreadMemo = { args, value }
   return value
 }
 
-let orderMemo: { cards: State['cards']; ft: boolean; day: string; iv: number; value: ReturnType<typeof makeOrder> } | null = null
-/** Review cards in priority order with the day each is released (0 = today), and learning cards' days. */
-function spreadOrder(s: State, now: Date) {
+let orderMemo: { cards: State['cards']; ft: boolean; day: string; iv: number; value: number[] } | null = null
+/** The day each review card is released (0 = today), in priority order: today's in due order, then later ones by due. */
+function spreadOrder(s: State, now: Date): number[] {
   const ft = fastOn(s)
   const day = dayKey(now)
   const iv = levelInfoVersion()
@@ -356,25 +351,22 @@ function spreadOrder(s: State, now: Date) {
   return value
 }
 
-function makeOrder(s: State, now: Date) {
+function makeOrder(s: State, now: Date): number[] {
   const eod = endOfDay(now)
   const dayOf = (due: number) => (due < eod ? 0 : 1 + Math.floor((due - eod) / DAY_MS))
   const ft = fastOn(s)
   const { review: dueToday, buried } = scanToday(s, now)
   const buriedSet = new Set(buried)
-  const learning: [string, number][] = []
-  // release day of each review card, in priority order: today's (already in due order), then later ones by due
-  const order: [string, number][] = dueToday.map(([id]) => [id, 0])
+  const order: number[] = dueToday.map(() => 0)
   const later: [string, number][] = []
   for (const id in s.cards) {
     if (!isActive(id, ft)) continue
     const c = s.cards[id]
-    if (isLearning(c)) learning.push([id, dayOf(c.due)])
-    else if (buriedSet.has(id) || c.due >= eod) later.push([id, c.due])
+    if (!isLearning(c) && (buriedSet.has(id) || c.due >= eod)) later.push([id, c.due])
   }
   later.sort(byDue)
-  for (const [id, due] of later) order.push([id, Math.max(1, dayOf(due))])
-  return { order, learning }
+  for (const [, due] of later) order.push(Math.max(1, dayOf(due)))
+  return order
 }
 
 // ── answering ───────────────────────────────────────────────────────────────
@@ -408,9 +400,6 @@ export function answer(id: string, grade: Grade, now = new Date(), activeMs?: nu
     if (prev?.state === CardState.Review) {
       log.r++
       if (grade !== Rating.Again) log.p++
-      // what the model expected, so readiness can be corrected if the learner remembers less (03 §4.1)
-      const predicted = scheduler.get_retrievability(card, at, false)
-      if (Number.isFinite(predicted)) log.e = (log.e ?? 0) + predicted
     }
     if (activeMs !== undefined && Number.isFinite(activeMs) && activeMs > 0) log.ms = (log.ms ?? 0) + Math.min(MAX_CARD_MS, Math.round(activeMs))
     d.log = { ...d.log, [key]: log }
@@ -522,6 +511,25 @@ export function breakdowns(s: CardsView): Record<Level, Breakdown> {
     out[l].new--
   }
   return out
+}
+
+/**
+ * The studied levels' words (`studyLevels`): how many there are, how many were met (introduced) and how many of those
+ * are in long-term memory — the sums of the 단어장 level rows (`breakdowns`). Home's word card, the 기록 stamps and the
+ * widget show these.
+ */
+export function studyProgress(s: CardsView & { settings: Pick<State['settings'], 'target' | 'includeLower'> }) {
+  const levels = studyLevels(s.settings)
+  const b = breakdowns(s)
+  let total = 0
+  let met = 0
+  let mature = 0
+  for (const l of levels) {
+    total += COUNTS[l]
+    met += COUNTS[l] - b[l].new
+    mature += b[l].mature
+  }
+  return { levels, total, met, mature }
 }
 
 /** Cards coming due on each of the next `days` days (index 0 = today, including overdue). */

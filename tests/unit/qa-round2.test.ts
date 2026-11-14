@@ -39,11 +39,10 @@ describe('Q2: a backup the app accepts never breaks it', () => {
 
   it('a card the check lets through can be scheduled and counted', async () => {
     const { store, srs } = await boot({ now: NOW })
-    const readiness = await import('../../src/readiness')
     const ok = file({ [L('5-1')]: card({ due: T - DAY }) })
     expect(store.isBackup(ok)).toBe(true)
     store.importState(ok as never)
-    expect(() => readiness.readiness(store.getState(), at(NOW))).not.toThrow()
+    expect(() => srs.spreadReviews(store.getState(), at(NOW))).not.toThrow()
     expect(srs.buildQueue(store.getState(), at(NOW)).review).toBe(1)
   })
 
@@ -55,39 +54,16 @@ describe('Q2: a backup the app accepts never breaks it', () => {
   })
 })
 
-describe('Q3: the exam date', () => {
-  it('examDateOk: a calendar day, at most three years ahead; past days are fine', async () => {
-    const { store } = await boot({ now: NOW })
-    const now = at(NOW)
-    expect(store.examDateOk('2026-12-06', now)).toBe(true)
-    expect(store.examDateOk('2020-07-05', now)).toBe(true)
-    expect(store.examDateOk('2029-07-01', now)).toBe(true)
-    expect(store.examDateOk('2099-12-06', now)).toBe(false)
-    expect(store.examDateOk('9999-12-31', now)).toBe(false)
-    expect(store.examDateOk('soon', now)).toBe(false)
-    expect(store.examDateOk(20261206, now)).toBe(false)
-    expect(store.examDateOk(undefined, now)).toBe(false)
-  })
-
-  it('a far, malformed or non-text exam date in a saved state or a backup becomes the next exam', async () => {
-    for (const examDate of ['2099-12-06', 'soon', 20261206]) {
-      const { store } = await boot({ now: NOW, saved: { v: 4, onboarded: true, settings: { target: 5, examDate }, cards: {}, log: {}, marks: [], xp: 0 } })
-      expect(store.getState().settings.examDate).toBe('2026-12-06')
+describe('Q3: the exam date (removed 2026-11-14)', () => {
+  it('a far, malformed or non-text exam date in a saved state or a backup loads and is dropped', async () => {
+    for (const examDate of ['2099-12-06', '9999-12-31', 'soon', 20261206, null]) {
+      const { store } = await boot({ now: NOW, saved: { v: 4, onboarded: true, settings: { target: 5, examDate, goal: 'x' }, cards: {}, log: {}, marks: [], xp: 0 } })
+      expect(store.getState().settings).not.toHaveProperty('examDate')
+      expect(store.getState().settings).not.toHaveProperty('goal')
       const backup = await import('../../src/backup')
       const r = backup.readBackup({ v: 4, settings: { target: 5, examDate }, cards: {} })
-      expect(r.ok && r.state.settings.examDate).toBe('2026-12-06')
+      expect(r.ok && r.state.settings).not.toHaveProperty('examDate')
     }
-  })
-
-  it('readiness for the furthest allowed exam stays quick', async () => {
-    const { store } = await bootUser(NOW, { target: 3, includeLower: true, examDate: '2029-11-11' })
-    store.update((d) => {
-      d.cards = Object.fromEntries(Array.from({ length: 600 }, (_, i) => [L(`5-${i}`), card({ due: T + ((i % 60) - 20) * DAY, stability: 1 + (i % 50), scheduled_days: 1 + (i % 50) })]))
-    })
-    const readiness = await import('../../src/readiness')
-    const t0 = performance.now()
-    readiness.readiness(store.getState(), at(NOW))
-    expect(performance.now() - t0).toBeLessThan(3000)
   })
 })
 

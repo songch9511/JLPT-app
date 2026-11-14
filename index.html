@@ -10,9 +10,80 @@
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <title>JLPT 루마 — 간격 반복 단어장</title>
-    <meta name="description" content="한국인을 위한 JLPT 단어 간격 반복 학습 앱. 시험날 기억할 단어 수를 보여 줘요. JLPT 주최 기관과 관계없는 비공식 앱이에요." />
+    <meta name="description" content="한국인을 위한 JLPT 단어 간격 반복 학습 앱. 한자어는 읽기만 확인하고, 잊을 때쯤 다시 보여 줘요. JLPT 주최 기관과 관계없는 비공식 앱이에요." />
+    <script>
+      // The theme chosen in 설정 (light/dark) before anything paints, so the launch screen below is already in it.
+      // src/themeRoot.ts keeps <html data-theme> in step from then on; "system" leaves it unset (the OS decides).
+      try {
+        var m = /"theme":"(light|dark)"/.exec(localStorage.getItem('kasane.state.v4') || '')
+        if (m) document.documentElement.setAttribute('data-theme', m[1])
+      } catch (e) {}
+    </script>
+    <style>
+      /* The launch screen (docs/design-system.md §3 "첫 화면"): painted from this file before any script, shown only
+         while the app loads and faded out by src/main.tsx as soon as the first screen is drawn (no minimum time).
+         Colours are the ruma theme's ground / ink / 藍 (src/themes/ruma/rumaTheme.ts), copied because the theme's CSS
+         is not loaded yet; the iOS launch image (scripts/ios/make-assets.mjs) draws the same screen. */
+      :root { --launch-bg: #fbfaf5; --launch-ink: #2d2a26; --launch-accent: #165e83; background: var(--launch-bg); }
+      :root[data-theme='dark'] { --launch-bg: #1b1a18; --launch-ink: #ece7db; --launch-accent: #86aecf; }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) { --launch-bg: #1b1a18; --launch-ink: #ece7db; --launch-accent: #86aecf; }
+      }
+      #launch {
+        position: fixed; inset: 0; z-index: 100; pointer-events: none; background: var(--launch-bg);
+        display: flex; align-items: center; justify-content: center;
+        transition: opacity 240ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      #launch.out { opacity: 0; }
+      #launch svg { display: block; width: 112px; height: 112px; margin-top: -24px; }
+      #launch p {
+        position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 56px); margin: 0; text-align: center;
+        font: 700 20px/1 -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', Pretendard, 'Noto Sans KR', sans-serif;
+        letter-spacing: 0.02em; color: var(--launch-ink);
+      }
+      #launch p span { color: var(--launch-accent); }
+      @media (prefers-reduced-motion: reduce) { #launch { transition: none; } }
+    </style>
   </head>
   <body>
+    <!-- Ruma as src/components/Ruma.tsx draws it (both eyes open, still) -->
+    <div id="launch" aria-hidden="true">
+      <svg viewBox="0 0 120 120">
+        <defs>
+          <clipPath id="lb"><path d="M60 9c30 0 49 24 49 54 0 28-20 47-49 47S11 91 11 63C11 33 30 9 60 9Z" /></clipPath>
+          <radialGradient id="lh" cx="34%" cy="20%" r="62%"><stop offset="0" stop-color="#fff" stop-opacity=".45" /><stop offset="1" stop-color="#fff" stop-opacity="0" /></radialGradient>
+          <linearGradient id="ld" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#3a0d05" stop-opacity="0" /><stop offset="1" stop-color="#3a0d05" stop-opacity=".34" /></linearGradient>
+          <linearGradient id="lv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffdf8" /><stop offset="1" stop-color="#f3e7d6" /></linearGradient>
+          <filter id="lf" x="-30%" y="-100%" width="160%" height="300%"><feGaussianBlur stdDeviation="2.4" /></filter>
+        </defs>
+        <ellipse cx="60" cy="113" rx="30" ry="4" fill="#000" opacity=".22" filter="url(#lf)" />
+        <g clip-path="url(#lb)">
+          <rect width="120" height="120" fill="#e0442f" />
+          <g fill="none" stroke="#f0c24f" stroke-linecap="round">
+            <path d="M14 80q3 14 13 24M106 80q-3 14-13 24" stroke-width="5.5" />
+            <path d="M25 87q3 11 11 19M95 87q-3 11-11 19" stroke-width="5" />
+            <path d="M37 91q2 8 7 14M83 91q-2 8-7 14" stroke-width="4.5" />
+          </g>
+          <path d="M60 89.5q1.6 7 8.5 8.5-6.9 1.6-8.5 8.5-1.6-6.9-8.5-8.5 6.9-1.5 8.5-8.5Z" fill="#f0c24f" stroke="#f0c24f" stroke-width="1.5" stroke-linejoin="round" />
+          <path d="M22 30q38-17 76 0" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="4" stroke-linecap="round" />
+          <rect width="120" height="120" fill="url(#ld)" />
+          <rect width="120" height="120" fill="url(#lh)" />
+        </g>
+        <path d="M60 9c30 0 49 24 49 54 0 28-20 47-49 47S11 91 11 63C11 33 30 9 60 9Z" fill="none" stroke="#7a3a2c" stroke-opacity=".28" stroke-width="1.5" />
+        <path d="M60 34c16 0 28 3 34 10 6 8 6 22 0 30-6 7-18 10-34 10s-28-3-34-10c-6-8-6-22 0-30 6-7 18-10 34-10Z" fill="url(#lv)" stroke="#f0c24f" stroke-width="1.8" />
+        <ellipse cx="30" cy="72.5" rx="7" ry="4.2" fill="#f7a9b4" />
+        <ellipse cx="90" cy="72.5" rx="7" ry="4.2" fill="#f7a9b4" />
+        <path d="M27 74.5l1.6-4M30 74.5l1.6-4M33 74.5l1.6-4M87 74.5l1.6-4M90 74.5l1.6-4M93 74.5l1.6-4" fill="none" stroke="#e8798b" stroke-width="1.1" stroke-linecap="round" />
+        <g fill="none" stroke="#2a2022" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M36 52q5-3.5 10-2.5" stroke-width="2.4" />
+          <path d="M84 52q-5-3.5-10-2.5" stroke-width="2.4" />
+          <path d="M55 69q2.5 3.6 5 0q2.5 3.6 5 0" stroke-width="2.2" />
+        </g>
+        <circle cx="45" cy="64" r="6.5" fill="#2a2022" /><circle cx="43" cy="61.8" r="2.1" fill="#fff" />
+        <circle cx="75" cy="64" r="6.5" fill="#2a2022" /><circle cx="73" cy="61.8" r="2.1" fill="#fff" />
+      </svg>
+      <p><span>JLPT</span> 루마</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

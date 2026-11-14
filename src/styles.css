@@ -38,7 +38,7 @@
   .error { color: var(--color-text-error); font-size: var(--font-size-base); }
 
   /* ── page frame: 16px sides (or the safe area), cards 12px apart, room for the tab bar ── */
-  .app, .study, .onboard { max-width: 520px; margin: 0 auto; }
+  .app, .study { max-width: 520px; margin: 0 auto; }
   .page {
     padding: calc(env(safe-area-inset-top) + var(--spacing-3)) max(var(--spacing-4), env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 104px) max(var(--spacing-4), env(safe-area-inset-left));
     display: flex; flex-direction: column; gap: var(--spacing-3);
@@ -186,13 +186,10 @@
   .form { display: flex; flex-direction: column; gap: 10px; }
   .form .card-title { margin-bottom: 0; }
   .field-label { font-size: var(--text-label-size); font-weight: 700; color: var(--color-text-secondary); margin-top: var(--spacing-1); }
-  .date-input {
-    width: 100%; min-height: 48px; padding: 0 14px; border-radius: var(--radius-element); font: inherit; color: var(--color-text-primary);
-    border: 1.5px solid var(--color-border-emphasized); background: var(--color-background-body);
-  }
   .row { display: flex; gap: var(--spacing-2); }
   .row > * { flex: 1; }
   .last-backup { color: var(--color-text-primary); }
+  .replay-tips { min-height: 44px; display: flex; align-items: center; font-size: var(--font-size-base); color: var(--color-text-secondary); margin: 0 0 calc(-1 * var(--spacing-2)) calc(-1 * var(--spacing-2)); }
   .about { display: flex; flex-direction: column; gap: var(--spacing-2); }
   .about .card-title { margin-bottom: 0; }
   .credits { display: flex; flex-direction: column; gap: var(--spacing-1); font-size: var(--font-size-base); color: var(--color-text-secondary); }
@@ -227,51 +224,29 @@
   .astryx-button:not([data-variant='ghost'], [aria-disabled='true']):active { transform: translateY(var(--ruma-depth)); box-shadow: 0 0 0 transparent; }
 
   /* ── home ── */
-  .home-head { display: flex; align-items: center; gap: var(--spacing-3); min-height: 44px; }
-  .home-ctx { flex: 1; min-width: 0; font-size: var(--font-size-base); color: var(--color-text-secondary); }
-  .home-ctx b { color: var(--color-text-primary); font-size: var(--font-size-lg); }
-  .home-ctx .soon { color: var(--color-text-error); font-weight: 700; }
-  .dday { font-size: var(--font-size-sm); font-weight: 700; padding: 3px 10px; border-radius: var(--radius-full); }
-  a.dday { color: var(--color-text-accent); background: var(--color-accent-muted); }
+  /* the top line: "오늘" and the day · level, the streak on the right (a `.top` header like every tab's) */
+  .home-head .subtitle b { color: var(--color-text-primary); }
   .streak { display: inline-flex; align-items: center; gap: var(--spacing-1); color: var(--color-text-primary); white-space: nowrap; }
   .streak svg { color: var(--ruma-flame); }
   .streak .num { font-size: var(--font-size-lg); }
   .streak small { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 
-  .readiness { display: flex; flex-direction: column; gap: var(--spacing-2); }
-  .readiness .card-title { margin-bottom: 0; }
-  .ready-figure { font-size: var(--font-size-base); }
-  .ready-figure .num { font-size: var(--font-size-3xl); }
-  .ready-figure .muted { font-size: var(--font-size-lg); font-variant-numeric: tabular-nums; }
-  /* the goal is a mark on the plain fill: a 2px ink tick reaching past the bar */
-  .progress-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; transform: translateX(-50%); background: var(--color-text-primary); border-radius: 1px; }
-  .ready-goal { text-align: right; margin-top: -2px; }
-  .ready-split { font-size: var(--font-size-base); color: var(--color-text-secondary); }
-  .ready-split .num { color: var(--color-text-primary); font-size: var(--font-size-lg); }
-  .ready-status { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-2); }
-  .status { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-size-base); font-weight: 700; }
-  .status::before { content: ''; width: 8px; height: 8px; border-radius: var(--radius-full); background: currentColor; }
-  .status.ok { color: var(--color-text-accent); }
-  .status.tight { color: var(--color-text-primary); }
-  .status.tight::before { background: var(--color-text-secondary); }
-  .status.risk { color: var(--color-text-error); }
-  .status.early { color: var(--color-text-secondary); }
-  .ready-info {
-    display: flex; align-items: flex-start; gap: 6px; text-align: left; min-height: 44px; padding: var(--spacing-2) 0 0; margin-bottom: calc(-1 * var(--spacing-2));
-    font-size: var(--font-size-sm); color: var(--color-text-secondary); border-radius: var(--radius-inner);
-  }
-  .ready-info svg { flex: none; margin-top: 2px; }
-
   .plan { display: flex; flex-direction: column; gap: var(--spacing-3); }
   .plan .card-title { margin-bottom: 0; }
   .plan-counts { display: flex; flex-wrap: wrap; gap: var(--spacing-1) var(--spacing-4); font-size: var(--font-size-base); color: var(--color-text-secondary); }
   .plan-counts .num { color: var(--color-text-primary); font-size: var(--font-size-xl); margin-left: 2px; }
-  .plan-gain { font-size: var(--font-size-base); }
-  .plan-gain .num { color: var(--color-text-accent); }
   .plan-note { font-size: var(--font-size-base); background: var(--color-background-muted); border-radius: var(--radius-element); padding: 10px var(--spacing-3); }
   .plan-done { color: var(--color-text-secondary); font-size: var(--font-size-base); }
   .plan-lever { display: flex; align-items: center; flex-wrap: wrap; gap: 0 var(--spacing-1); font-size: var(--font-size-base); margin: calc(-1 * var(--spacing-2)) 0; }
   .link.inline-btn { color: var(--color-text-accent); font-weight: 700; text-decoration: underline; }
+
+  /* the studied levels' words met so far: a plain count and bar */
+  .words-card { display: flex; flex-direction: column; gap: var(--spacing-2); }
+  .words-card .card-title { margin-bottom: 0; }
+  .words-card .card-title .muted { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); white-space: nowrap; }
+  .words-card .card-title .num { color: var(--color-text-primary); font-weight: 700; }
+  .words-sub { font-size: var(--font-size-base); color: var(--color-text-secondary); }
+  .words-sub .num { color: var(--color-text-primary); }
 
   .week-card { display: flex; flex-direction: column; gap: var(--spacing-3); }
   .week-top { display: flex; align-items: center; gap: var(--spacing-2); }
@@ -294,6 +269,30 @@
   .quest-mini { display: inline-flex; align-items: center; gap: var(--spacing-1); font-size: var(--font-size-sm); color: var(--color-text-secondary); white-space: nowrap; }
   .quest-mini.done { color: var(--color-text-primary); }
   .quest-mini.done svg { color: var(--color-accent); }
+
+  /* ── Ruma's first run and tips (screens/HomeGuide.tsx): the same mascot card, the bubble holds the question, the
+     answers sit right under it as ordinary buttons. No overlay, nothing blocks the screen. ── */
+  .bubble > p + p { margin-top: var(--spacing-1); }
+  .bubble-sub { color: var(--color-text-secondary); }
+  .bubble:focus { outline: none; }
+  .bubble:focus-visible { outline: var(--focus-outline-width) solid var(--focus-outline-color); outline-offset: 2px; }
+  .guide-answers { display: grid; gap: var(--spacing-2); }
+  .guide-answers.level-answers { grid-template-columns: repeat(5, 1fr); }
+  .guide-answers .btn { min-width: 0; padding-inline: var(--spacing-2); font-size: var(--font-size-base); }
+  .guide-answers.level-answers .btn { font-size: var(--font-size-lg); }
+  .guide-back { align-self: center; margin: calc(-1 * var(--spacing-2)) 0; }
+  .guide-card .btn.full { margin-top: var(--spacing-1); }
+  @media (max-width: 360px) { .guide-card .ruma { width: 56px; height: 56px; } }
+  /* a tip: the bubble's words and a quiet "알겠어요" at its end */
+  .bubble.tip { display: flex; flex-direction: column; align-items: flex-start; padding-bottom: 0; }
+  .tip-close { align-self: flex-end; margin: calc(-1 * var(--spacing-1)) calc(-1 * var(--spacing-2)) 0 0; }
+  /* the plan card while Ruma asks: its place and title, no numbers yet */
+  .plan.pending .hint { margin-top: 0; }
+  .first-note { padding: 0 var(--spacing-1); font-size: var(--font-size-sm); color: var(--color-text-secondary); text-align: center; }
+  /* the reading-card tip on the study screen: a small Ruma and its bubble above the card */
+  .study-tip { display: flex; align-items: center; gap: var(--spacing-2); padding: 0 max(var(--spacing-4), env(safe-area-inset-right)) var(--spacing-2) max(var(--spacing-4), env(safe-area-inset-left)); animation: fade var(--duration-medium) var(--ease-standard) both; }
+  .study-tip .bubble { display: flex; align-items: center; gap: var(--spacing-1); padding-right: 0; }
+  .study-tip .bubble p { flex: 1; min-width: 0; }
 
   /* plain link rows (Astryx List was 23 KB gzip for these two rows: docs/design-system.md §쓰지 않은 것) */
   .home-links { display: flex; flex-direction: column; }
@@ -452,7 +451,7 @@
   .grade small { display: block; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); line-height: 1.25; opacity: 0.8; color: inherit; }
   @media (max-width: 340px) { .answer-bar.three { grid-template-columns: 1fr 1.15fr 1fr; gap: 6px; } }
 
-  .done-screen, .onboard {
+  .done-screen {
     min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; gap: var(--spacing-3);
     padding: calc(env(safe-area-inset-top) + var(--spacing-8)) max(var(--spacing-6), env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + var(--spacing-8)) max(var(--spacing-6), env(safe-area-inset-left));
   }
@@ -475,19 +474,6 @@
   .result-tiles b { display: flex; align-items: center; justify-content: center; gap: var(--spacing-1); color: var(--color-text-primary); font-size: var(--font-size-2xl); line-height: 1.2; font-variant-numeric: tabular-nums; }
   .t-streak svg { color: var(--ruma-flame); }
 
-  .onboard { align-items: stretch; justify-content: flex-start; padding-bottom: 0; }
-  .onboard .ruma { align-self: center; }
-  .onboard h1 { font-size: var(--font-size-2xl); }
-  .how { display: flex; flex-direction: column; gap: var(--spacing-2); margin: var(--spacing-1) 0 var(--spacing-2); }
-  .how li { display: flex; flex-direction: column; padding: 10px 14px; border-radius: var(--radius-container); background: var(--color-background-surface); border: 1px solid var(--color-border); }
-  .how span { color: var(--color-text-secondary); font-size: var(--font-size-base); }
-  /* the start button stays in reach while the choices scroll under it (05 §2.1) */
-  .onboard-action {
-    position: sticky; bottom: 0; margin: var(--spacing-2) calc(-1 * var(--spacing-6)) 0; display: flex; flex-direction: column; gap: var(--spacing-2);
-    padding: var(--spacing-3) var(--spacing-6) calc(env(safe-area-inset-bottom) + var(--spacing-3));
-    background: linear-gradient(to bottom, transparent, var(--color-background-body) var(--spacing-3));
-  }
-  .onboard-note { font-size: var(--font-size-sm); color: var(--color-text-secondary); text-align: center; }
 
   /* error recovery */
   .recovery {
@@ -547,9 +533,6 @@
   @media (max-width: 360px) {
     .segmented > button { padding-inline: var(--spacing-1); }
     .streak small { display: none; }
-    .readiness { gap: var(--spacing-1); }
-    .ready-figure .num { font-size: var(--font-size-2xl); }
-    .ready-goal { margin-top: -4px; }
   }
 
   /* ── the iOS app's own settings (src/platform/NativeSettings.tsx, ReminderOffer.tsx) are plain elements: they share

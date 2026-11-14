@@ -101,10 +101,10 @@ test('iOS evicted localStorage: the study state comes back from the durable copy
   expect(await page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).xp, KEY)).toBe(4321)
 })
 
-test('first launch with nothing saved shows onboarding; progress is mirrored to the durable copy', async ({ page }) => {
+test('first launch with nothing saved: Ruma asks on home; progress is mirrored to the durable copy', async ({ page }) => {
   await openShell(page)
-  await expect(page.getByRole('button', { name: '시작하기' })).toBeVisible()
-  await page.getByRole('button', { name: '시작하기' }).click()
+  await page.getByRole('button', { name: 'N5' }).click()
+  await expect(page.getByRole('button', { name: '첫 학습 시작' })).toBeVisible()
   await homeShown(page)
   await expect.poll(async () => JSON.parse((await fakeFile(page, 'LIBRARY/ruma/state-a.json')) ?? 'null')?.onboarded).toBe(true)
   // nothing asked of iOS at first launch: no notification permission request
@@ -217,7 +217,8 @@ test('reset clears the durable copy of the old history', async ({ page }) => {
   await openShell(page, { state: user({}, { xp: 50, rev: 3 }), hash: '/settings', files: { 'LIBRARY/ruma/state-b.json': JSON.stringify(user({}, { xp: 40, rev: 2 })) } })
   await page.getByRole('button', { name: '모든 기록 초기화' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: '모두 지우기' }).click()
-  await expect(page.getByRole('button', { name: '시작하기' })).toBeVisible()
+  await page.getByRole('link', { name: '홈' }).click()
+  await expect(page.getByRole('button', { name: 'N5' })).toBeVisible()
   await expect
     .poll(async () => {
       const slots = [await fakeFile(page, 'LIBRARY/ruma/state-a.json'), await fakeFile(page, 'LIBRARY/ruma/state-b.json')].filter(Boolean)

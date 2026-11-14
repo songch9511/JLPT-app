@@ -5,7 +5,6 @@ import { useLevels, type Level } from './data'
 import { Doc, isDoc, type DocName } from './screens/Doc'
 import { Home } from './screens/Home'
 import { LevelScreen } from './screens/Level'
-import { Onboarding } from './screens/Onboarding'
 import { Settings } from './screens/Settings'
 import { Stats } from './screens/Stats'
 import { Study } from './screens/Study'
@@ -48,8 +47,9 @@ export default function App() {
   const theme = useStore((s) => s.settings.theme)
   const target = useStore((s) => s.settings.target)
   const includeLower = useStore((s) => s.settings.includeLower)
-  // the studied levels' data in the background: today's counts (new words, reading cards) follow its order
-  useLevels(onboarded ? studyLevels({ target, includeLower }) : [])
+  // the studied levels' data in the background: today's counts (new words, reading cards) follow its order. Also
+  // before the first-run question is answered: Home shows the default level's counts as soon as one is chosen.
+  useLevels(studyLevels({ target, includeLower }))
 
   useEffect(() => {
     const on = () => {
@@ -66,14 +66,9 @@ export default function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)
   }, [theme])
 
-  if (!onboarded)
-    return (
-      <>
-        <SaveWarning />
-        <Onboarding />
-      </>
-    )
-  if (route.name === 'study')
+  // There is no onboarding page: a new learner starts on Home, where Ruma asks the level
+  // (screens/HomeGuide.tsx). Until it is answered there is nothing to study, so the study route shows Home.
+  if (route.name === 'study' && onboarded)
     return (
       <>
         <SaveWarning />
@@ -82,12 +77,12 @@ export default function App() {
     )
 
   // a level's word list belongs to the 단어장 tab, where the level rows are; the privacy and support pages to 설정
-  const tab = route.name === 'level' ? 'words' : route.name === 'doc' ? 'settings' : route.name
+  const tab = route.name === 'level' ? 'words' : route.name === 'doc' ? 'settings' : route.name === 'study' ? 'home' : route.name
   return (
     <div className="app">
       <SaveWarning />
       <main className="page">
-        {route.name === 'home' && <Home />}
+        {(route.name === 'home' || route.name === 'study') && <Home />}
         {route.name === 'level' && <LevelScreen level={route.level} />}
         {route.name === 'words' && <Words key={route.tab ?? 'search'} initialTab={route.tab} />}
         {route.name === 'stats' && <Stats />}

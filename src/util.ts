@@ -22,23 +22,6 @@ export function daysBetween(a: Date, b: Date): number {
   return Math.round((u(b) - u(a)) / 86400000)
 }
 
-function firstSunday(year: number, month: number): Date {
-  const d = new Date(year, month, 1)
-  d.setDate(1 + ((7 - d.getDay()) % 7))
-  return d
-}
-
-/** JLPT is held on the first Sunday of July and December. */
-export function upcomingExams(from = new Date(), count = 3): string[] {
-  const out: string[] = []
-  for (let y = from.getFullYear(); out.length < count; y++)
-    for (const m of [6, 11]) {
-      const d = firstSunday(y, m)
-      if (daysBetween(from, d) >= 0 && out.length < count) out.push(dayKey(d))
-    }
-  return out
-}
-
 export function formatDay(key: string): string {
   const d = parseDay(key)
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`

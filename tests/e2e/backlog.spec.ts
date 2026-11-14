@@ -36,9 +36,8 @@ test.describe('backlog on home', () => {
     expect((await todayLog(page))?.xr).toBe(50)
     await plan.getByRole('button', { name: '되돌리기' }).click()
     await expect(plan.locator('.c-review b')).toHaveText('225')
-    // the readiness sheet states the same policy
-    await page.locator('.ready-info').click()
-    await expect(page.getByRole('dialog')).toContainText('밀리면 하루 225장까지, 오래된 것부터')
+    // no exam-day estimate, gain or pace advice anywhere on the screen
+    await expect(page.getByText(/시험|예상|목표에 닿아요/)).toHaveCount(0)
   })
 
   test('today’s share done: the rest waits for the coming days, and the learner can choose to do more', async ({ page }) => {
@@ -69,27 +68,5 @@ test.describe('backlog on home', () => {
     await expect(page.locator('.done-text')).toContainText('남은 밀린 복습 225장은 내일부터')
     await expect(page.getByRole('button', { name: '복습 50장 더 하기' })).toBeVisible()
     await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toHaveCount(0)
-  })
-})
-
-test.describe('“오늘 하면 +N” stays honest', () => {
-  test('a tiny gain is said in words, not as +0 or an inflated number', async ({ page }) => {
-    const cards = overdue(3)
-    await open(page, { state: user({ dailyNew: 0, examDate: '2027-07-04' }, { cards }) })
-    await homeShown(page)
-    await expect(page.locator('.plan-gain')).toHaveText('오늘 분량은 시험날 예상을 거의 바꾸지 않아요. 미루면 내일 할 복습이 늘어요.')
-  })
-
-  test('new words today: a positive figure', async ({ page }) => {
-    await open(page, { state: user({ dailyNew: 10 }) })
-    await homeShown(page)
-    await expect(page.locator('.plan-gain')).toHaveText(/^오늘 하면 시험날 예상 \+(9|10)단어$/)
-  })
-
-  test('exam near with a backlog: skipping a day costs reviews that would not fit before the exam', async ({ page }) => {
-    await open(page, { state: user({ dailyNew: 0, examDate: '2026-11-15' }, { cards: overdue(900) }) })
-    await homeShown(page)
-    const text = await page.locator('.plan-gain').innerText()
-    expect(Number(/\+(\d+)단어/.exec(text)?.[1])).toBeGreaterThan(10)
   })
 })

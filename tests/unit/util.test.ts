@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, dayKey, daysBetween, formatDay, parseDay, shuffle, upcomingExams } from '../../src/util'
+import { addDays, dayKey, daysBetween, formatDay, parseDay, shuffle } from '../../src/util'
 
 describe('dayKey / parseDay / addDays', () => {
   it('uses the local calendar day, zero-padded', () => {
@@ -54,44 +54,6 @@ describe('daysBetween', () => {
     const next = addDays(sat, 1)
     expect(dayKey(next)).toBe('2026-09-06')
     expect(daysBetween(sat, next)).toBe(1)
-  })
-})
-
-describe('upcomingExams', () => {
-  const isFirstSunday = (k: string) => {
-    const d = parseDay(k)
-    return d.getDay() === 0 && d.getDate() <= 7 && (d.getMonth() === 6 || d.getMonth() === 11)
-  }
-
-  it('lists the first Sundays of July and December in order', () => {
-    const list = upcomingExams(new Date(2026, 10, 13), 4)
-    expect(list).toEqual(['2026-12-06', '2027-07-04', '2027-12-05', '2028-07-02'])
-    list.forEach((k) => expect(isFirstSunday(k)).toBe(true))
-  })
-
-  it('includes an exam that is today, and skips one that was yesterday', () => {
-    expect(upcomingExams(new Date(2026, 11, 6, 18), 1)).toEqual(['2026-12-06'])
-    expect(upcomingExams(new Date(2026, 11, 7, 0, 1), 1)).toEqual(['2027-07-04'])
-  })
-
-  it('rolls over the year end', () => {
-    expect(upcomingExams(new Date(2026, 11, 31, 23, 59), 2)).toEqual(['2027-07-04', '2027-12-05'])
-    expect(upcomingExams(new Date(2027, 0, 1), 1)).toEqual(['2027-07-04'])
-  })
-
-  it('handles months that start on a Sunday', () => {
-    // 2029-07-01 is a Sunday
-    expect(upcomingExams(new Date(2029, 0, 1), 1)).toEqual(['2029-07-01'])
-  })
-
-  it('always returns exactly `count` valid dates for every day of a decade', () => {
-    for (let d = new Date(2026, 0, 1); d.getFullYear() < 2036; d = addDays(d, 1)) {
-      const list = upcomingExams(d, 3)
-      expect(list).toHaveLength(3)
-      expect(daysBetween(d, parseDay(list[0]))).toBeGreaterThanOrEqual(0)
-      expect(daysBetween(d, parseDay(list[0]))).toBeLessThan(220)
-      list.forEach((k) => expect(isFirstSunday(k)).toBe(true))
-    }
   })
 })
 

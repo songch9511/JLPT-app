@@ -11,7 +11,8 @@ const config: CapacitorConfig = {
   appId: 'com.example.jlptruma', // PLACEHOLDER, e.g. io.github.<owner>.jlptruma
   appName: 'JLPT 루마', // PLACEHOLDER display name (store name is set in App Store Connect)
   webDir: 'dist-native',
-  // the light theme's ground colour behind the web view while it loads (styles.css --bg)
+  // the light theme's ground colour behind the web view while it loads; MainViewController.swift replaces it with the
+  // launch screen's light/dark ground (Assets › LaunchBackground) once the bridge is up
   backgroundColor: '#fbfaf5',
   ios: {
     // the CSS lays the page out with env(safe-area-inset-*) and viewport-fit=cover; the web view must not inset it again

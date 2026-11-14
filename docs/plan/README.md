@@ -8,11 +8,11 @@
 - **배포**: 웹은 https://songch9511.github.io/JLPT-app/ (GitHub Pages, PWA, 저장소 공개). iOS 앱은 Capacitor 셸로 만들었고 **아직 App Store에 내지 않았습니다**(`docs/store/checklist.md`).
 - **스택**: React 19 + Vite + TypeScript, 해시 라우팅. 상태는 기기 안에만: 웹은 `localStorage`(`kasane.state.v4`), iOS 앱은 그것과 앱 폴더의 내구 사본. 앱에는 백엔드·계정·분석 도구·결제가 없습니다.
 - **학습 엔진**: FSRS 간격 반복(`ts-fsrs`). 앞면에서 "정답 보기" 뒤 모르겠어요 / 알아요 / 쉬워요. 하루 분량 = 돌아온 복습(밀리면 하루 상한으로 나눔) + 새 단어 N개(빈도순).
-- **준비도**: 홈 첫 줄은 "시험날 기억할 단어(예상)" — FSRS 기억 확률로 시험날 아침에 기억할 단어 수를 추정하고, "지금 그만두면 / 계획대로면", 목표선(70·80·90%), "오늘 하면 +N"을 보여 줍니다. 합격 확률은 말하지 않습니다(03 §4).
+- **홈**: 날짜·목표 급수·연속 학습, 루마와 이번 주, 오늘의 계획(밀린 복습은 며칠에 나눔), 공부하는 급수의 만난 단어 수와 장기 기억 수. **시험일과 시험날 기억 예측("시험날 기억할 단어", "오늘 하면 +N", 목표 %)은 2026-11-14 소유자 결정으로 앱 전체에서 없앴습니다**(03 §4, 02 기둥 2 철회). 예전 상태·백업은 그대로 열리고, 그 필드는 다음 저장에서 빠집니다(`src/store.ts` `RETIRED_SETTINGS`).
 - **한자어 빠른 통과**: 한국 한자어와 뜻이 같은 단어(産業 = 산업)는 뜻 대신 읽기를 4지선다로 묻는 읽기 카드(`<id>:r`), 뜻이 다른 한자어(大丈夫)는 경고. 단어 유형 태그와 한자음 대응 힌트는 08, 오답 보기는 11.
 - **데이터**: N5~N1 8,130단어(open-anki-jlpt-decks, MIT, tanos.co.uk 기반). 한국어 뜻은 기계 번역(전수 검수 안 됨). 빈도 순서·유형 태그는 wordfreq·JMdict·KANJIDIC2·Unihan에서 만들어 CC BY-SA 4.0. 단어마다 **안정 ID**(`w000`…, `data/ids.json` 등록부, 08 §7) — 기록은 위치가 아니라 이 ID에 붙습니다.
 - **AI**: 앱에 없습니다. **사용자가 API 키를 넣는 구조는 없앴습니다**. 단어 설명은 미리 생성해 정적 데이터로 낼 계획(09, 실행 안 함), 약한 단어 이야기는 서버(`server/`, 배포 안 함)를 거칠 계획이고, 그때까지 화면에 입구가 없습니다(`src/content.ts`).
-- **게임 요소**: XP(카드당 10), 연속 학습, "오늘 분량 끝내기" 퀘스트 하나, 50단어마다 도장 찍히는 여정, 진행할수록 눈을 뜨는 루마.
+- **게임 요소**: XP(카드당 10), 연속 학습, "오늘 분량 끝내기" 퀘스트 하나, 만난 단어 50개마다 도장 찍히는 여정, 진행할수록 눈을 뜨는 루마.
 - **디자인**: 일본 전통색 테마 `ruma`(Astryx 테마 형식, 토큰이 유일한 출처), 직접 만든 가벼운 컨트롤 + 따로 불러오는 Astryx 대화상자·시트, Lucide 아이콘, 묶음마다 프라이머리 하나, `word-break: keep-all`, 최소 iOS 16.4 — `docs/design-system.md`.
 - **iOS 앱 기능**: 복습 알림(로컬), 홈 화면 위젯, 기기 일본어 음성, 햅틱, 공유 시트 백업·문서 선택기 가져오기, 오프라인 첫 실행, 앱 안에서 여는 처리방침·도움말(10, `src/platform/`, `src/screens/Doc.tsx`).
 - **테스트**: 단위(Vitest, `tests/unit/`)와 E2E(Playwright, 휴대폰 화면, 웹 + 가짜 Capacitor로 돌리는 iOS 빌드, `tests/e2e/`), CI(`.github/workflows/ci.yml`), iOS 서명 없는 컴파일(`ios.yml`). 실제 iPhone에서는 아직 아무도 돌려 보지 않았습니다(10 §5 기기 체크리스트).
@@ -21,10 +21,10 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `src/srs.ts`, `src/readiness.ts`, `src/projection.ts`, `src/pnew.ts` | 스케줄러·오늘의 큐·밀린 복습 나누기, 준비도와 "+N" 계산 |
+| `src/srs.ts` | 스케줄러·오늘의 큐·밀린 복습 나누기(`spreadReviews`)·만난 단어 수(`studyProgress`). `src/backlog-sim.ts`는 밀린 복습 순서를 고른 근거 시뮬레이션(앱이 가져오지 않음, 테스트만) |
 | `src/store.ts`, `src/ids.ts`, `src/backup.ts` | 상태 구조·저장·이전(v2/v3 → v4), 단어 ID, 백업 내보내기·가져오기 |
 | `src/data.ts`, `src/distractors.ts` | 단어 데이터 불러오기, 읽기 카드 오답 보기 |
-| `src/screens/*.tsx` | Home, Study, Level, Words, Stats(기록), Settings, Onboarding, Doc(처리방침·도움말) |
+| `src/screens/*.tsx` | Home, Study, Level, Words, Stats(기록), Settings, HomeGuide(루마의 첫 실행 질문·안내, 온보딩 화면 대신), Doc(처리방침·도움말) |
 | `src/components/ui.tsx`, `overlays.tsx`, `Ruma.tsx` | 컨트롤, Astryx 대화상자·시트, 마스코트 |
 | `src/themes/ruma/` | 테마 원본과 빌드 결과(`npm run theme`) |
 | `src/platform/` | 웹과 iOS 앱이 다른 곳 하나(알림, 음성, 햅틱, 파일, 내구 저장, 위젯) |
@@ -39,8 +39,8 @@
 | 문서 | 내용 | 상태 (2026-11-14) |
 | --- | --- | --- |
 | [01-business-model.md](01-business-model.md) | 무료 + 평생 이용권 "루마 플러스", 가격, AI 원가, RevenueCat·Cloudflare 구조 | 계획. 1.0은 무료로 내고 결제는 사업자등록 뒤(06·checklist G) |
-| [02-differentiation.md](02-differentiation.md) | 경쟁 분석, 포지셔닝(한자어 지름길 + 정직한 시험날 추정), 만들지 않을 것 | 기둥 두 개 모두 구현됨. 이름 권고("JLPT"를 브랜드에 넣지 말 것)와 달리 이름은 JLPT 루마 — 위험은 `docs/store/review-notes.md` §2 |
-| [03-curriculum-dashboard.md](03-curriculum-dashboard.md) | 준비도 지표, 빈도 순서, 읽기 카드, 세션 설계 명세 | 단계 1·4 완료, 단계 3 일부(밀린 복습 나누기, 다단계 +N). 남은 것은 문서 끝 "구현 현황" |
+| [02-differentiation.md](02-differentiation.md) | 경쟁 분석, 포지셔닝(한자어 지름길 + 정직한 시험날 추정), 만들지 않을 것 | 기둥 1 구현됨. 기둥 2(시험날 추정)는 2026-11-14 소유자 결정으로 철회·제거. 이름 권고("JLPT"를 브랜드에 넣지 말 것)와 달리 이름은 JLPT 루마 — 위험은 `docs/store/review-notes.md` §2 |
+| [03-curriculum-dashboard.md](03-curriculum-dashboard.md) | 준비도 지표, 빈도 순서, 읽기 카드, 세션 설계 명세 | 단계 1·4 완료, 단계 3 일부(밀린 복습 나누기). 준비도·"+N"(§4)은 2026-11-14 제거. 남은 것은 문서 끝 "구현 현황" |
 | [04-qa-report.md](04-qa-report.md) | 테스트 도입, 버그 11개 수정, 열린 위험 O1~O4 | 완료. O2(오류 화면)·O4(위치 ID)는 이후 해결(08 §7), 숫자는 작성 당시 값 |
 | [05-ux-design-review.md](05-ux-design-review.md) | 화면별 UX 진단과 묶음별 개선안 | 1~3묶음과 4묶음 일부 구현(문서 끝 "구현 현황"), 디자인 규칙은 `docs/design-system.md`로 옮김 |
 | [06-app-store.md](06-app-store.md) | PWA → Capacitor iOS 앱 경로, 심사 요건, 계정·서류·일정 | 계획 문서. 실행 순서는 `docs/store/checklist.md` |

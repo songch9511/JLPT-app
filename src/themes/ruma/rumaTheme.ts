@@ -22,7 +22,7 @@ const c = {
   rokusho: ['#47885e', '#7fb996'], // 緑青 success / long-term memory
   tokiwa: ['#2f6b48', '#7fb996'], // 常磐 success text
   byakuroku: ['#e3eee3', '#22332a'], // 白緑 success tint
-  shu: ['#c4553b', '#e08c74'], // 朱 wrong / forgot / warning of a close exam
+  shu: ['#c4553b', '#e08c74'], // 朱 wrong / forgot / warning
   bengara: ['#9c3b26', '#e08c74'], // 弁柄 vermilion text
   sakura: ['#f6e4dc', '#40271f'], // 桜 vermilion tint
   asagi: ['#4d9aa6', '#6fb3bd'], // 浅葱 "다지는 중" (young)
