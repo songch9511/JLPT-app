@@ -289,7 +289,10 @@ test.describe('a forgotten card', () => {
     await expect(page.locator('.flash-head')).toHaveText('새 단어')
     await expect(page.locator('.flash')).not.toHaveClass(/missed/)
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
-    await expect(page.locator('.flash-head').getByRole('status').filter({ hasText: '다시 나와요' })).toHaveText('다시 나와요 · 1분')
+    // one line in the facts line's place: the mark (↻) and the words, the colour on the text only
+    const result = page.locator('.flash-head').getByRole('status').filter({ hasText: '다시 나와요' })
+    await expect(result).toHaveText('1분 뒤 다시 나와요')
+    await expect(result.locator('.result[data-tone="again"] svg')).toHaveCount(1)
     await expect(page.locator('.flash-head')).not.toContainText('새 단어')
     await expect(page.locator('.flash')).toHaveClass(/missed/)
     expect(await spoken(page)).toEqual([])

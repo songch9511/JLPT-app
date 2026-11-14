@@ -9,7 +9,6 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type ComponentProps,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -103,9 +102,54 @@ export function IconButton({
   )
 }
 
-/** A static group: 1px line, no shadow. `padding={3}` for small tiles. */
-export function Card({ padding, className, ...rest }: ComponentProps<'div'> & { padding?: 3 }) {
-  return <div className={cx('card', padding === 3 && 'pad-3', className)} {...rest} />
+/**
+ * A group on the ground (docs/design-system.md §4 "표면"): a heading and its rows, divided by hairlines — no card
+ * surface. Only things you hold (the study card, sheets, dialogs) get a surface. `title` is the group's name and the
+ * region's label.
+ */
+export function Group({ title, id, aside, className, children }: { title: string; id: string; aside?: ReactNode; className?: string; children: ReactNode }) {
+  return (
+    <section className={cx('group', className)} aria-labelledby={id}>
+      <h2 className="group-title" id={id}>
+        {title}
+        {aside && <span className="group-aside">{aside}</span>}
+      </h2>
+      {children}
+    </section>
+  )
+}
+
+/** One row of a group: a name in the body ink, an optional line under it, and its control below (a segmented choice). */
+export function Field({ label, description, children }: { label: string; description?: string; children: ReactNode }) {
+  return (
+    <div className="field">
+      <p className="field-name">{label}</p>
+      {description && <p className="field-desc">{description}</p>}
+      {children}
+    </div>
+  )
+}
+
+/** Static facts as plain text joined by " · " (never pills): "새 단어 · 읽기 · N4". Empty parts are left out. */
+export function Meta({ items, className, live }: { items: (string | false | null | undefined)[]; className?: string; live?: boolean }) {
+  return (
+    <span className={cx('meta', className)} aria-live={live ? 'polite' : undefined}>
+      {items.filter(Boolean).join(' · ')}
+    </span>
+  )
+}
+
+/**
+ * An answer's result as one line: a Lucide mark in front, the colour on the text only, so it never rests on colour
+ * alone (✓ 맞았어요 · ✕ 틀렸어요 · ↻ 10분 뒤 다시 나와요). The card around it never changes.
+ */
+export function Result({ tone, children, className }: { tone: 'right' | 'wrong' | 'again'; children: ReactNode; className?: string }) {
+  return (
+    <span className={cx('result', className)} data-tone={tone}>
+      <Icon name={tone === 'right' ? 'check' : tone === 'wrong' ? 'close' : 'again'} size={16} strokeWidth={2.4} />
+      <span>{children}</span>
+    </span>
+  )
 }
 
 /**
@@ -266,15 +310,6 @@ export function ProgressBar({ label, value, max, valueText, className }: { label
     >
       <i style={{ width: pct(value) }} />
     </div>
-  )
-}
-
-/** A small static label (new word, again, reading, level, target). */
-export function Badge({ label, variant = 'neutral' }: { label: string; variant?: 'neutral' | 'blue' | 'red' }) {
-  return (
-    <span className="badge" data-variant={variant}>
-      {label}
-    </span>
   )
 }
 

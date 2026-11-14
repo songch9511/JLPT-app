@@ -17,7 +17,7 @@ function Row({ w, onOpen, extra }: { w: Word; onOpen: (w: Word) => void; extra?:
         {w.r && <span lang="ja">{w.r}</span>}
       </span>
       <span className="word-meaning">{meaning(w)}</span>
-      <span className="tag">{extra ?? `N${w.level}`}</span>
+      <span className="word-aside">{extra ?? `N${w.level}`}</span>
     </button>
   )
 }

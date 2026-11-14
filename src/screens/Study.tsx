@@ -1,12 +1,14 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { go } from '../App'
+import { go, syncThemeColor } from '../App'
 import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
 import { PastBar, PastCard } from '../components/PastCard'
 import { useSwipe } from '../components/useSwipe'
 import { Session, type Entry } from '../session'
 import { Icon } from '../components/Icon'
-import { Announce, Badge, Button, IconButton, ProgressBar, Skeleton } from '../components/ui'
+import { Announce, Button, IconButton, Meta, ProgressBar, Result, Skeleton } from '../components/ui'
+import { Waves } from '../components/Waves'
+import { ReadingChoice } from '../components/Choices'
 import { done as guideDone, markDone } from '../guide'
 import { Bridge, FalseFriend, SoundHints, TypeLine } from '../components/WordNotes'
 import { isReadingCard, levelOf, meaning, useAllWords, useLevel, useLevels, wordById } from '../data'
@@ -216,6 +218,19 @@ export function Study() {
     if (finished && answered > 0) platform.haptic('done')
   }, [finished])
 
+  // the done screen stands under Ruma's sky, like Home: the ground behind the page and the browser's status bar take the
+  // sky's colour (styles.css `:root[data-sky] body`), and give it back when the screen changes
+  const doneSky = levels.ready && !q.next ? (q.waiting === 0 ? 'day' : 'wake') : null
+  useLayoutEffect(() => {
+    if (!doneSky) return
+    document.documentElement.dataset.sky = doneSky
+    syncThemeColor()
+    return () => {
+      delete document.documentElement.dataset.sky
+      syncThemeColor()
+    }
+  }, [doneSky])
+
   /** `fromButton`: the grade buttons appear where "정답 보기" was, so a double tap on it must not answer. */
   const reveal = useCallback(
     (fromButton = false) => {
@@ -417,70 +432,75 @@ export function Study() {
     const inMin = q.nextDue === null ? 0 : Math.max(1, Math.ceil((q.nextDue - now.getTime()) / 60_000))
     return (
       <main className="study done-screen">
-        <div className="done-mascot">
-          <Ruma progress={cleared ? 1 : (log?.c ?? 0) / ((log?.c ?? 0) + q.waiting)} mood={cleared ? 'cheer' : 'idle'} size={132} />
-          {cleared && (
-            <span className="seal" aria-hidden="true" lang="ja">
-              済
-            </span>
-          )}
+        {/* Home's language: Ruma under its sky (both eyes and the day sky when the day is done, one eye while cards
+            wait), the result on a sheet rising over it */}
+        <div className="home-sky done-sky" data-sky={cleared ? 'day' : 'wake'}>
+          <Waves />
+          <div className="sky-ruma done-mascot">
+            <Ruma progress={cleared ? 1 : (log?.c ?? 0) / ((log?.c ?? 0) + q.waiting)} mood={cleared ? 'cheer' : 'idle'} size={132} />
+            {cleared && (
+              <span className="seal" aria-hidden="true" lang="ja">
+                済
+              </span>
+            )}
+          </div>
         </div>
-        <h1>{cleared ? '오늘 끝' : '쉬어 가요'}</h1>
-        {/* Ruma's eyes and the seal say the day is done; only what the screen cannot show is said in words */}
-        {(!cleared || q.held > 0) && (
-          <p className="done-text">{cleared ? `밀린 복습 ${q.held.toLocaleString()}장은 내일부터 나눠서 나와요.` : `익히는 중 ${q.waiting}장이 ${inMin}분 뒤에 돌아와요.`}</p>
-        )}
-        <dl className="result-tiles">
-          <div className="t-cards">
-            <dt>본 카드</dt>
-            <dd>
-              <b>{log?.c ?? 0}장</b>
-            </dd>
-          </div>
-          <div className="t-streak">
-            <dt>연속 학습</dt>
-            <dd>
-              <b>
-                <Icon name="flame" size={18} />
-                {streak(s.log, now)}일
-              </b>
-            </dd>
-          </div>
-          <div className="t-xp">
-            <dt>오늘 XP</dt>
-            <dd>
-              <b>{log?.xp ?? 0}</b>
-            </dd>
-          </div>
-        </dl>
-        <div className="done-actions">
-          {!cleared && <Button label={`${q.waiting}장 지금 하기`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
-          <Button label="홈으로" variant={cleared ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
-          {/* while reviews are held for later days, more reviews rather than more new words (03 §5.1, §5.3) */}
-          {cleared && q.held > 0 ? (
-            // the same labels as Home's quiet buttons: short on screen, the whole action as the name
-            <Button
-              label={`밀린 복습 ${Math.min(MORE_REVIEWS, q.held)}장 더 하기`}
-              size="lg"
-              width="100%"
-              onClick={() => unlockMoreReviews(Math.min(MORE_REVIEWS, q.held))}
-            >
-              {Math.min(MORE_REVIEWS, q.held)}장 더
-            </Button>
-          ) : (
-            cleared &&
-            moreNew && (
-              <Button label="새 단어 10개 더 하기" size="lg" width="100%" onClick={() => unlockMoreNew(10)}>
-                새 단어 10개 더
+        <section className="home-sheet done-sheet" aria-labelledby="done-title">
+          <h1 id="done-title">{cleared ? '오늘 끝' : '쉬어 가요'}</h1>
+          {/* Ruma's eyes and the seal say the day is done; only what the screen cannot show is said in words */}
+          {(!cleared || q.held > 0) && (
+            <p className="done-text">{cleared ? `밀린 복습 ${q.held.toLocaleString()}장은 내일부터 나눠서 나와요.` : `익히는 중 ${q.waiting}장이 ${inMin}분 뒤에 돌아와요.`}</p>
+          )}
+          {/* the day in one line of figures (labels as before: 본 카드 · 연속 학습 · 오늘 XP) */}
+          <dl className="done-figures">
+            <div className="t-cards">
+              <dt>본 카드</dt>
+              <dd>
+                <b className="num">{log?.c ?? 0}장</b>
+              </dd>
+            </div>
+            <div className="t-streak">
+              <dt>연속 학습</dt>
+              <dd>
+                <b className="num">{streak(s.log, now)}일</b>
+              </dd>
+            </div>
+            <div className="t-xp">
+              <dt>오늘 XP</dt>
+              <dd>
+                <b className="num">{(log?.xp ?? 0).toLocaleString()}</b>
+              </dd>
+            </div>
+          </dl>
+          <div className="done-actions">
+            {!cleared && <Button label={`${q.waiting}장 지금 하기`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
+            <Button label="홈으로" variant={cleared ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
+            {/* while reviews are held for later days, more reviews rather than more new words (03 §5.1, §5.3) */}
+            {cleared && q.held > 0 ? (
+              // the same labels as Home's quiet buttons: short on screen, the whole action as the name
+              <Button
+                label={`밀린 복습 ${Math.min(MORE_REVIEWS, q.held)}장 더 하기`}
+                size="lg"
+                width="100%"
+                onClick={() => unlockMoreReviews(Math.min(MORE_REVIEWS, q.held))}
+              >
+                {Math.min(MORE_REVIEWS, q.held)}장 더
               </Button>
-            )
+            ) : (
+              cleared &&
+              moreNew && (
+                <Button label="새 단어 10개 더 하기" size="lg" width="100%" onClick={() => unlockMoreNew(10)}>
+                  새 단어 10개 더
+                </Button>
+              )
+            )}
+          </div>
+          {ReminderOffer && platform.native && cleared && (
+            <Suspense fallback={null}>
+              <ReminderOffer />
+            </Suspense>
           )}
-        </div>
-        {ReminderOffer && platform.native && cleared && (
-          <Suspense fallback={null}>
-            <ReminderOffer />
-          </Suspense>
-        )}
+        </section>
       </main>
     )
   }
@@ -570,16 +590,15 @@ export function Study() {
             onClick={() => !quiz && reveal()}
           >
             <div className="flash-head">
-              {missed ? (
-                <span role="status">
-                  <Badge variant="red" label={`다시 나와요 · ${intervals?.[Rating.Again]}`} />
-                </span>
-              ) : (
-                next.kind === 'new' && <Badge variant="blue" label="새 단어" />
-              )}
-              {reading && <Badge label="읽기" />}
-              {lower && <Badge label={`N${levelOf(next.id)}`} />}
-              <span className="grow" />
+              {/* the card's facts as one plain line; on a meaning card answered "모르겠어요" the result takes its place
+                  (a reading card says its result where it asked, above the choices) */}
+              <span className="flash-status grow" role="status">
+                {missed && !quiz ? (
+                  <Result tone="again">{intervals ? `${afterText(intervals[Rating.Again])} 다시 나와요` : '다시 나와요'}</Result>
+                ) : (
+                  <Meta className="flash-meta" items={[next.kind === 'new' && '새 단어', reading && '읽기', lower && `N${levelOf(next.id)}`]} />
+                )}
+              </span>
               {(!reading || revealed) && (
                 <IconButton
                   label="발음 듣기"
@@ -607,36 +626,32 @@ export function Study() {
               </p>
               {reading && question ? (
                 <>
-                  <p className="reading-prompt" id="reading-prompt">
-                    {picked === null ? '어떻게 읽을까요?' : picked === question.answer ? '맞았어요' : picked < 0 ? '이렇게 읽어요' : '틀렸어요'}
+                  {/* the question's line, then the result in its place: one line, a mark and the colour on the text */}
+                  <p className="reading-prompt" id="reading-prompt" aria-live="polite">
+                    {picked === null ? (
+                      '어떻게 읽을까요?'
+                    ) : picked === question.answer ? (
+                      <Result tone="right">맞았어요</Result>
+                    ) : picked < 0 ? (
+                      <Result tone="again">이렇게 읽어요</Result>
+                    ) : (
+                      <Result tone="wrong">틀렸어요</Result>
+                    )}
                   </p>
                   <div className="choices" role="group" aria-labelledby="reading-prompt">
                     {question.choices.map((c, i) => {
                       const state = picked === null ? '' : i === question.answer ? 'right' : i === picked ? 'wrong' : 'dim'
                       return (
-                        <button
+                        <ReadingChoice
                           key={c}
-                          lang="ja"
-                          className={`choice ${state}`}
+                          text={c}
+                          state={state}
                           disabled={picked !== null}
-                          aria-label={state === 'right' ? `${c}, 정답` : state === 'wrong' ? `${c}, 고른 답, 오답` : c}
                           onClick={(e) => {
                             e.stopPropagation()
                             choose(i)
                           }}
-                        >
-                          {state === 'right' && (
-                            <span className="choice-mark">
-                              <Icon name="check" size={18} />
-                            </span>
-                          )}
-                          {state === 'wrong' && (
-                            <span className="choice-mark">
-                              <Icon name="close" size={18} />
-                            </span>
-                          )}
-                          {c}
-                        </button>
+                        />
                       )
                     })}
                   </div>

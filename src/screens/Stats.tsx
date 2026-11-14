@@ -2,7 +2,7 @@ import { type CSSProperties } from 'react'
 import { forecast, retention, studyProgress } from '../srs'
 import { useStore, type State } from '../store'
 import { addDays, dayKey, daysBetween, useClock } from '../util'
-import { Card } from '../components/ui'
+import { Group } from '../components/ui'
 
 const WEEKS = 15
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
@@ -13,8 +13,8 @@ export const STAMP_STEP = 50
 export const textEms = (t: string) => [...t].reduce((n, ch) => n + (/[0-9]/.test(ch) ? 0.62 : /[,.]/.test(ch) ? 0.3 : /[%–]/.test(ch) ? 0.85 : 1), 0)
 
 /**
- * A summary number on one line in a third of the screen (320–430px): it keeps the 24px size where it fits and gets
- * smaller only as far as it must, never below 16px (styles.css `.stat b`: the tile's width ÷ the text's width in
+ * A summary figure on one line in a third of the screen (320–430px): it keeps the 24px size where it fits and gets
+ * smaller only as far as it must, never below 16px (styles.css `.stat b`: the column's width ÷ the text's width in
  * em). XP from a million on is written in 만 (1,234,567 → 123만) so it fits at 16px too; the full number is its name.
  */
 function StatNumber({ text, label }: { text: string; label?: string }) {
@@ -100,14 +100,11 @@ export function Stats() {
         <h1>기록</h1>
       </header>
 
-      <Card role="region" aria-labelledby="stamps-title">
-        <h2 id="stamps-title" className="card-title">
-          도장 여정
-          <span className="muted">만난 단어 {STAMP_STEP}개마다</span>
-        </h2>
+      {/* groups on the ground, a heading each; the figures as one line, not tiles (docs/design-system.md §4 "표면") */}
+      <Group title="도장 여정" id="stamps-title" aside={`만난 단어 ${STAMP_STEP}개마다`}>
         <Stamps met={met} total={total} />
         {/* the same short label as Home's word row; read as a sentence */}
-        <p className="hint">
+        <p className="field-desc">
           <span aria-hidden="true">
             {range} 만난 단어 <b className="num">{met.toLocaleString()}</b> / {total.toLocaleString()}
           </span>
@@ -115,40 +112,46 @@ export function Stats() {
             {range} 단어 {total.toLocaleString()}개 중 {met.toLocaleString()}개 만남
           </span>
         </p>
-      </Card>
+      </Group>
 
-      <section className="stat-grid" aria-label="요약">
-        <Card className="stat" padding={3}>
-          <span className="stat-label">기억 유지율</span>
-          <StatNumber text={kept == null ? '–' : `${Math.round(kept * 100)}%`} />
-          <small className="muted">최근 30일</small>
-        </Card>
-        <Card className="stat" padding={3}>
-          <span className="stat-label">학습 시간</span>
-          <StatNumber text={`${Math.round(ms7 / 60_000).toLocaleString()}분`} />
-          <small className="muted">최근 7일</small>
-        </Card>
-        <Card className="stat" padding={3}>
-          <span className="stat-label">XP</span>
-          <StatNumber text={formatXp(s.xp)} label={s.xp >= 1_000_000 ? s.xp.toLocaleString() : undefined} />
-          <small className="muted">누적</small>
-        </Card>
-      </section>
+      <dl className="stat-grid" aria-label="요약">
+        <div className="stat">
+          <dt className="stat-note">
+            <span className="stat-label">기억 유지율</span>
+            <span className="stat-period">최근 30일</span>
+          </dt>
+          <dd>
+            <StatNumber text={kept == null ? '–' : `${Math.round(kept * 100)}%`} />
+          </dd>
+        </div>
+        <div className="stat">
+          <dt className="stat-note">
+            <span className="stat-label">학습 시간</span>
+            <span className="stat-period">최근 7일</span>
+          </dt>
+          <dd>
+            <StatNumber text={`${Math.round(ms7 / 60_000).toLocaleString()}분`} />
+          </dd>
+        </div>
+        <div className="stat">
+          <dt className="stat-note">
+            <span className="stat-label">XP</span>
+            <span className="stat-period">누적</span>
+          </dt>
+          <dd>
+            <StatNumber text={formatXp(s.xp)} label={s.xp >= 1_000_000 ? s.xp.toLocaleString() : undefined} />
+          </dd>
+        </div>
+      </dl>
 
-      <Card role="region" aria-labelledby="forecast-title">
-        <h2 id="forecast-title" className="card-title">
-          7일 복습 예보
-        </h2>
+      <Group title="7일 복습 예보" id="forecast-title">
         <Forecast counts={forecast(s, today)} today={today} />
-      </Card>
+      </Group>
 
-      <Card role="region" aria-labelledby="heat-title">
-        <h2 id="heat-title" className="card-title">
-          학습 기록
-        </h2>
+      <Group title="학습 기록" id="heat-title">
         <Heatmap log={s.log} today={today} />
-        <p className="hint">최근 {WEEKS}주 · 진할수록 많이 본 날</p>
-      </Card>
+        <p className="field-desc">최근 {WEEKS}주 · 진할수록 많이 본 날</p>
+      </Group>
     </>
   )
 }

@@ -2,7 +2,10 @@ import { TYPE_LABEL, type Word } from '../data'
 import { soundHints } from '../sound'
 import { Icon } from './Icon'
 
-/** The false-friend warning (k = F): shown once the meaning is visible, never before. */
+/**
+ * The false-friend warning (k = F), shown once the meaning is visible, never before: below a hairline, one 弁柄 line
+ * with its mark, then the note in the body ink. No tinted box.
+ */
 export function FalseFriend({ word }: { word: Word }) {
   if (word.k !== 'F' || !word.ff) return null
   return (
