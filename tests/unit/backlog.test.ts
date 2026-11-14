@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { at, boot, bootUser, card, DAY, HOUR, MIN } from './helpers'
+import { at, boot, bootUser, card, DAY, HOUR, MIN, L, legacyKeys } from './helpers'
 import type { DayLog, SCard, State } from '../../src/store'
 
 // Friday 2026-11-13 09:00 in Seoul; the default exam is Sunday 2026-12-06 (D-23)
@@ -9,12 +9,12 @@ const EXAM = Date.parse('2026-12-06T09:00:00')
 const EOD = Date.parse('2026-11-14T00:00:00')
 const log = (p: Partial<DayLog>): DayLog => ({ c: 0, n: 0, r: 0, p: 0, ...p })
 
-/** `n` review cards of level 5 that came due one minute apart, the oldest `daysAgo` days ago. */
-function overdue(n: number, daysAgo = 7, from = 0): Record<string, SCard> {
+/** `n` review cards of a level (N5 unless said) that came due one minute apart, the oldest `daysAgo` days ago. */
+function overdue(n: number, daysAgo = 7, from = 0, level = 5): Record<string, SCard> {
   const out: Record<string, SCard> = {}
   for (let i = 0; i < n; i++) {
     const due = T - daysAgo * DAY + i * MIN
-    out[`5-${from + i}`] = card({ due, last_review: due - 6 * DAY, stability: 6, scheduled_days: 6 })
+    out[L(`${level}-${from + i}`)] = card({ due, last_review: due - 6 * DAY, stability: 6, scheduled_days: 6 })
   }
   return out
 }
@@ -58,11 +58,12 @@ describe('buildQueue with a backlog', () => {
     const { srs, store, rd } = await setup(cards, { dailyNew: 0 })
     const before = structuredClone(store.getState().cards)
     const q = srs.buildQueue(store.getState(), at(NOW))
-    expect(q).toMatchObject({ review: 225, held: 75, next: { id: '5-0', kind: 'review' } })
+    expect(q).toMatchObject({ review: 225, held: 75, next: { id: L('5-0'), kind: 'review' } })
     const sp = srs.spreadReviews(store.getState(), at(NOW))
     const today = [...sp.day].filter(([, d]) => d === 0).map(([id]) => id)
     expect(today.length).toBe(225)
-    expect(today.every((id) => Number(id.split('-')[1]) < 225)).toBe(true)
+    const oldest = new Set(Object.keys(cards).slice(0, 225))
+    expect(today.every((id) => oldest.has(id))).toBe(true)
     rd.readiness(store.getState(), at(NOW))
     // a selection policy, not a rewrite: due dates and every other field stay as they were
     expect(store.getState().cards).toEqual(before)
@@ -73,7 +74,7 @@ describe('buildQueue with a backlog', () => {
     // 225 reviews answered today (as if the oldest had been done): the day's share is finished
     store.update((d) => {
       const cards = { ...d.cards }
-      for (let i = 0; i < 225; i++) cards[`5-${i}`] = { ...cards[`5-${i}`], due: T + 9 * DAY, last_review: T, state: 2 }
+      for (let i = 0; i < 225; i++) cards[L(`5-${i}`)] = { ...cards[L(`5-${i}`)], due: T + 9 * DAY, last_review: T, state: 2 }
       d.cards = cards
       d.log = { '2026-11-13': log({ c: 225, r: 225, p: 200 }) }
     })
@@ -89,7 +90,7 @@ describe('buildQueue with a backlog', () => {
 
   it('learning cards are never held', async () => {
     const cards = overdue(300)
-    for (let i = 0; i < 5; i++) cards[`5-${400 + i}`] = card({ due: T - MIN, state: 1, scheduled_days: 0 })
+    for (let i = 0; i < 5; i++) cards[L(`5-${400 + i}`)] = card({ due: T - MIN, state: 1, scheduled_days: 0 })
     const { srs, store } = await setup(cards, { dailyNew: 0 })
     expect(srs.buildQueue(store.getState(), at(NOW))).toMatchObject({ learning: 5, review: 225, held: 75 })
   })
@@ -123,23 +124,23 @@ describe('spreading over the coming days', () => {
 
   it('cards coming due meanwhile queue behind the older ones (oldest due first)', async () => {
     const cards = overdue(600)
-    for (let i = 0; i < 100; i++) cards[`5-${600 + i}`] = card({ due: EOD + HOUR + i * MIN, last_review: EOD - 5 * DAY, stability: 6, scheduled_days: 6 })
+    for (let i = 0; i < 100; i++) cards[L(`5-${600 + i}`)] = card({ due: EOD + HOUR + i * MIN, last_review: EOD - 5 * DAY, stability: 6, scheduled_days: 6 })
     const { srs, store } = await setup(cards)
     const sp = srs.spreadReviews(store.getState(), at(NOW))
     // day 1: the remaining 375 old ones first (225 of them); the 100 new ones wait with 150 old ones
     expect(sp.held.slice(0, 4)).toEqual([375, 250, 25, 0])
     expect(sp.catchUp).toBe(4)
-    expect(sp.day.get('5-600')).toBe(2)
+    expect(sp.day.get(L('5-600'))).toBe(2)
   })
 
   it('nothing held: catch-up is 0 and every card is on its due day', async () => {
     const cards = overdue(10)
-    cards['5-50'] = card({ due: EOD + 3 * DAY + HOUR, last_review: T - DAY, stability: 4, scheduled_days: 4 })
+    cards[L('5-50')] = card({ due: EOD + 3 * DAY + HOUR, last_review: T - DAY, stability: 4, scheduled_days: 4 })
     const { srs, store } = await setup(cards)
     const sp = srs.spreadReviews(store.getState(), at(NOW))
     expect(sp.catchUp).toBe(0)
-    expect(sp.day.get('5-0')).toBe(0)
-    expect(sp.day.get('5-50')).toBe(4)
+    expect(sp.day.get(L('5-0'))).toBe(0)
+    expect(sp.day.get(L('5-50'))).toBe(4)
   })
 })
 
@@ -163,7 +164,7 @@ describe('readiness uses the same policy', () => {
 describe('“오늘 하면 +N”: plan with today against today skipped (multi-step)', () => {
   it('one card due today, no new words: the card’s value reviewed today minus reviewed tomorrow', async () => {
     const c = card({ due: T - HOUR, last_review: T - 5 * DAY, stability: 4, difficulty: 6, scheduled_days: 4 })
-    const { store, rd, pj } = await setup({ '5-0': c }, { dailyNew: 0 })
+    const { store, rd, pj } = await setup({ [L('5-0')]: c }, { dailyNew: 0 })
     const r = rd.readiness(store.getState(), at(NOW))
     const today = pj.examRecall(c, T, EXAM)
     const tomorrow = pj.examRecall(c, EOD, EXAM)
@@ -180,7 +181,7 @@ describe('“오늘 하면 +N”: plan with today against today skipped (multi-s
 
   it('exam tomorrow: skipping leaves today’s reviews undone, so the gain is the review against none', async () => {
     const c = card({ due: T - HOUR, last_review: T - 5 * DAY, stability: 3, scheduled_days: 4 })
-    const { store, rd, pj } = await setup({ '5-0': c }, { dailyNew: 0, examDate: '2026-11-14' })
+    const { store, rd, pj } = await setup({ [L('5-0')]: c }, { dailyNew: 0, examDate: '2026-11-14' })
     const r = rd.readiness(store.getState(), at(NOW))
     const exam = Date.parse('2026-11-14T09:00:00')
     expect(r.daysLeft).toBe(1)
@@ -198,15 +199,16 @@ describe('“오늘 하면 +N”: plan with today against today skipped (multi-s
 
   it('exam far away, one review today: the honest gain is tiny (and never negative)', async () => {
     const c = card({ due: T - HOUR, last_review: T - 5 * DAY, stability: 4, scheduled_days: 4 })
-    const { store, rd } = await setup({ '5-0': c }, { dailyNew: 0, examDate: '2027-07-04' })
+    const { store, rd } = await setup({ [L('5-0')]: c }, { dailyNew: 0, examDate: '2027-07-04' })
     const r = rd.readiness(store.getState(), at(NOW))
     expect(r.todayGain).toBeGreaterThanOrEqual(0)
     expect(r.todayGain).toBeLessThan(0.05)
   })
 
   it('a backlog near the exam makes skipping cost more: a day lost pushes 225 reviews past the exam', async () => {
-    const calm = await setup(overdue(200), { dailyNew: 0, examDate: '2026-11-18' })
-    const busy = await setup(overdue(1200), { dailyNew: 0, examDate: '2026-11-18' })
+    // N3: a level with more than 1,200 words (N5 has 718)
+    const calm = await setup(overdue(200, 7, 0, 3), { target: 3, dailyNew: 0, examDate: '2026-11-18' })
+    const busy = await setup(overdue(1200, 7, 0, 3), { target: 3, dailyNew: 0, examDate: '2026-11-18' })
     const a = calm.rd.readiness(calm.store.getState(), at(NOW))
     const b = busy.rd.readiness(busy.store.getState(), at(NOW))
     expect(b.held).toBe(975)
@@ -216,7 +218,7 @@ describe('“오늘 하면 +N”: plan with today against today skipped (multi-s
   it('far from the exam a day’s delay of an overdue review costs (almost) nothing in the model, and nothing is inflated', async () => {
     // FSRS gives a later successful review a larger stability gain, so one day later can even end higher on the
     // exam morning; the gain is then reported as 0, not as a made-up positive number
-    const { store, rd } = await setup(overdue(1200), { dailyNew: 0 })
+    const { store, rd } = await setup(overdue(1200, 7, 0, 3), { target: 3, dailyNew: 0 })
     const r = rd.readiness(store.getState(), at(NOW))
     expect(r.todayGain).toBeGreaterThanOrEqual(0)
     expect(r.todayGain).toBeLessThan(1)
@@ -226,7 +228,7 @@ describe('“오늘 하면 +N”: plan with today against today skipped (multi-s
     const cards: Record<string, SCard> = {}
     let k = 0
     for (const [l, n] of [[5, 718], [4, 668], [3, 2140], [2, 1474]] as const)
-      for (let i = 0; i < n; i++, k++) cards[`${l}-${i}`] = card({ due: T - 14 * DAY + k * MIN, last_review: T - 20 * DAY, stability: 2 + (k % 30), difficulty: 3 + (k % 6), scheduled_days: 6 })
+      for (let i = 0; i < n; i++, k++) cards[L(`${l}-${i}`)] = card({ due: T - 14 * DAY + k * MIN, last_review: T - 20 * DAY, stability: 2 + (k % 30), difficulty: 3 + (k % 6), scheduled_days: 6 })
     const { store, rd, srs } = await setup(cards, { target: 2, includeLower: true })
     const t0 = performance.now()
     const r = rd.readiness(store.getState(), at(NOW))
@@ -248,9 +250,9 @@ describe('state and backups', () => {
     const file = JSON.parse(JSON.stringify(backup.backupFile(store.getState())))
     const read = backup.readBackup(file)
     expect(read.ok && read.state.log['2026-11-13'].xr).toBe(50)
-    expect(store.getState().v).toBe(3)
-    // a state saved before this field existed
-    const b = await boot({ now: NOW, saved: { v: 3, onboarded: true, settings: { target: 5 }, cards: overdue(300), log: { '2026-11-13': log({ c: 3, r: 3 }) }, marks: [], xp: 0 } })
+    expect(store.getState().v).toBe(4)
+    // a state saved before this field existed (and before stable ids)
+    const b = await boot({ now: NOW, legacy: { v: 3, onboarded: true, settings: { target: 5 }, cards: legacyKeys(overdue(300)), log: { '2026-11-13': log({ c: 3, r: 3 }) }, marks: [], xp: 0 } })
     expect(b.srs.buildQueue(b.store.getState(), at(NOW))).toMatchObject({ review: 222, held: 78 })
   })
 })

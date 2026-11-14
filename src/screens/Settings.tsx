@@ -3,7 +3,7 @@ import { exportBackup, readBackup, useMeta } from '../backup'
 import { TITLE, UNOFFICIAL_NOTICE } from '../brand'
 import { Banner, Button, Card, ChipGroup, Choice, ConfirmDialog, MessageDialog, Switch } from '../components/ui'
 import { LEVELS } from '../data'
-import { canUndoImport, GOALS, importState, MAX_DAILY_NEW, resetAll, undoImport, update, useStore, type State } from '../store'
+import { canUndoImport, GOALS, importState, MAX_DAILY_NEW, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
 import { formatDay, upcomingExams } from '../util'
 
@@ -13,6 +13,7 @@ const NativeSettings = import.meta.env.MODE === 'native' ? lazy(() => import('..
 export function Settings() {
   const st = useStore((s) => s.settings)
   const meta = useMeta()
+  const orphans = useStore(orphanCount)
   const file = useRef<HTMLInputElement>(null)
   const exams = upcomingExams(new Date(), 4)
   const set = (patch: Partial<State['settings']>) => update((d) => void Object.assign(d.settings, patch))
@@ -121,6 +122,10 @@ export function Settings() {
             : '학습 기록은 이 기기의 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'}
         </p>
         <p className="small last-backup">{meta.lastExport ? `마지막 백업: ${formatDay(meta.lastExport)}` : '아직 백업한 적이 없어요.'}</p>
+        {orphans > 0 && (
+          // records whose words this version does not know (store.ts `orphans`): kept, exported, never shown
+          <p className="small muted orphans-note">이 버전에 없는 단어의 기록 {orphans.toLocaleString()}개도 지우지 않고 함께 보관하고 있어요. 백업 파일에도 담겨요.</p>
+        )}
         {canUndoImport() && (
           <div role="status">
             <Banner

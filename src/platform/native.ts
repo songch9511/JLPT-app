@@ -10,8 +10,8 @@ import type { SharePlugin } from '@capacitor/share'
 import type { StatusBarPlugin } from '@capacitor/status-bar'
 import type { TextToSpeechPlugin } from '@capacitor-community/text-to-speech'
 import type { FilePickerPlugin } from '@capawesome/capacitor-file-picker'
-import { getState, hydrate, setStoreHooks, STATE_KEY } from '../store'
-import { DurableStore, reconcile, type FileAdapter } from './durable'
+import { getState, hydrate, LEGACY_KEY, setStoreHooks, STATE_KEY } from '../store'
+import { DurableStore, legacyCopy, reconcile, type FileAdapter } from './durable'
 import { DEFAULT_PREFS, getPrefs, initPrefs, setPrefs } from './prefs'
 import { isReminderId, planReminders, type PlannedReminder } from './reminders'
 import type { Platform } from './types'
@@ -78,6 +78,13 @@ export async function loadDeps(): Promise<NativeDeps> {
 
 const DIR = 'ruma'
 const PREFS_FILE = 'prefs.json'
+/**
+ * The state as the version before stable ids saved it (v2/v3), written once before the durable slots are first
+ * overwritten with the migrated state: the device's recoverable copy if the migration ever turns out wrong
+ * (docs/plan/08 §7.5). localStorage's LEGACY_KEY holds the same, but iOS may evict localStorage. Removed by
+ * "모든 기록 초기화".
+ */
+export const PREMIGRATION_FILE = 'state-v3-premigration.json'
 
 export function fileAdapter(Filesystem: FilesystemPlugin): FileAdapter {
   const at = (name: string) => ({ path: `${DIR}/${name}`, directory: DIR_LIBRARY })
@@ -336,12 +343,19 @@ export async function createNativePlatform(d?: NativeDeps, now: () => Date = () 
 
   // 1. which copy of the study state to start from (before the first render)
   let localRaw: string | null = null
+  let localLegacy: string | null = null
   try {
     localRaw = localStorage.getItem(STATE_KEY)
+    localLegacy = localStorage.getItem(LEGACY_KEY)
   } catch {
     /* unreadable: counts as empty */
   }
-  const decision = reconcile(localRaw, await durable.readSlots())
+  const slots = await durable.readSlots()
+  // before any slot is overwritten with a migrated state: keep the pre-migration copy once, as a file
+  const pre = legacyCopy([localLegacy, ...slots])
+  if (pre !== null && (await files.read(PREMIGRATION_FILE)) === null) await files.write(PREMIGRATION_FILE, pre).catch(() => {})
+  // a slot of either version competes on its save counter (the migration keeps the counter); `hydrate` migrates
+  const decision = reconcile(localRaw, slots)
   if (decision.use === 'durable') hydrate(decision.raw)
   else if (decision.writeDurable) {
     durable.schedule(decision.raw)
@@ -367,6 +381,7 @@ export async function createNativePlatform(d?: NativeDeps, now: () => Date = () 
       void (async () => {
         // the old history must not survive in the other slot: clear both, then keep the fresh state
         await durable.clear()
+        await files.remove(PREMIGRATION_FILE).catch(() => {})
         durable.schedule(JSON.stringify(getState()))
         await durable.flush()
         initPrefs(DEFAULT_PREFS, (p) => void files.write(PREFS_FILE, JSON.stringify(p)).catch(() => {}))
@@ -412,6 +427,7 @@ export async function createNativePlatform(d?: NativeDeps, now: () => Date = () 
       await applyReminderPlan(deps.LocalNotifications, []).catch(() => {})
       await deps.WidgetBridge.clear().catch(() => {})
       await durable.clear()
+      await files.remove(PREMIGRATION_FILE).catch(() => {})
       await files.remove(PREFS_FILE)
       initPrefs(DEFAULT_PREFS, (p) => void files.write(PREFS_FILE, JSON.stringify(p)).catch(() => {}))
     },

@@ -70,7 +70,7 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 - **상태 표시줄**: 테마(시스템·라이트·다크)를 따라 글자색을 바꿉니다. 세이프 에어리어는 기존 CSS(`viewport-fit=cover`, `env(safe-area-inset-*)`, 탭바 하단 여백)에 `contentInset: 'never'`로 맞췄습니다.
 - **외부 링크**: 라이선스 링크는 앱 안 Safari 뷰(`@capacitor/browser`, SFSafariViewController)로, 앱 안 파일(고지문)은 시트로 엽니다. WebView가 앱 밖 페이지로 넘어가지 않습니다.
 - **서비스 워커**: 앱에서는 등록하지 않습니다. 모든 자산이 앱 번들(`capacitor://localhost`)에 있고 WKWebView는 이 스킴에서 서비스 워커를 돌리지 않습니다. 남아 있는 등록이 있으면 해제합니다. 웹은 그대로 등록합니다.
-- **오프라인 첫 실행**: `public/data/n1~5.json`(8,130단어)과 고지문이 `ios/App/App/public/data/`에 복사되고, 앱은 상대 경로(`base: './'`)로 읽으므로 비행기 모드 첫 실행에서도 전부 동작해야 합니다(CI가 파일 존재를 검사, 실제 오프라인 실행은 기기 확인).
+- **오프라인 첫 실행**: `public/data/words-n1~5.json`(8,130단어, 안정 ID 포함; 안정 ID 이전의 동결 파일 `n1~5.json`은 앱에 넣지 않음)과 고지문이 `ios/App/App/public/data/`에 복사되고, 앱은 상대 경로(`base: './'`)로 읽으므로 비행기 모드 첫 실행에서도 전부 동작해야 합니다(CI가 파일 존재를 검사, 실제 오프라인 실행은 기기 확인).
 - **쓰지 않은 것**: `@capacitor/preferences`(위 3.2 이유), `@capacitor/splash-screen`(런치 화면 스토리보드로 충분, 플러그인 하나 줄임).
 
 ### 3.5 위젯

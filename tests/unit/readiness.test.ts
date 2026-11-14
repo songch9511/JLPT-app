@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { at, bootUser, card, DAY, HOUR, MIN } from './helpers'
+import { at, bootUser, card, DAY, HOUR, MIN, L } from './helpers'
 import type { DayLog, SCard, State } from '../../src/store'
 
 // Friday 2026-11-13 09:00 in Seoul; the default exam is Sunday 2026-12-06 (D-23)
@@ -63,30 +63,30 @@ describe('readiness: edge states', () => {
     store.update(
       (d) =>
         void (d.cards = {
-          '5-0': rev(30, 5, 20), // strong review card
-          '5-1': rev(1, 3, -2), // weak, overdue
-          '5-2': card({ due: T + 10 * MIN, last_review: T, stability: 0.5, state: LEARNING, scheduled_days: 0 }),
-          '5-3': card({ due: T + 10 * MIN, last_review: T, stability: 0.3, state: RELEARNING, lapses: 1, scheduled_days: 0 }),
-          '4-0': rev(100, 1, 50), // another level: not in the target set
+          [L('5-0')]: rev(30, 5, 20), // strong review card
+          [L('5-1')]: rev(1, 3, -2), // weak, overdue
+          [L('5-2')]: card({ due: T + 10 * MIN, last_review: T, stability: 0.5, state: LEARNING, scheduled_days: 0 }),
+          [L('5-3')]: card({ due: T + 10 * MIN, last_review: T, stability: 0.3, state: RELEARNING, lapses: 1, scheduled_days: 0 }),
+          [L('4-0')]: rev(100, 1, 50), // another level: not in the target set
         }),
     )
     const r = rd.readiness(store.getState(), at(NOW))
     const s = store.getState().cards
-    const stop = ['5-0', '5-1', '5-2', '5-3'].reduce((n, id) => n + rd.recallAt(s[id], EXAM), 0)
+    const stop = [L('5-0'), L('5-1'), L('5-2'), L('5-3')].reduce((n, id) => n + rd.recallAt(s[id], EXAM), 0)
     expect(r.stop).toBeCloseTo(stop, 6)
     expect(r.stop).toBeLessThan(4)
     expect(r.stop).toBeGreaterThan(0)
     // each card is between 0 and 1
     for (const id of Object.keys(s)) expect(rd.recallAt(s[id], EXAM)).toBeGreaterThanOrEqual(0)
     // learning cards reviewed once more (they are due in minutes) do better than if left alone
-    expect(rd.recallAfterReview(s['5-2'], T + 10 * MIN, EXAM)).toBeGreaterThan(rd.recallAt(s['5-2'], EXAM))
+    expect(rd.recallAfterReview(s[L('5-2')], T + 10 * MIN, EXAM)).toBeGreaterThan(rd.recallAt(s[L('5-2')], EXAM))
     expect(r.plan).toBeGreaterThan(r.stop)
     expect(r.unseen).toBe(714)
   })
 
   it('a card due after the exam counts with its exam-day recall in both figures', async () => {
     const { rd, store } = await setup({ dailyNew: 0 })
-    store.update((d) => void (d.cards = { '5-0': rev(60, 2, 40) }))
+    store.update((d) => void (d.cards = { [L('5-0')]: rev(60, 2, 40) }))
     const r = rd.readiness(store.getState(), at(NOW))
     expect(r.plan).toBeCloseTo(r.stop, 9)
     expect(r.todayGain).toBe(0)
@@ -96,7 +96,7 @@ describe('readiness: edge states', () => {
     const { rd, store } = await setup({ dailyNew: 0 })
     const pj = await import('../../src/projection')
     const c = rev(4, 4, 3)
-    store.update((d) => void (d.cards = { '5-0': c }))
+    store.update((d) => void (d.cards = { [L('5-0')]: c }))
     const r = rd.readiness(store.getState(), at(NOW))
     // reviewed on its due day, then on every due day after it until the exam
     expect(r.plan).toBeCloseTo(pj.examRecall(c, c.due, EXAM), 9)
@@ -116,7 +116,7 @@ describe('readiness: edge states', () => {
 
   it('exam today: nothing left to plan, the plan equals the stop-now figure', async () => {
     const { rd, store } = await setup({ examDate: '2026-11-13', dailyNew: 20 }, {}, '2026-11-13T07:00:00')
-    store.update((d) => void (d.cards = { '5-0': rev(3, 2, -1), '5-1': rev(20, 2, 5) }))
+    store.update((d) => void (d.cards = { [L('5-0')]: rev(3, 2, -1), [L('5-1')]: rev(20, 2, 5) }))
     const r = rd.readiness(store.getState(), at('2026-11-13T07:00:00'))
     expect(r).toMatchObject({ past: false, examDay: true, daysLeft: 0, plannedNew: 0, todayGain: 0 })
     expect(r.plan).toBeCloseTo(r.stop, 9)
@@ -124,16 +124,16 @@ describe('readiness: edge states', () => {
 
   it('a word with several cards counts its weakest card', async () => {
     const { rd, store } = await setup({ dailyNew: 0 })
-    store.update((d) => void (d.cards = { '5-0': rev(50, 1, 40), '5-0:r': rev(1, 5, 40) }))
+    store.update((d) => void (d.cards = { [L('5-0')]: rev(50, 1, 40), [L('5-0:r')]: rev(1, 5, 40) }))
     const r = rd.readiness(store.getState(), at(NOW))
     const s = store.getState().cards
-    expect(r.stop).toBeCloseTo(Math.min(rd.recallAt(s['5-0'], EXAM), rd.recallAt(s['5-0:r'], EXAM)), 9)
+    expect(r.stop).toBeCloseTo(Math.min(rd.recallAt(s[L('5-0')], EXAM), rd.recallAt(s[L('5-0:r')], EXAM)), 9)
     expect(r.unseen).toBe(717)
   })
 
   it('the same input gives the same output', async () => {
     const { rd, store } = await setup()
-    store.update((d) => void (d.cards = { '5-0': rev(4, 4, -1), '5-1': rev(9, 2, 3) }))
+    store.update((d) => void (d.cards = { [L('5-0')]: rev(4, 4, -1), [L('5-1')]: rev(9, 2, 3) }))
     const a = rd.readiness(store.getState(), at(NOW))
     const b = rd.readiness(structuredClone(store.getState()), at(NOW))
     expect(b).toEqual(a)
@@ -151,7 +151,7 @@ describe('readiness: target set and status', () => {
   it('status: early under 30 review answers, then on track / tight / at risk against the goal', async () => {
     const { rd, store } = await setup({ dailyNew: 0 })
     const strong: Record<string, SCard> = {}
-    for (let i = 0; i < 718; i++) strong[`5-${i}`] = rev(200, 1, 150)
+    for (let i = 0; i < 718; i++) strong[L(`5-${i}`)] = rev(200, 1, 150)
     store.update((d) => void (d.cards = strong))
     expect(rd.readiness(store.getState(), at(NOW)).status).toBe('early')
     store.update((d) => void (d.log = { '2026-11-10': log({ c: 30, r: 30, p: 29 }) }))
@@ -172,7 +172,7 @@ describe('readiness: target set and status', () => {
 
   it('calibration: when the last 30 days were remembered clearly less than predicted, every figure is scaled', async () => {
     const { rd, store } = await setup({ dailyNew: 0 })
-    store.update((d) => void (d.cards = { '5-0': rev(30, 2, 30), '5-1': rev(30, 2, 30) }))
+    store.update((d) => void (d.cards = { [L('5-0')]: rev(30, 2, 30), [L('5-1')]: rev(30, 2, 30) }))
     const before = rd.readiness(store.getState(), at(NOW))
     expect(before.calibrated).toBe(false)
     // predicted 0.9 on average, remembered 0.7
@@ -190,7 +190,7 @@ describe('readiness: target set and status', () => {
 describe('readiness: monotonicity', () => {
   const mixed = () => {
     const cards: Record<string, SCard> = {}
-    for (let i = 0; i < 300; i++) cards[`5-${i}`] = rev(1 + (i % 40), 1 + (i % 9), (i % 30) - 10, { difficulty: 3 + (i % 6) })
+    for (let i = 0; i < 300; i++) cards[L(`5-${i}`)] = rev(1 + (i % 40), 1 + (i % 9), (i % 30) - 10, { difficulty: 3 + (i % 6) })
     return cards
   }
 
@@ -218,7 +218,7 @@ describe('readiness: monotonicity', () => {
     const s1 = rd.readiness(store.getState(), at(NOW))
     expect(s1.stop).toBeGreaterThanOrEqual(s0.stop)
     // a new word answered, even forgotten, only adds
-    srs.answer('5-500', srs.Rating.Again, at(NOW))
+    srs.answer(L('5-500'), srs.Rating.Again, at(NOW))
     const s2 = rd.readiness(store.getState(), at(NOW))
     expect(s2.stop).toBeGreaterThan(s1.stop)
     // a faster daily pace never lowers the plan
@@ -264,7 +264,7 @@ describe('performance', () => {
     const { rd, store, srs } = await setup({ target: 1, includeLower: true, dailyNew: 20 })
     const counts = { 5: 718, 4: 668, 3: 2140, 2: 1905, 1: 2600 } as const
     const cards: Record<string, SCard> = {}
-    for (const [l, n] of Object.entries(counts)) for (let i = 0; i < n; i++) cards[`${l}-${i}`] = rev(1 + (i % 60), 1 + (i % 20), (i % 50) - 15)
+    for (const [l, n] of Object.entries(counts)) for (let i = 0; i < n; i++) cards[L(`${l}-${i}`)] = rev(1 + (i % 60), 1 + (i % 20), (i % 50) - 15)
     store.update((d) => void (d.cards = cards))
     expect(Object.keys(cards).length).toBeGreaterThan(8000)
 
@@ -277,7 +277,7 @@ describe('performance', () => {
     expect(rd.readiness(store.getState(), new Date(T + 5 * MIN))).toBe(a)
     expect(performance.now() - t0).toBeLessThan(5)
 
-    srs.answer('3-7', srs.Rating.Good, at(NOW))
+    srs.answer(L('3-7'), srs.Rating.Good, at(NOW))
     t0 = performance.now()
     rd.readiness(store.getState(), new Date(T + 5 * MIN))
     const warm = performance.now() - t0

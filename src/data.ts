@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+// with the extension: the dev tools in scripts/ run this module directly under node --experimental-strip-types
+import { COUNTS as ID_COUNTS, idsOfLevel, levelOfId } from './ids.ts'
 
 export type Level = 5 | 4 | 3 | 2 | 1
 export const LEVELS: Level[] = [5, 4, 3, 2, 1]
 
-/** Word counts per level (kept in sync with public/data by scripts/build-data.mjs output). */
-export const COUNTS: Record<Level, number> = { 5: 718, 4: 668, 3: 2140, 2: 1905, 1: 2699 }
+/** Word counts per level (from the generated id table, written by the same build as public/data). */
+export const COUNTS: Record<Level, number> = ID_COUNTS
 
 /**
  * Word type relative to Korean (docs/plan/08 §3, data/tags/LABELLING.md): S same hanja word and meaning,
@@ -23,8 +25,10 @@ export const TYPE_LABEL: Record<Exclude<WordType, ''>, string> = {
 }
 
 export interface Word {
+  /** stable word id (`w0k3`, src/ids.ts); never derived from the word's position */
   id: string
   level: Level
+  /** row position in the level's data file; means nothing beyond that file (never an identity) */
   idx: number
   w: string
   /** reading; empty when the word is already kana */
@@ -49,12 +53,12 @@ export interface Word {
 }
 
 export const meaning = (w: Word) => w.ko || w.en
-export const wordId = (l: Level, idx: number) => `${l}-${idx}`
-export const levelOf = (id: string) => Number(id[0]) as Level
+/** The level of a word or card id; undefined for an id this version does not know (store.ts keeps those apart). */
+export const levelOf = (id: string): Level | undefined => levelOfId(id)
 
 /**
- * Card ids (03 §3 C): the meaning card keeps the word id `<level>-<idx>`; the reading card of the cognate
- * fast-track is `<level>-<idx>:r`. Each is its own FSRS card.
+ * Card ids (03 §3 C): the meaning card keeps the word id (`w0k3`); the reading card of the cognate fast-track is
+ * `w0k3:r`. Each is its own FSRS card.
  */
 export const READING = ':r'
 export const readingId = (word: string) => word + READING
@@ -63,32 +67,35 @@ export const wordOfCard = (id: string) => {
   const i = id.indexOf(':')
   return i < 0 ? id : id.slice(0, i)
 }
-export const idxOf = (id: string) => Number(wordOfCard(id).split('-')[1])
 
 /** What the scheduler needs from a loaded level, kept here so queue building stays synchronous. */
 export interface LevelInfo {
-  /** idx in introduction order */
-  order: number[]
-  /** idx of words tagged S (fast-track: reading card instead of meaning card) */
-  fast: Set<number>
+  /** word ids in introduction order */
+  order: string[]
+  /** ids of words tagged S (fast-track: reading card instead of meaning card) */
+  fast: Set<string>
 }
 const infos = new Map<Level, LevelInfo>()
 /** Introduction order and fast-track words of a level, once its data has loaded (null before). */
 export const levelInfo = (l: Level): LevelInfo | null => infos.get(l) ?? null
 
-export function setLevelInfo(l: Level, words: Pick<Word, 'idx' | 'o' | 'k'>[]) {
-  const order = words.map((w) => w.idx).sort((a, b) => words[a].o - words[b].o || a - b)
-  infos.set(l, { order, fast: new Set(words.filter((w) => w.k === 'S').map((w) => w.idx)) })
+export function setLevelInfo(l: Level, words: Pick<Word, 'id' | 'idx' | 'o' | 'k'>[]) {
+  const order = words
+    .slice()
+    .sort((a, b) => a.o - b.o || a.idx - b.idx)
+    .map((w) => w.id)
+  infos.set(l, { order, fast: new Set(words.filter((w) => w.k === 'S').map((w) => w.id)) })
 }
 
-type Row = [string, string, string, string, number?, number?, string?, string?, string?, string?, string?, string?]
+/** A row of public/data/words-n{l}.json (scripts/build-data.mjs): the stable id, then the word's columns. */
+export type Row = [string, string, string, string, string, number?, number?, string?, string?, string?, string?, string?, string?]
 const TYPES = new Set<string>(WORD_TYPES)
 
-/** One data row as a Word. Rows from before the extra columns (or a cached old file) get idx order and no type. */
+/** One data row as a Word. Rows without the extra columns get file order and no type. */
 export function parseRow(l: Level, row: Row, idx: number): Word {
-  const [w, r, ko, en, o, f, k = '', sk = '', ff = '', rt = '', a = '', x = ''] = row
+  const [id, w, r, ko, en, o, f, k = '', sk = '', ff = '', rt = '', a = '', x = ''] = row
   return {
-    id: wordId(l, idx),
+    id,
     level: l,
     idx,
     w,
@@ -107,21 +114,32 @@ export function parseRow(l: Level, row: Row, idx: number): Word {
 }
 
 const cache = new Map<Level, Promise<Word[]>>()
+const index = new Map<string, Word>()
+/** A loaded word by its word id (or a card id of it); null until its level's data has loaded. */
+export const wordById = (id: string): Word | null => index.get(wordOfCard(id)) ?? null
+
+/** Ids of a level in the data's order before its data has loaded (issue order = the positional order of old). */
+export const fallbackOrder = (l: Level) => idsOfLevel(l)
 
 export function loadLevel(l: Level): Promise<Word[]> {
   let p = cache.get(l)
   if (!p) {
-    p = fetch(`${import.meta.env.BASE_URL}data/n${l}.json`)
+    // words-n{l}.json carries the stable ids; data/n{l}.json is the frozen positional file kept for tabs still
+    // running the version before stable ids (docs/plan/08 §7.6) and is never read by this version
+    p = fetch(`${import.meta.env.BASE_URL}data/words-n${l}.json`)
       .then((r) => {
         if (!r.ok) throw new Error(`단어 데이터를 불러오지 못했어요 (N${l})`)
         return r.json() as Promise<Row[]>
       })
       .then((rows) => {
-        const words = rows.map((row, idx) => parseRow(l, row, idx))
+        // a row whose id this version does not place in this level (data from another deploy) is left out
+        const words = rows.map((row, idx) => parseRow(l, row, idx)).filter((w) => levelOfId(w.id) === l)
+        words.forEach((w, i) => (w.idx = i))
         // a file whose `o` is not a permutation (a partial or old file) falls back to idx order
         const os = new Set(words.map((w) => w.o))
         if (os.size !== words.length || words.some((w) => w.o < 0 || w.o >= words.length)) words.forEach((w) => (w.o = w.idx))
         setLevelInfo(l, words)
+        for (const w of words) index.set(w.id, w)
         return words
       })
     p.catch(() => cache.delete(l))
@@ -187,7 +205,10 @@ export function useAllWords(enabled = true): Word[] | null {
 export async function wordsById(ids: string[]): Promise<Word[]> {
   const out: Word[] = []
   for (const id of ids) {
-    const w = (await loadLevel(levelOf(id)))[idxOf(id)]
+    const l = levelOf(id)
+    if (l === undefined) continue
+    await loadLevel(l)
+    const w = wordById(id)
     if (w) out.push(w)
   }
   return out

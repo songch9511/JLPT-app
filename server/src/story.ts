@@ -52,7 +52,7 @@ export const SYSTEM_PROMPT = [
 export function buildUserPrompt(words: Word[]): string {
   // JSON.stringify escapes quotes/newlines, so a word cannot end the data block early.
   const data = JSON.stringify(
-    words.map((w) => ({ word: w.w, reading: w.r || w.w, meaning: w.m, level: `N${w.id.slice(0, 1)}` })),
+    words.map((w) => ({ word: w.w, reading: w.r || w.w, meaning: w.m, level: `N${w.l}` })),
   )
   return (
     '제가 자꾸 틀리는 단어들입니다. 이 단어들을 최대한 많이 써서 기억에 남는 짧은 이야기를 써 주세요. ' +

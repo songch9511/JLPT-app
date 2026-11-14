@@ -77,7 +77,7 @@
 | 항목 | 지금 | WKWebView(Capacitor)에서 | 조치 |
 | --- | --- | --- | --- |
 | 서비스 워커·오프라인 캐시 | `vite-plugin-pwa`(workbox) | `capacitor://` 스킴에서는 서비스 워커가 정상 동작하지 않음. App-Bound Domains 설정이 필요하다는 보고가 많음(검색 요약) [C4] | 네이티브 빌드에서는 SW를 등록하지 않음. 어차피 모든 자산이 번들 안에 있으니 SW가 필요 없음 |
-| `localStorage` 영속성 | `kasane.state.v2` 한 키 | Capacitor 문서는 "기기 저장 공간이 부족하면 OS가 WebView의 localStorage를 회수할 수 있으니 일시 데이터로 취급하라"고 함. iOS의 IndexedDB도 같음(검색 요약) [C5] | 네이티브에서는 `@capacitor/preferences`(iOS UserDefaults) 또는 SQLite 파일에 저장. `store.ts`의 `load`/`update` 안 `localStorage` 호출 두 곳을 `platform.storage`로 바꿈. 상태가 커지면(카드 8,130장 × 필드 10개) SQLite나 Filesystem JSON 파일로 |
+| `localStorage` 영속성 | `kasane.state.v2` 한 키(2026-11-14부터 `kasane.state.v4`, 08 §7) | Capacitor 문서는 "기기 저장 공간이 부족하면 OS가 WebView의 localStorage를 회수할 수 있으니 일시 데이터로 취급하라"고 함. iOS의 IndexedDB도 같음(검색 요약) [C5] | 네이티브에서는 `@capacitor/preferences`(iOS UserDefaults) 또는 SQLite 파일에 저장. `store.ts`의 `load`/`update` 안 `localStorage` 호출 두 곳을 `platform.storage`로 바꿈. 상태가 커지면(카드 8,130장 × 필드 10개) SQLite나 Filesystem JSON 파일로 |
 | `speechSynthesis` | `util.ts`의 `speak()` | WKWebView에서도 대체로 동작하지만, 일본어 음성 유무·무음 스위치·첫 호출 지연이 기기마다 다름(미확인) | 네이티브에서는 AVSpeechSynthesizer 플러그인으로 바꿈. 일본어 음성이 없으면 "설정 › 손쉬운 사용 › 음성 콘텐츠"로 안내 |
 | 해시 라우터 | `location.hash` | `capacitor://localhost/#/...`로 그대로 동작. `base: './'`도 그대로 | 변경 없음. 다만 위젯이나 알림에서 특정 화면으로 들어가는 딥링크(`#/study`)는 알림 탭 핸들러에서 `location.hash`를 설정 |
 | 데이터 로딩 | `fetch(BASE_URL + 'data/n5.json')` | 번들 안의 상대 경로라 동작 | 변경 없음 |

@@ -23,7 +23,7 @@ for (const f of files) {
   const [head, ...lines] = readFileSync(f, 'utf8').replace(/^﻿/, '').split(/\r?\n/).filter(Boolean)
   const cols = head.split('\t')
   const at = (c) => cols.indexOf(c)
-  for (const c of ['idx', 'k', 'sk', 'ff', 'rt']) if (at(c) < 0) { console.error(`${f}: column "${c}" missing`); process.exit(2) }
+  for (const c of ['id', 'k', 'sk', 'ff', 'rt']) if (at(c) < 0) { console.error(`${f}: column "${c}" missing (chunks made before stable word ids have "idx": make them again with tag-chunks.mjs)`); process.exit(2) }
   const out = {}
   for (const line of lines) {
     const v = line.split('\t')
@@ -32,7 +32,7 @@ for (const f of files) {
       const x = (v[at(c)] ?? '').trim()
       if (x) t[c] = c === 'k' ? x.toUpperCase() : x
     }
-    out[v[at('idx')].trim()] = t
+    out[v[at('id')].trim()] = t
   }
   const path = `${root}data/tags/${name}.json`
   writeFileSync(path, '{\n' + Object.entries(out).map(([k, t]) => `${JSON.stringify(k)}:${JSON.stringify(t)}`).join(',\n') + '\n}\n')

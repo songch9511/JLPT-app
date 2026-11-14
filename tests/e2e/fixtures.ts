@@ -1,14 +1,33 @@
 import { readFileSync } from 'node:fs'
 import { expect, type Page } from '@playwright/test'
+import { fromLegacy } from '../../src/ids'
 
-export const KEY = 'kasane.state.v2'
+/** Where the app saves its state since stable word ids (v4). */
+export const KEY = 'kasane.state.v4'
+/** Where the versions before stable ids saved it (v2/v3, positional ids); the app migrates it at launch. */
+export const LEGACY_KEY = 'kasane.state.v2'
+
+/** The stable id of a word named by its old positional id (`L('5-0')`), to look a card up in what the app saved. */
+export const L = (legacy: string) => {
+  const id = fromLegacy(legacy)
+  if (!id) throw new Error(`no word ${legacy}`)
+  return id
+}
+
+/** The key a seeded state belongs under: states of the versions before stable ids (v2/v3) under theirs. */
+export const keyFor = (state: unknown) => {
+  const v = (typeof state === 'string' ? (() => { try { return JSON.parse(state) } catch { return null } })() : state)?.v
+  return v === 4 ? KEY : LEGACY_KEY
+}
 /** Friday 2026-11-13 09:00 in Seoul (the browser context runs in Asia/Seoul). */
 export const NOW = new Date('2026-11-13T09:00:00+09:00')
 
 type Settings = { target: number; examDate: string; dailyNew: number; theme: string; autoSpeak: boolean; includeLower: boolean; goal: number; fastTrack: boolean }
 
 /**
- * A saved state as an existing learner has it. Without `includeLower` it is a learner from before that
+ * A saved state as an existing learner has it — saved by the version before stable ids (v2, positional ids like
+ * `5-0`, under LEGACY_KEY), so every scenario also goes through the one-time migration. Without `includeLower` it
+ * is a learner from before that
  * setting: only the target level is studied (pass `includeLower: true` for a new learner's behaviour).
  * The cognate fast-track is off unless asked for (`fastTrack: true`), so scenarios about the meaning card,
  * its three answers and their intervals see meaning cards only; fasttrack.spec.ts covers reading cards.
@@ -40,7 +59,7 @@ export async function open(page: Page, opts: { state?: unknown; time?: Date; has
           sessionStorage.setItem('e2e-seeded', '1')
         }
       },
-      [KEY, JSON.stringify(opts.state)],
+      [keyFor(opts.state), typeof opts.state === 'string' ? opts.state : JSON.stringify(opts.state)],
     )
   await page.goto(opts.hash ? `./#${opts.hash}` : './')
 }
@@ -59,7 +78,7 @@ export const READ_MS = 400
 const READINGS = (() => {
   const m = new Map<string, Set<string>>()
   for (const l of [1, 2, 3, 4, 5])
-    for (const [w, r] of JSON.parse(readFileSync(new URL(`../../public/data/n${l}.json`, import.meta.url), 'utf8')) as string[][]) {
+    for (const [, w, r] of JSON.parse(readFileSync(new URL(`../../public/data/words-n${l}.json`, import.meta.url), 'utf8')) as string[][]) {
       const set = m.get(w) ?? m.set(w, new Set()).get(w)!
       for (const x of (r || w).replace(/[(（][^)）]*[)）]/g, ' ').split(/[;；、,，\s]+/)) if (x) set.add(x.replace(/[～〜~]/g, ''))
     }

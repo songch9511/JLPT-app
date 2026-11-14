@@ -1,6 +1,6 @@
 // Deterministic tag pre-pass: everything that needs no judgement, plus candidates for labellers.
 //   node scripts/enrich/prepass.mjs        -> data/tags/prepass/n{l}.json
-// Per idx: { core, hk, auto, sk, rt, hint }
+// Per word id (docs/plan/08 §7): { core, hk, auto, sk, rt, hint }
 //   core  the written form the tags are about (first form, no ～ / annotations)
 //   hk    1 if core contains kanji
 //   auto  'L' (katakana only) | 'K' (kana only, not katakana-only) | '' — final unless a labeller overrides
@@ -148,7 +148,7 @@ export function prepassLevel(n, table = loadKanjiTable()) {
     const auto = hk ? '' : isKatakanaOnly(core) ? 'L' : isKanaOnly(core) ? 'K' : 'K'
     const sk = hk ? skCandidates(core, table, { suffix: w.affix === 'suf' }) : []
     const rt = hk ? readingType(core, w.coreReading, table) : ''
-    out[w.idx] = { core, hk, auto, sk, rt, hint: hintFor({ core, hk, auto, sk, rt, ko: w.ko }) }
+    out[w.id] = { core, hk, auto, sk, rt, hint: hintFor({ core, hk, auto, sk, rt, ko: w.ko }) }
   }
   return out
 }

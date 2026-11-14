@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { answer, currentWord, NOW, open, READ_MS, saved, todayLog, user } from './fixtures'
+import { levelOfId } from '../../src/ids'
 
 test('onboarding → home → a full day of study → done screen → home', async ({ page }) => {
   await open(page)
@@ -33,7 +34,7 @@ test('onboarding → home → a full day of study → done screen → home', asy
   const s = await saved(page)
   expect(s.log['2026-11-13']).toMatchObject({ c: 20, n: 10, xp: 250, q: 1 })
   expect(s.settings.includeLower).toBe(true)
-  expect(Object.keys(s.cards).every((id) => id.startsWith('5-'))).toBe(true) // N5 words first
+  expect(Object.keys(s.cards).every((id) => levelOfId(id) === 5)).toBe(true) // N5 words first
   // study time was recorded
   expect(s.log['2026-11-13'].ms).toBeGreaterThan(0)
   expect(Object.keys(s.cards)).toHaveLength(10)

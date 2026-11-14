@@ -15,7 +15,7 @@
 
 | 열 | 내용 | 수정 |
 | --- | --- | --- |
-| `idx` | 단어 번호. **절대 바꾸지 마세요.** | ✗ |
+| `id` | 단어 ID(`w0k3`, 안정 ID — docs/plan/08 §7). **절대 바꾸지 마세요.** | ✗ |
 | `expr`, `reading` | 일본어 표기, 읽기(가나 단어는 비어 있음) | ✗ |
 | `ko`, `en` | 앱의 한국어 뜻, 영어 뜻 | ✗ |
 | `auto` | 기계 판정: `L`(가타카나뿐) / `K`(가나뿐). 한자가 있으면 비어 있음 | ✗ |
@@ -159,7 +159,7 @@
 node scripts/enrich/tags-import.mjs n5-2.tsv        # → data/tags/n5-2.json 생성 후 자동 검사
 ```
 
-**방법 B — JSON 직접 작성.** 경로는 `data/tags/n<급수>-<번호>.json`(예: `data/tags/n5-2.json`). 청크의 **모든 idx**를 문자열 키로 넣고, 빈 칸은 키를 생략합니다.
+**방법 B — JSON 직접 작성.** 경로는 `data/tags/n<급수>-<번호>.json`(예: `data/tags/n5-2.json`). 청크의 **모든 단어 ID**를 키로 넣고, 빈 칸은 키를 생략합니다.
 
 ```json
 {
@@ -179,6 +179,6 @@ node scripts/enrich/validate-tags.mjs data/tags/n5-2.json    # 한 파일
 node scripts/enrich/validate-tags.mjs                         # 전체 + 급수별 집계
 ```
 
-`ERROR`는 모두 고쳐야 제출할 수 있습니다(빠진 idx, 허용되지 않은 값, S/F/J인데 sk 없음, sk에 한글 외 문자, sk 음절 수 ≠ 한자 수, F인데 ff 없음, ff에 일본어 문자 등). 2.1의 ✔ 규칙과 같은 표제어 불일치도 `ERROR`입니다. `warn`은 확인만 하면 됩니다(후보에 없는 sk, 자동 후보와 다른 rt). 확인한 warn은 `data/tags/reviewed.json`에 `"n1-1:277": "이유"`로 적으면 다시 나오지 않습니다.
+`ERROR`는 모두 고쳐야 제출할 수 있습니다(빠진 ID, 허용되지 않은 값, S/F/J인데 sk 없음, sk에 한글 외 문자, sk 음절 수 ≠ 한자 수, F인데 ff 없음, ff에 일본어 문자 등). 2.1의 ✔ 규칙과 같은 표제어 불일치도 `ERROR`입니다. `warn`은 확인만 하면 됩니다(후보에 없는 sk, 자동 후보와 다른 rt). 확인한 warn은 `data/tags/reviewed.json`에 `"w49v": "이유"`(단어 ID)로 적으면 다시 나오지 않습니다.
 
 `data/tags/n5-1.json`은 이 안내대로 라벨링한 60단어 시범 청크입니다. 처음 시작할 때 함께 보세요.

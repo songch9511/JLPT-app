@@ -4,12 +4,14 @@
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { parseRow } from '../src/data.ts'
+// the study screen seeds a showing with the card's positional id of before stable ids (src/ids.ts)
+import { legacySeed } from '../src/ids.ts'
 
 const root = new URL('..', import.meta.url).pathname
 const i = process.argv.indexOf('--gen')
 const { readingQuestion } = await import(pathToFileURL(i > 0 ? process.argv[i + 1] : `${root}src/distractors.ts`).href)
 const pool = []
-for (const l of [5, 4, 3, 2, 1]) JSON.parse(readFileSync(`${root}public/data/n${l}.json`, 'utf8')).forEach((row, idx) => pool.push(parseRow(l, row, idx)))
+for (const l of [5, 4, 3, 2, 1]) JSON.parse(readFileSync(`${root}public/data/words-n${l}.json`, 'utf8')).forEach((row, idx) => pool.push(parseRow(l, row, idx)))
 const cards = pool.filter((w) => w.k === 'S')
 let t = performance.now()
 readingQuestion(cards[0], pool, 'first')
@@ -18,7 +20,7 @@ for (const rep of [0, 1]) {
   const times = []
   for (const w of cards) {
     t = performance.now()
-    readingQuestion(w, pool, `${w.id}:r|${rep + 1}`)
+    readingQuestion(w, pool, `${legacySeed(w.id)}:r|${rep + 1}`)
     times.push([performance.now() - t, `${w.w} ${w.r}`])
   }
   if (rep === 0) continue // warm-up pass for the JIT

@@ -70,7 +70,7 @@ describe('CORS', () => {
   it('refuses other origins, including on preflight, without CORS headers', async () => {
     for (const r of [
       req('/v1/story', { method: 'OPTIONS', origin: 'https://evil.example', user: null }),
-      storyReq(['5-1'], { origin: 'https://evil.example' }),
+      storyReq(['w001'], { origin: 'https://evil.example' }),
       req('/v1/health', { origin: 'null' }),
     ]) {
       const res = await call(r, d())

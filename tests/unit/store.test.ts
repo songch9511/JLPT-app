@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boot, card, DAY, KEY, MemoryStorage } from './helpers'
+import { boot, card, DAY, KEY, L, LEGACY_KEY, MemoryStorage } from './helpers'
 
 const NOW = '2026-11-13T09:00:00'
 
@@ -30,16 +30,17 @@ describe('store: loading', () => {
       xp: 120,
       // no marks
     }
-    const { store, ls } = await boot({ now: NOW, saved })
+    const { store, ls } = await boot({ now: NOW, legacy: saved })
     const s = store.getState()
     // a learner from before `includeLower` keeps studying the target level only, so the plan does not suddenly grow
     expect(s.settings).toEqual({ target: 3, examDate: '2027-07-04', dailyNew: 10, theme: 'dark', autoSpeak: false, includeLower: false, goal: 0.8, fastTrack: true })
     expect(JSON.stringify(s)).not.toContain('sk-ant-old')
-    // and out of storage at once, not only at the next save
+    // the migrated state is stored at once (without the key); the pre-migration copy stays exactly as it was
     expect(ls.getItem(KEY)).not.toContain('sk-ant-old')
+    expect(ls.getItem(LEGACY_KEY)).toBe(JSON.stringify(saved))
     expect(s.marks).toEqual([])
     expect(s.xp).toBe(120)
-    expect(Object.keys(s.cards)).toEqual(['3-0'])
+    expect(Object.keys(s.cards)).toEqual([L('3-0')])
   })
 
   it('falls back to a fresh state on corrupt JSON, `null`, or a missing settings object', async () => {
@@ -94,11 +95,11 @@ describe('store: saving', () => {
 
   it('toggleMark adds to the front and removes', async () => {
     const { store } = await boot({ now: NOW })
-    store.toggleMark('5-1')
-    store.toggleMark('5-2')
-    expect(store.getState().marks).toEqual(['5-2', '5-1'])
-    store.toggleMark('5-1')
-    expect(store.getState().marks).toEqual(['5-2'])
+    store.toggleMark(L('5-1'))
+    store.toggleMark(L('5-2'))
+    expect(store.getState().marks).toEqual([L('5-2'), L('5-1')])
+    store.toggleMark(L('5-1'))
+    expect(store.getState().marks).toEqual([L('5-2')])
   })
 
   it('resetAll returns to a fresh, not-onboarded state', async () => {
@@ -106,8 +107,8 @@ describe('store: saving', () => {
     store.update((d) => {
       d.onboarded = true
       d.xp = 999
-      d.marks = ['5-1']
-      d.cards = { '5-0': card({ due: 0 }) }
+      d.marks = [L('5-1')]
+      d.cards = { [L('5-0')]: card({ due: 0 }) }
     })
     store.resetAll()
     const s = store.getState()
@@ -119,7 +120,7 @@ describe('store: saving', () => {
 
   it('replaceState fills missing fields from defaults', async () => {
     const { store } = await boot({ now: NOW })
-    store.update((d) => void (d.marks = ['5-9']))
+    store.update((d) => void (d.marks = [L('5-9')]))
     // an older backup without marks/xp and with partial settings
     store.replaceState({ v: 2, onboarded: true, settings: { target: 4 }, cards: {}, log: {} } as never)
     const s = store.getState()
@@ -205,15 +206,16 @@ describe('store: additive fields without a version bump', () => {
       marks: ['1-0'],
       xp: 50,
     }
-    const { store, srs } = await boot({ now: NOW, saved })
+    const { store, srs } = await boot({ now: NOW, legacy: saved })
     const s = store.getState()
-    // migrated to v3 on load (the fast-track); nothing else about the state changes
-    expect(s.v).toBe(3)
+    // migrated to v4 on load (the fast-track, stable ids); nothing else about the state changes
+    expect(s.v).toBe(4)
     expect(s.settings).toEqual({ target: 1, examDate: '2026-12-06', dailyNew: 40, theme: 'light', autoSpeak: true, includeLower: false, goal: 0.8, fastTrack: true })
     expect(s.log['2026-11-12']).toEqual({ c: 5, n: 5, r: 0, p: 0, xp: 50 })
-    expect(s.cards['1-0']).toEqual(saved.cards['1-0'])
+    expect(s.cards[L('1-0')]).toEqual(saved.cards['1-0'])
+    expect(s.marks).toEqual([L('1-0')])
     // answering adds the new fields alongside the old ones
-    srs.answer('1-1', srs.Rating.Good, new Date(NOW), 4000)
+    srs.answer(L('1-1'), srs.Rating.Good, new Date(NOW), 4000)
     expect(store.getState().log['2026-11-13']).toMatchObject({ c: 1, ms: 4000 })
   })
 

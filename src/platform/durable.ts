@@ -37,6 +37,21 @@ export function parseCopy(raw: string | null | undefined): Copy | null {
   return { raw, rev }
 }
 
+/**
+ * Among copies of the state, the best one saved by the versions before stable ids (state v2/v3, positional ids):
+ * the highest save counter. What the app keeps once as the pre-migration copy (docs/plan/08 §7.5); null if none.
+ */
+export function legacyCopy(raws: (string | null | undefined)[]): string | null {
+  let best: Copy | null = null
+  for (const raw of raws) {
+    const copy = parseCopy(raw)
+    if (!copy) continue
+    const v = (JSON.parse(copy.raw) as { v?: unknown }).v
+    if ((v === 2 || v === 3 || v === undefined) && (!best || copy.rev > best.rev)) best = copy
+  }
+  return best?.raw ?? null
+}
+
 export type Decision =
   /** start from localStorage as it is; `writeDurable`: the durable copy is missing, older or damaged */
   | { use: 'local'; raw: string; writeDurable: boolean }

@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { alternatives, MIN_WRONG, moraCount, plausible, readingOf, readingQuestion, soundKey, soundVariants } from '../../src/distractors'
 import { soundHints } from '../../src/sound'
 import { parseRow, type Level, type Word } from '../../src/data'
+import { legacySeed } from '../../src/ids'
+import { L } from './helpers'
 
 let n = 0
 const word = (w: string, r: string, p: Partial<Word> = {}): Word => ({
@@ -87,13 +89,15 @@ describe('reading question', () => {
 })
 
 // ---- the shipped data: every reading-card word (k = S) of all five levels ----
+// seeded as the study screen seeds a showing: the card's positional id of before stable ids (src/ids.ts legacySeed)
 const DATA: Word[] = ([5, 4, 3, 2, 1] as Level[]).flatMap((l) =>
-  (JSON.parse(readFileSync(new URL(`../../public/data/n${l}.json`, import.meta.url), 'utf8')) as Parameters<typeof parseRow>[1][]).map((row, idx) =>
+  (JSON.parse(readFileSync(new URL(`../../public/data/words-n${l}.json`, import.meta.url), 'utf8')) as Parameters<typeof parseRow>[1][]).map((row, idx) =>
     parseRow(l, row, idx),
   ),
 )
 const CARDS = DATA.filter((w) => w.k === 'S')
-const byId = (id: string) => DATA.find((w) => w.id === id)!
+/** a word by its positional id of before stable ids (how these cases were first written down) */
+const byId = (legacy: string) => DATA.find((w) => w.id === L(legacy))!
 const coreOf = (w: string) => alternatives(w)[0] ?? w
 /** every reading that is right for the word: its own, other entries of the same written word, the dictionary's (column x) */
 const RIGHT = new Map<string, Set<string>>()
@@ -123,7 +127,7 @@ describe('reading question over the whole word data', () => {
   // one showing of every reading-card word (a second pass would double the run time for little)
   const results = CARDS.map((w) => {
     const t = performance.now()
-    const q = readingQuestion(w, DATA, `${w.id}:r|0`)
+    const q = readingQuestion(w, DATA, `${legacySeed(w.id)}:r|0`)
     return { w, q, ms: performance.now() - t }
   })
 
@@ -182,8 +186,8 @@ describe('reading question over the whole word data', () => {
   it('is the same for the same showing, also with the data loaded afresh, and stays fast', () => {
     const fresh = DATA.slice()
     for (const { w, q } of results.filter((_, i) => i % 7 === 0)) {
-      expect(readingQuestion(w, DATA, `${w.id}:r|0`)).toEqual(q)
-      expect(readingQuestion(w, fresh, `${w.id}:r|0`)).toEqual(q)
+      expect(readingQuestion(w, DATA, `${legacySeed(w.id)}:r|0`)).toEqual(q)
+      expect(readingQuestion(w, fresh, `${legacySeed(w.id)}:r|0`)).toEqual(q)
     }
     // the one-off index build lands on the first card; every other card is a millisecond or so (measured
     // median 0.8 ms, max 3.6 ms on a desktop). Generous bounds so a slow CI machine does not fail it.
@@ -216,7 +220,7 @@ describe('reading question over the whole word data', () => {
   it('compounds swap a kanji’s piece for a reading a Korean learner would mix up (産業 산업)', () => {
     const w = DATA.find((x) => x.w === '産業' && x.k === 'S')!
     expect(w.a).toBe('さん|ぎょう')
-    const all = new Set(Array.from({ length: 12 }, (_, k) => readingQuestion(w, DATA, `${w.id}:r|${k}`)!.choices).flat())
+    const all = new Set(Array.from({ length: 12 }, (_, k) => readingQuestion(w, DATA, `${legacySeed(w.id)}:r|${k}`)!.choices).flat())
     all.delete('さんぎょう')
     for (const c of all) expect(moraCount(c), c).toBe(4)
     // most wrong choices keep one kanji's piece and swap the other; 残業 ざんぎょう (잔, one sound from 산) comes up
@@ -258,7 +262,7 @@ describe('reading question fallback', () => {
 
   it('across the data, counts which words would fall back', () => {
     // the shipped data has none (docs/plan/11 §4); this keeps the count visible if the data changes
-    const fallback = CARDS.filter((w) => readingQuestion(w, DATA, `${w.id}:r|1`)?.choices.length !== 4)
+    const fallback = CARDS.filter((w) => readingQuestion(w, DATA, `${legacySeed(w.id)}:r|1`)?.choices.length !== 4)
     expect(fallback.map((w) => w.w)).toEqual([])
   })
 })

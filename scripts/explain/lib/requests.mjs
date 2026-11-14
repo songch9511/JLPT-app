@@ -4,11 +4,10 @@
 import { CONFIG } from './config.mjs'
 import { OUTPUT_SCHEMA } from './schema.mjs'
 import { SYSTEM, userMessage } from './prompt.mjs'
+import { WORD_ID } from './words.mjs'
 
 const CUSTOM_ID = /^[a-zA-Z0-9_-]{1,64}$/ // Batch API constraint on custom_id
-const WORD_ID = /^n[1-5]-\d+$/
-
-/** Word id `n5-12` is already a valid custom_id; keep it verbatim so results map back without a table. */
+/** A stable word id (`w0k3`) is already a valid custom_id; keep it verbatim so results map back without a table. */
 export function toCustomId(wordId) {
   if (!WORD_ID.test(wordId)) throw new Error(`bad word id: ${wordId}`)
   if (!CUSTOM_ID.test(wordId)) throw new Error(`id not usable as custom_id: ${wordId}`)

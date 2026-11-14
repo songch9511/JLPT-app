@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ReminderPrefs } from '../../src/platform/reminders'
-import { at, bootUser, card, DAY, HOUR } from './helpers'
+import { at, bootUser, card, DAY, HOUR, L } from './helpers'
 
 const ON: ReminderPrefs = { enabled: true, hour: 20, minute: 0, quietDays: [] }
 const NOW = '2026-11-13T09:00:00' // a Friday, Asia/Seoul
@@ -13,7 +13,7 @@ async function setup(extra: Parameters<typeof bootUser>[2] = {}, settings: Param
 
 describe('planReminders', () => {
   it('nothing when off, or before onboarding', async () => {
-    const { store, r } = await setup({ cards: { '5-0': card({ due: at('2026-11-13T08:00:00').getTime() }) } })
+    const { store, r } = await setup({ cards: { [L('5-0')]: card({ due: at('2026-11-13T08:00:00').getTime() }) } })
     expect(r.planReminders(store.getState(), { ...ON, enabled: false }, at(NOW))).toEqual([])
     expect(r.planReminders({ ...store.getState(), onboarded: false }, ON, at(NOW))).toEqual([])
   })
@@ -22,9 +22,9 @@ describe('planReminders', () => {
     const t = (s: string) => at(s).getTime()
     const { store, r } = await setup({
       cards: {
-        '5-0': card({ due: t('2026-11-12T10:00:00') }), // overdue
-        '5-1': card({ due: t('2026-11-13T15:00:00') }), // later today
-        '5-2': card({ due: t('2026-11-15T07:00:00') }), // Sunday
+        [L('5-0')]: card({ due: t('2026-11-12T10:00:00') }), // overdue
+        [L('5-1')]: card({ due: t('2026-11-13T15:00:00') }), // later today
+        [L('5-2')]: card({ due: t('2026-11-15T07:00:00') }), // Sunday
       },
     })
     const plan = r.planReminders(store.getState(), ON, at(NOW))
@@ -44,7 +44,7 @@ describe('planReminders', () => {
   })
 
   it('at most one a day, ids unique per day, within the horizon', async () => {
-    const cards = Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`5-${i}`, card({ due: at(NOW).getTime() + i * 6 * HOUR })]))
+    const cards = Object.fromEntries(Array.from({ length: 40 }, (_, i) => [L(`5-${i}`), card({ due: at(NOW).getTime() + i * 6 * HOUR })]))
     const { store, r } = await setup({ cards })
     const plan = r.planReminders(store.getState(), ON, at(NOW))
     expect(plan.length).toBe(r.HORIZON_DAYS)
@@ -54,37 +54,37 @@ describe('planReminders', () => {
   })
 
   it('a day with only new words and no reviews gets no reminder', async () => {
-    const { store, r } = await setup({ cards: { '5-0': card({ due: at('2026-11-16T09:00:00').getTime() }) } })
+    const { store, r } = await setup({ cards: { [L('5-0')]: card({ due: at('2026-11-16T09:00:00').getTime() }) } })
     expect(r.planReminders(store.getState(), ON, at(NOW)).map((p) => p.day)[0]).toBe('2026-11-16')
   })
 
   it('nothing today once the day is done; tomorrow still planned', async () => {
     const { store, srs, r } = await setup({
-      cards: { '5-0': card({ due: at('2026-11-13T08:00:00').getTime() }), '5-1': card({ due: at('2026-11-14T08:00:00').getTime() }) },
+      cards: { [L('5-0')]: card({ due: at('2026-11-13T08:00:00').getTime() }), [L('5-1')]: card({ due: at('2026-11-14T08:00:00').getTime() }) },
     }, { dailyNew: 0 })
     expect(r.planReminders(store.getState(), ON, at(NOW))[0].day).toBe('2026-11-13')
-    srs.answer('5-0', srs.Rating.Good, at('2026-11-13T09:01:00'))
+    srs.answer(L('5-0'), srs.Rating.Good, at('2026-11-13T09:01:00'))
     const plan = r.planReminders(store.getState(), ON, at('2026-11-13T09:02:00'))
     expect(plan[0].day).toBe('2026-11-14')
     expect(r.workOn(store.getState(), at('2026-11-13T00:00:00'), at('2026-11-13T09:02:00')).done).toBe(true)
   })
 
   it('not in the past: after the chosen time, the first reminder is tomorrow', async () => {
-    const { store, r } = await setup({ cards: { '5-0': card({ due: at('2026-11-13T08:00:00').getTime() }) } }, {}, '2026-11-13T20:30:00')
+    const { store, r } = await setup({ cards: { [L('5-0')]: card({ due: at('2026-11-13T08:00:00').getTime() }) } }, {}, '2026-11-13T20:30:00')
     expect(r.planReminders(store.getState(), ON, at('2026-11-13T20:30:00'))[0]).toMatchObject({ day: '2026-11-14', at: at('2026-11-14T20:00:00').getTime() })
     // a minute before the time it is still today
     expect(r.planReminders(store.getState(), { ...ON, hour: 20, minute: 31 }, at('2026-11-13T20:30:00'))[0].day).toBe('2026-11-13')
   })
 
   it('quiet weekdays are skipped', async () => {
-    const { store, r } = await setup({ cards: { '5-0': card({ due: at('2026-11-12T08:00:00').getTime() }) } })
+    const { store, r } = await setup({ cards: { [L('5-0')]: card({ due: at('2026-11-12T08:00:00').getTime() }) } })
     const plan = r.planReminders(store.getState(), { ...ON, quietDays: [6, 0] }, at(NOW)) // Sat, Sun
     expect(plan.map((p) => p.day)).toEqual(['2026-11-13', '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19'])
   })
 
   it('a word with a meaning and a reading card counts once on future days, and resting reading cards not at all', async () => {
     const due = at('2026-11-12T08:00:00').getTime()
-    const { store, r } = await setup({ cards: { '5-0': card({ due }), '5-0:r': card({ due }), '5-1:r': card({ due }) } }, { fastTrack: true })
+    const { store, r } = await setup({ cards: { [L('5-0')]: card({ due }), [L('5-0:r')]: card({ due }), [L('5-1:r')]: card({ due }) } }, { fastTrack: true })
     expect(r.workOn(store.getState(), at('2026-11-14T00:00:00'), at(NOW)).reviews).toBe(2)
     store.update((d) => void (d.settings = { ...d.settings, fastTrack: false }))
     expect(r.workOn(store.getState(), at('2026-11-14T00:00:00'), at(NOW)).reviews).toBe(1)
@@ -107,7 +107,7 @@ describe('planReminders', () => {
 
 describe('widget snapshot', () => {
   it('one entry per day, today done flag, readiness figure', async () => {
-    const { store } = await setup({ cards: { '5-0': card({ due: at('2026-11-13T08:00:00').getTime() }) } })
+    const { store } = await setup({ cards: { [L('5-0')]: card({ due: at('2026-11-13T08:00:00').getTime() }) } })
     const { widgetSnapshot } = await import('../../src/platform/widget')
     const w = widgetSnapshot(store.getState(), at(NOW))
     expect(w.days.map((d) => d.day)).toEqual(['2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19'])

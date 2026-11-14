@@ -10,17 +10,19 @@ export interface Word {
   r: string
   /** Korean meaning (English when no Korean exists yet) */
   m: string
+  /** JLPT level (5 = N5); from the data, never from the id */
+  l: number
 }
 
 /**
- * Word ids are positional today: `<level>-<index>` (index into public/data/n<level>.json).
- * A stable-id migration is planned. Re-keying touches only three places: `idOf()` in
- * scripts/build-words.mjs, this pattern, and `shardOf()` below.
+ * A stable word id (the app's docs/plan/08 §7): `w` + a base-36 counter, at least three digits, no extra leading
+ * zeros (`w000`, `w0k3`), issued once in the app's data/ids.json and never tied to a word's position or level.
+ * Bounded to 7 characters (counters below 36^6). Must match scripts/build-words.mjs.
  */
-export const WORD_ID_PATTERN = /^[1-5]-(0|[1-9][0-9]{0,4})$/
+export const WORD_ID_PATTERN = /^w(?:[0-9a-z]{3}|[1-9a-z][0-9a-z]{3,5})$/
 
-/** Which generated shard holds the id (today: the JLPT level, the id's first character). */
-const shardOf = (id: string): string => id.slice(0, 1)
+/** Which generated shard holds the id: `w` + the counter's first digit (scripts/build-words.mjs groups the same way). */
+const shardOf = (id: string): string => id.slice(0, 2)
 
 const parsed = new Map<string, Map<string, Word>>()
 
@@ -29,8 +31,8 @@ function shard(name: string): Map<string, Word> | undefined {
   if (!m) {
     const raw = SHARDS[name]
     if (raw === undefined) return undefined
-    const rows = JSON.parse(raw) as [string, string, string, string][]
-    m = new Map(rows.map(([id, w, r, mean]) => [id, { id, w, r, m: mean }]))
+    const rows = JSON.parse(raw) as [string, string, string, string, number][]
+    m = new Map(rows.map(([id, w, r, mean, l]) => [id, { id, w, r, m: mean, l }]))
     parsed.set(name, m)
   }
   return m

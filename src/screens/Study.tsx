@@ -5,7 +5,8 @@ import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
 import { Badge, Button, IconButton, ProgressBar, Skeleton } from '../components/ui'
 import { Bridge, FalseFriend, SoundHints, TypeLine } from '../components/WordNotes'
-import { idxOf, isReadingCard, levelOf, meaning, useAllWords, useLevel, useLevels } from '../data'
+import { isReadingCard, levelOf, meaning, useAllWords, useLevel, useLevels, wordById } from '../data'
+import { legacySeed } from '../ids'
 import { readingOf, readingQuestion } from '../distractors'
 import {
   answer,
@@ -143,13 +144,13 @@ export function Study() {
 
   const id = levels.ready ? q.next?.id : undefined
   const reading = !!id && isReadingCard(id)
-  const { words, error: levelError } = useLevel(id ? levelOf(id) : null, retry)
+  const { words, error: levelError } = useLevel(id ? (levelOf(id) ?? null) : null, retry)
   // reading questions draw wrong choices from the data and must know every entry of the same written word
   const all = useAllWords(reading)
-  const word = words && id ? (words[idxOf(id)] ?? null) : null
+  const word = words && id ? wordById(id) : null
   const error = levelError ?? levels.error
   const reps = id ? (s.cards[id]?.reps ?? 0) : 0
-  const question = useMemo(() => (reading && word && all ? readingQuestion(word, all, `${id}|${reps}`) : null), [reading, word, all, id, reps])
+  const question = useMemo(() => (reading && word && all ? readingQuestion(word, all, `${legacySeed(id!)}|${reps}`) : null), [reading, word, all, id, reps])
   // a word without enough good wrong choices (readingQuestion → null) is asked like a meaning card: recall, then reveal
   const quiz = reading && !!question
   const ready = !!word && (!reading || !!all)

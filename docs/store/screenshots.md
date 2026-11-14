@@ -67,7 +67,7 @@ node docs/store/capture.mjs --out ./store-shots
 
 - `npm run build`(웹 빌드) → `npx vite preview`(빈 포트 자동 선택) → Playwright Chromium(`PLAYWRIGHT_BROWSERS_PATH`의 것, `playwright install`은 하지 않음)으로 찍습니다. 뷰포트는 440×956·402×874 CSS px에 배율 3, `ko-KR`, `Asia/Seoul`, 시계 고정, 동작 줄이기 켬.
 - **단어 ID 형식에 묶여 있습니다.** 스크립트는 `src/data.ts`의 `wordId`가 `` `${l}-${idx}` ``일 때만 돌고, 아니면 바로 멈추며 무엇을 고칠지 알려 줍니다. 단어 ID 개편이 main에 들어가면 `idOf()`를 새 규칙으로 바꾸면 됩니다(단어는 표기로 찾으므로 그 밖은 그대로).
-- 저장 키 `kasane.state.v2`, `kasane.meta`, 상태 버전 3, 카드 형식(`SCard`)을 그대로 씁니다. 이것들이 바뀌면 시드도 함께 고칩니다.
+- 저장 키 `kasane.state.v2`, `kasane.meta`, 상태 버전 3, 카드 형식(`SCard`)을 그대로 씁니다. 이것들이 바뀌면 시드도 함께 고칩니다. (2026-11-14부터 앱은 상태를 `kasane.state.v4`에 안정 단어 ID로 두지만, 이 시드처럼 옛 키·옛 위치 ID(`public/data/n*.json` 동결 파일 기준)로 넣은 상태는 첫 실행에 그대로 옮겨 쓰므로 시드는 지금도 동작합니다 — docs/plan/08 §7.3. 동결 파일을 지울 때(§7.6) 시드도 `words-n*.json`과 `kasane.state.v4`로 바꿉니다.)
 
 ## 6. 알려진 한계
 

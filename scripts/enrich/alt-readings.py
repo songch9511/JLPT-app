@@ -4,9 +4,9 @@
 #
 #   python3 -I scripts/enrich/alt-readings.py [path/to/jamdict.db]
 #
-# Reads public/data/n{1..5}.json (written form, reading, type) and JMdict from jamdict-data 1.5
+# Reads public/data/words-n{1..5}.json ([id, written form, reading, ko, en, o, f, type, ...]) and JMdict from jamdict-data 1.5
 # (fetched by fetch-sources.sh; default $ENRICH_CACHE or ~/.cache/luma-enrich/jamdict.db).
-# Writes data/readings/n{l}.json = { "<idx>": ["reading", ...] } with only the readings the entry does not
+# Writes data/readings/n{l}.json = { "<word id>": ["reading", ...] } (stable ids, docs/plan/08 §7) with only the readings the entry does not
 # already give. JMdict is EDRDG CC BY-SA (docs/plan/08 §1). build-data.mjs --extras appends them as column x.
 import json, os, re, sqlite3, sys
 
@@ -35,9 +35,10 @@ def readings(form):
 
 total = 0
 for l in [5, 4, 3, 2, 1]:
-    rows = json.load(open(os.path.join(root, 'public', 'data', f'n{l}.json'), encoding='utf8'))
+    rows = json.load(open(os.path.join(root, 'public', 'data', f'words-n{l}.json'), encoding='utf8'))
     out = {}
-    for idx, row in enumerate(rows):
+    for row in rows:
+        wid, row = row[0], row[1:]
         if len(row) < 7 or row[6] != 'S':
             continue
         own = set(alternatives(row[1] or row[0]))
@@ -47,7 +48,7 @@ for l in [5, 4, 3, 2, 1]:
                 if r not in own and r not in extra:
                     extra.append(r)
         if extra:
-            out[str(idx)] = extra
+            out[wid] = extra
     total += len(out)
     with open(os.path.join(root, 'data', 'readings', f'n{l}.json'), 'w', encoding='utf8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'), sort_keys=False)

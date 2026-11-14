@@ -7,10 +7,12 @@ import { addDays, dayKey, daysBetween, parseDay } from './util'
 
 export const BACKUP_FORMAT = 'jlpt-luma-backup'
 /**
- * 2 since the state's v3 (reading cards `:r`). An app that only knows 1 refuses a version-2 file as "newer"
- * instead of failing on card ids it cannot read; files of version 1 (and plain v2 states) still import here.
+ * 3 since the state's v4 (stable word ids `w0k3`, docs/plan/08 §7); 2 since v3 (reading cards `:r`). An app that
+ * only knows an earlier version refuses a newer file as "newer" instead of failing on card ids it cannot read.
+ * Files of versions 1 and 2 (positional ids `3-17`) and plain v2 states still import here: their ids are migrated
+ * by the same `migrate` as a saved state.
  */
-export const BACKUP_FORMAT_VERSION = 2
+export const BACKUP_FORMAT_VERSION = 3
 declare const __APP_VERSION__: string | undefined
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'
 
@@ -19,8 +21,9 @@ const ENVELOPE = ['format', 'formatVersion', 'app', 'exportedAt'] as const
 
 /** The backup file's content: the state plus format fields next to the existing `v`. */
 export function backupFile(s: State, now = new Date()) {
-  // the save counter only orders this device's own copies (store.ts `rev`); it means nothing elsewhere
-  const { rev: _rev, ...state } = s
+  // the save counter only orders this device's own copies (store.ts `rev`), and `legacy` only describes this
+  // device's storage; they mean nothing elsewhere. Quarantined records (`orphans`) are exported, to keep them.
+  const { rev: _rev, legacy: _legacy, ...state } = s
   return {
     format: BACKUP_FORMAT,
     formatVersion: BACKUP_FORMAT_VERSION,
@@ -33,8 +36,9 @@ export function backupFile(s: State, now = new Date()) {
 export type ReadResult = { ok: true; state: State } | { ok: false; reason: 'invalid' | 'newer' }
 
 /**
- * Reads a parsed backup file. Accepts this format (versions 1 and 2) and the earlier plain state (`{ v: 2, … }`)
- * files; returns the state with the format fields removed, migrated to the current state version.
+ * Reads a parsed backup file. Accepts this format (versions 1 to 3) and the earlier plain state (`{ v: 2, … }`)
+ * files; returns the state with the format fields removed, migrated to the current state version (positional
+ * ids become stable ids).
  */
 export function readBackup(x: unknown): ReadResult {
   if (typeof x !== 'object' || x === null || Array.isArray(x)) return { ok: false, reason: 'invalid' }
@@ -46,6 +50,9 @@ export function readBackup(x: unknown): ReadResult {
   }
   const rest: Record<string, unknown> = { ...o }
   for (const k of ENVELOPE) delete rest[k]
+  // a file never brings this device's bookkeeping, even if someone edited it in
+  delete rest.rev
+  delete rest.legacy
   return isBackup(rest) ? { ok: true, state: migrate(rest) } : { ok: false, reason: 'invalid' }
 }
 

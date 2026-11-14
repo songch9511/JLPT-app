@@ -5,7 +5,7 @@
 // the Swift plugins, permissions dialogs) — that is the device checklist in docs/plan/10-ios-build.md.
 import { expect, test, type Page } from '@playwright/test'
 import { NATIVE_PORT } from '../../playwright.config'
-import { answer, homeShown, KEY, NOW, user } from './fixtures'
+import { answer, homeShown, KEY, keyFor, NOW, user } from './fixtures'
 
 test.use({ baseURL: `http://localhost:${NATIVE_PORT}/` })
 
@@ -85,7 +85,7 @@ async function openShell(page: Page, opts: { state?: unknown; files?: Record<str
         },
       }
     },
-    { files: opts.files ?? {}, permission: opts.permission ?? 'prompt', pick: opts.pick, state: opts.state ? JSON.stringify(opts.state) : null, key: KEY },
+    { files: opts.files ?? {}, permission: opts.permission ?? 'prompt', pick: opts.pick, state: opts.state ? JSON.stringify(opts.state) : null, key: keyFor(opts.state) },
   )
   await page.goto(opts.hash ? `./#${opts.hash}` : './')
 }

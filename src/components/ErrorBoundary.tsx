@@ -1,7 +1,7 @@
 import { Component, useState, type ReactNode } from 'react'
 import { exportRaw } from '../backup'
 import { platform } from '../platform'
-import { STATE_KEY } from '../store'
+import { LEGACY_KEY, STATE_KEY } from '../store'
 import { Button } from './ui'
 
 /**
@@ -12,7 +12,8 @@ function Recovery({ error }: { error: Error }) {
   const [confirming, setConfirming] = useState(false)
   const raw = () => {
     try {
-      return localStorage.getItem(STATE_KEY)
+      // the copy from before stable ids when no migrated state was stored (e.g. the migration itself failed)
+      return localStorage.getItem(STATE_KEY) ?? localStorage.getItem(LEGACY_KEY)
     } catch {
       return null
     }
@@ -47,6 +48,7 @@ function Recovery({ error }: { error: Error }) {
                   await platform.clearDeviceData().catch(() => {})
                   try {
                     localStorage.removeItem(STATE_KEY)
+                    localStorage.removeItem(LEGACY_KEY)
                   } catch {
                     /* nothing more we can do */
                   }

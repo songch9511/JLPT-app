@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
-import { homeShown, NOW, open, saved, user } from './fixtures'
+import { homeShown, L, NOW, open, saved, user } from './fixtures'
 
 const DAY = 86400_000
 const review = (due: number, extra: Record<string, number> = {}) => ({
@@ -36,7 +36,7 @@ test.describe('words', () => {
     await sheet.getByRole('button', { name: '북마크' }).click()
     await page.keyboard.press('Escape')
     await expect(sheet).toBeHidden()
-    expect((await saved(page)).marks).toEqual(['5-452'])
+    expect((await saved(page)).marks).toEqual([L('5-452')])
     // the list tabs are a segmented control (a radio group)
     await page.getByRole('radio', { name: /^북마크/ }).click()
     await expect(page.locator('.word-row')).toHaveCount(1)
