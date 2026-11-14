@@ -103,7 +103,7 @@ test.describe('level screen', () => {
     await open(page, { state: user() })
     for (const h of ['#/level/9', '#/level/', '#/level/05', '#/nope', '#%%%', '#/../settings']) {
       await page.evaluate((x) => (location.hash = x), h)
-      await expect(page.getByRole('heading', { name: /시험날 기억할 단어/ }), h).toBeVisible()
+      await expect(page.getByRole('heading', { name: '오늘의 계획' }), h).toBeVisible()
     }
     // trailing segments after a valid route are ignored
     await page.evaluate(() => (location.hash = '#/level/4/extra'))
@@ -121,7 +121,7 @@ test.describe('settings', () => {
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await page.getByRole('link', { name: '홈' }).click()
-    await expect(page.locator('.home-ctx b')).toHaveText('N2')
+    await expect(page.locator('.home-head .subtitle b')).toHaveText('N2')
     await expect(page.locator('.plan-counts .c-new b')).toHaveText('30')
     await page.getByRole('link', { name: '설정' }).click()
     await page.getByRole('radio', { name: '시스템' }).click()
@@ -195,40 +195,19 @@ test.describe('settings', () => {
     await expect(page.getByRole('button', { name: 'N5' })).toBeVisible()
     expect((await saved(page)).onboarded).toBe(false)
   })
-
-  test('an exam date in the past is reported, not crashed on', async ({ page }) => {
-    await open(page, { state: user({ examDate: '2026-07-05' }) })
-    await expect(page.locator('.dday')).toHaveText('시험일 지남 · 바꾸기')
-    // no readiness figure is claimed for an exam that is over
-    await expect(page.getByText('시험일이 지났어요. 다음 시험일을 골라 주세요.')).toBeVisible()
-    await expect(page.locator('.ready-figure')).toHaveCount(0)
-  })
 })
 
-test('P9: home never offers more than 40 new words a day; the one lever is the smallest pace that reaches the goal', async ({ page }) => {
-  // N1: 2,699 words in 23 days cannot be reached at any allowed pace; the old link offered 100 a day
-  await open(page, { state: user({ target: 1, dailyNew: 20, examDate: '2026-12-06' }) })
+test('P9: home never offers more than 40 new words a day and gives no pace advice; the pace is a setting', async ({ page }) => {
+  // the old “맞추기” link offered 100 a day, and a later lever pushed the pace towards an exam-day goal
+  await open(page, { state: user({ target: 1, dailyNew: 100 }) })
   await homeShown(page)
-  await expect(page.getByRole('button', { name: /맞추기/ })).toHaveCount(0)
-  await expect(page.locator('.plan-lever')).toContainText('다음 시험(2027년 7월 4일)으로 미루는')
-  await expect(page.getByRole('button', { name: /바꾸기/ })).toHaveCount(0)
-  // N5 at 5 a day falls short; a faster pace within the cap reaches the goal
-  await page.evaluate(() => localStorage.clear())
-  await page.evaluate((k) => localStorage.setItem(k, JSON.stringify({ v: 2, onboarded: true, settings: { target: 5, examDate: '2026-12-06', dailyNew: 5, theme: 'light' }, cards: {}, log: {}, marks: [], xp: 0 })), 'kasane.state.v2')
-  await page.reload()
-  const lever = page.locator('.plan-lever')
-  await expect(lever).toContainText(/하루 새 단어 \d+개면 목표에 닿아요/)
-  const n = Number((await lever.innerText()).match(/하루 새 단어 (\d+)개/)![1])
-  expect(n).toBeGreaterThan(5)
-  expect(n).toBeLessThanOrEqual(40)
-  await lever.getByRole('button', { name: /바꾸기/ }).click()
-  expect((await saved(page)).settings.dailyNew).toBe(n)
-  await expect(lever).toContainText(`하루 새 단어 ${n}개로 바꿨어요`)
-  await lever.getByRole('button', { name: '되돌리기' }).click()
-  expect((await saved(page)).settings.dailyNew).toBe(5)
+  await expect(page.locator('.plan-counts .c-new b')).toHaveText('40')
+  await expect(page.getByRole('button', { name: /맞추기|바꾸기/ })).toHaveCount(0)
+  await expect(page.locator('.plan-lever')).toHaveCount(0)
+  await expect(page.getByText(/목표에 닿아요|목표를|시험/)).toHaveCount(0)
 })
 
-test('settings: daily new words stop at 40; lower levels and the goal can be set; the unofficial notice is shown', async ({ page }) => {
+test('settings: daily new words stop at 40; lower levels can be set; no exam date or goal; the unofficial notice is shown', async ({ page }) => {
   await open(page, { state: user({ target: 3, dailyNew: 100 }), hash: '/settings' })
   // an old value above the cap is held to it
   await expect(page.getByRole('radio', { name: '40', exact: true })).toBeChecked()
@@ -236,39 +215,45 @@ test('settings: daily new words stop at 40; lower levels and the goal can be set
   const lower = page.getByRole('switch', { name: /아래 급수 단어도 함께 \(N5·N4\)/ })
   await expect(lower).not.toBeChecked()
   await lower.check()
-  await page.getByRole('radio', { name: '90%' }).click()
-  const s = (await saved(page)).settings
-  expect(s).toMatchObject({ includeLower: true, goal: 0.9, dailyNew: 40 })
+  await expect.poll(async () => (await saved(page)).settings).toMatchObject({ includeLower: true, dailyNew: 40 })
+  // the exam date (chips, date field) and the exam-day goal are gone
+  await expect(page.getByRole('radio', { name: '90%' })).toHaveCount(0)
+  await expect(page.getByRole('group', { name: '시험일' })).toHaveCount(0)
+  await expect(page.locator('input[type="date"]')).toHaveCount(0)
+  await expect(page.getByText(/시험일|시험날|준비도/)).toHaveCount(0)
+  expect((await saved(page)).settings).not.toHaveProperty('goal')
   await expect(page.locator('.about .notice')).toContainText('관계없는 비공식 학습 앱')
   await expect(page.locator('.about .notice')).toContainText('승인하거나 후원하지 않아요')
 })
 
 test('P4: with lower levels included an N3 learner meets N5 words first, and the card says which level', async ({ page }) => {
   await open(page, { state: user({ target: 3, includeLower: true }) })
-  await expect(page.locator('.ready-info')).toContainText('N5~N3 목록 기준')
+  await expect(page.getByRole('heading', { name: /^N5~N3 단어/ })).toBeVisible()
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   await expect(page.locator('.flash-head').getByText('N5', { exact: true })).toBeVisible()
 })
 
-test.describe('home: readiness first, then today’s plan', () => {
-  test('shows the figure with its caveats; the ⓘ sheet explains what it cannot say', async ({ page }) => {
+test.describe('home: Ruma, today’s plan, then the words met', () => {
+  test('an established learner: the day and level on top, Ruma’s card, the plan with its one primary, the word card; nothing about an exam', async ({ page }) => {
     const t = NOW.getTime()
     const cards = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`5-${i}`, review(t + ((i % 20) - 5) * DAY, { stability: 10 + (i % 30) })]))
     await open(page, { state: user({}, { cards, log: { '2026-11-12': { c: 60, n: 0, r: 40, p: 36 } } }) })
-    const card = page.getByRole('region', { name: /시험날 기억할 단어/ })
-    await expect(card.locator('.ready-figure')).toContainText('/ 718')
-    await expect(card.locator('.ready-split')).toContainText(/지금 그만두면 \d+ · 계획대로면 \d+/)
-    await expect(card.locator('.ready-status .status')).toHaveText(/순항 중이에요|빠듯해요|목표보다 모자라요/)
-    await expect(card.locator('.ready-info')).toHaveText('N5 목록 기준 추정 · 문법·독해·청해 제외 · 합격 확률이 아니에요')
-    // the readiness card comes before the plan, and both fit in the first screen with the start button
+    await homeShown(page)
+    await expect(page.getByRole('heading', { name: '오늘', level: 1 })).toBeVisible()
+    await expect(page.locator('.home-head .subtitle')).toHaveText('11월 13일 금요일 · N5')
+    await expect(page.locator('.streak')).toBeVisible()
+    // order: Ruma's card, the plan, the word card
+    const order = await page.locator('main.page > .card').evaluateAll((els) => els.map((e) => e.className))
+    expect(order.slice(0, 3).map((c) => c.split(' ').find((x) => ['week-card', 'plan', 'words-card'].includes(x)))).toEqual(['week-card', 'plan', 'words-card'])
+    const words = page.getByRole('region', { name: /N5 단어/ })
+    await expect(words.locator('.card-title')).toHaveText('N5 단어200 / 718 만남')
+    await expect(words.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '718개 중 200개 만남')
+    await expect(words.locator('.words-sub')).toHaveText(/^그중 장기 기억 \d+개$/)
+    await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
+    // the start button stays in the first screen
     const box = await page.getByRole('button', { name: '오늘의 학습 시작' }).boundingBox()
     expect(box!.y + box!.height).toBeLessThan(844 - 70)
-    await card.locator('.ready-info').click()
-    const sheet = page.getByRole('dialog', { name: '이 숫자는 무엇인가요?' })
-    await expect(sheet).toContainText('합격 확률이 아니에요')
-    await expect(sheet).toContainText('공식 목록이 아니에요')
-    await page.keyboard.press('Escape')
-    await expect(sheet).toBeHidden()
+    await expect(page.getByText(/시험|D-\d|예상|목표에 닿아요|합격/)).toHaveCount(0)
   })
 
   test('the 기록 tab holds the stamps, forecast and heatmap that left home', async ({ page }) => {

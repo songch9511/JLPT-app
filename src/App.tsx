@@ -48,7 +48,7 @@ export default function App() {
   const target = useStore((s) => s.settings.target)
   const includeLower = useStore((s) => s.settings.includeLower)
   // the studied levels' data in the background: today's counts (new words, reading cards) follow its order. Also
-  // before the first-run questions are answered: Home shows the default level's counts as soon as one is chosen.
+  // before the first-run question is answered: Home shows the default level's counts as soon as one is chosen.
   useLevels(studyLevels({ target, includeLower }))
 
   useEffect(() => {
@@ -66,8 +66,8 @@ export default function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)
   }, [theme])
 
-  // There is no onboarding page: a new learner starts on Home, where Ruma asks the level and the exam date
-  // (screens/HomeGuide.tsx). Until both are answered there is nothing to study, so the study route shows Home.
+  // There is no onboarding page: a new learner starts on Home, where Ruma asks the level
+  // (screens/HomeGuide.tsx). Until it is answered there is nothing to study, so the study route shows Home.
   if (route.name === 'study' && onboarded)
     return (
       <>

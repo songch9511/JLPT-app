@@ -6,6 +6,9 @@
 // words off S (N5 前·～中(じゅう)·元気, N4 大体, N2 伯父さん·叔父さん·作者). Those reading cards now rest and the
 // words count as new until their meaning card is learned, so the N5/N4/N2 breakdowns, readiness (−7 words) and
 // today's reading-card count (8 → 6) changed by hand; every other recorded text is as recorded.
+// A second (2026-11-14): the exam-day estimate was removed from Home. The plan lost its "오늘 하면 시험날 예상" line and
+// pace advice, and the readiness card gave way to the word card, whose counts were written by hand from this file's
+// own level breakdowns (N5~N2: 5,431 words, 2,655 new → 2,776 met; 631 + 566 + 634 + 259 = 2,090 long-term).
 import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { homeShown, KEY, L, NOW, open, saved, user } from './fixtures'
@@ -23,13 +26,13 @@ const text = (page: Page, sel: string) =>
     .allInnerTexts()
     .then((t) => t.map((x) => x.replace(/\s+/g, ' ').trim()))
 
-/** What a learner sees of their records: home plan and readiness, the first study card, the word lists, each level's breakdown. */
+/** What a learner sees of their records: home plan and word card, the first study card, the word lists, each level's breakdown. */
 async function screens(page: Page) {
   const out: Record<string, unknown> = {}
   await homeShown(page)
   // today's plan counts its reading cards once the studied levels' data has loaded (this learner has 8 new ones)
   await expect(page.locator('.plan')).toContainText('(읽기만')
-  out.home = { plan: await text(page, '.plan'), readiness: await text(page, '.readiness') }
+  out.home = { plan: await text(page, '.plan'), words: await text(page, '.words-card') }
   await page.goto('./#/words')
   await page.getByRole('radio', { name: /^북마크/ }).click()
   await expect(page.locator('.word-row').first()).toBeVisible()

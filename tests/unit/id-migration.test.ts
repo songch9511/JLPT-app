@@ -62,9 +62,12 @@ describe('migrating a real learner’s saved state (v3, positional ids)', () => 
     const s = store.getState()
     expect(s.v).toBe(4)
     expectSameRecords(old, s)
-    expect(s.settings).toEqual(old.settings)
+    // every setting as it was, except the exam date and goal the app no longer has (dropped, 2026-11-14)
+    const { examDate: _e, goal: _g, ...settings } = old.settings as Record<string, unknown>
+    expect(s.settings).toEqual(settings)
     expect(s.onboarded).toBe(true)
-    expect(s.bestE).toBe(old.bestE)
+    // …and the stamps' best exam-day estimate
+    expect('bestE' in s).toBe(false)
     // the save counter carries on from the old copy (the iOS durable copy is compared by it)
     expect(s.rev).toBe(old.rev)
     // stored at once under the new key; the old copy is left exactly as it was (the recoverable pre-migration copy)

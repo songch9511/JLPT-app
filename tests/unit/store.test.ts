@@ -9,18 +9,13 @@ describe('store: loading', () => {
     const s = store.getState()
     expect(s.onboarded).toBe(false)
     // a new learner studies the lower levels too (03 decision 2)
-    expect(s.settings).toEqual({ target: 5, examDate: '2026-12-06', dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, goal: 0.8, fastTrack: true })
+    expect(s.settings).toEqual({ target: 5, dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, fastTrack: true })
     expect(s.cards).toEqual({})
     expect(s.marks).toEqual([])
     expect(s.xp).toBe(0)
   })
 
-  it('the default exam date is computed from the clock at load time', async () => {
-    const { store } = await boot({ now: '2026-12-07T09:00:00' })
-    expect(store.getState().settings.examDate).toBe('2027-07-04')
-  })
-
-  it('fills settings added in later versions and keeps what was saved; drops the removed API key', async () => {
+  it('fills settings added in later versions and keeps what was saved; drops the removed API key and exam date', async () => {
     const saved = {
       v: 2,
       onboarded: true,
@@ -33,7 +28,7 @@ describe('store: loading', () => {
     const { store, ls } = await boot({ now: NOW, legacy: saved })
     const s = store.getState()
     // a learner from before `includeLower` keeps studying the target level only, so the plan does not suddenly grow
-    expect(s.settings).toEqual({ target: 3, examDate: '2027-07-04', dailyNew: 10, theme: 'dark', autoSpeak: false, includeLower: false, goal: 0.8, fastTrack: true })
+    expect(s.settings).toEqual({ target: 3, dailyNew: 10, theme: 'dark', autoSpeak: false, includeLower: false, fastTrack: true })
     expect(JSON.stringify(s)).not.toContain('sk-ant-old')
     // the migrated state is stored at once (without the key); the pre-migration copy stays exactly as it was
     expect(ls.getItem(KEY)).not.toContain('sk-ant-old')
@@ -196,7 +191,7 @@ describe('store: storage full', () => {
 })
 
 describe('store: additive fields without a version bump', () => {
-  it('an old saved state (v2, no ms/e/includeLower/goal, dailyNew 100 from the old “맞추기” link) loads and is normalised', async () => {
+  it('an old saved state (v2, no ms/includeLower, dailyNew 100 from the old “맞추기” link) loads and is normalised', async () => {
     const saved = {
       v: 2,
       onboarded: true,
@@ -210,7 +205,7 @@ describe('store: additive fields without a version bump', () => {
     const s = store.getState()
     // migrated to v4 on load (the fast-track, stable ids); nothing else about the state changes
     expect(s.v).toBe(4)
-    expect(s.settings).toEqual({ target: 1, examDate: '2026-12-06', dailyNew: 40, theme: 'light', autoSpeak: true, includeLower: false, goal: 0.8, fastTrack: true })
+    expect(s.settings).toEqual({ target: 1, dailyNew: 40, theme: 'light', autoSpeak: true, includeLower: false, fastTrack: true })
     expect(s.log['2026-11-12']).toEqual({ c: 5, n: 5, r: 0, p: 0, xp: 50 })
     expect(s.cards[L('1-0')]).toEqual(saved.cards['1-0'])
     expect(s.marks).toEqual([L('1-0')])
@@ -223,7 +218,71 @@ describe('store: additive fields without a version bump', () => {
     const { store } = await boot({ now: NOW })
     store.replaceState({ v: 2, onboarded: true, settings: { target: 2, dailyNew: 50, apiKey: 'k', goal: 0.55 }, cards: {}, log: {} } as never)
     const st = store.getState().settings as Record<string, unknown>
-    expect(st).toMatchObject({ target: 2, dailyNew: 40, includeLower: false, goal: 0.8 })
+    expect(st).toMatchObject({ target: 2, dailyNew: 40, includeLower: false })
     expect(st).not.toHaveProperty('apiKey')
+    expect(st).not.toHaveProperty('goal')
+  })
+})
+
+describe('store: the exam date and the exam-day estimate are gone (2026-11-14)', () => {
+  // as the versions with the estimate saved a learner: exam date, goal, the stamps' best estimate, predicted recall in the log
+  const withExam = (v: 2 | 3 | 4, extra: Record<string, unknown> = {}) => ({
+    v,
+    onboarded: true,
+    settings: { target: 4, examDate: '2027-07-04', dailyNew: 10, theme: 'light', autoSpeak: false, includeLower: true, goal: 0.9, fastTrack: true },
+    cards: v === 4 ? { [L('4-0')]: card({ due: Date.parse(NOW) }) } : { '4-0': card({ due: Date.parse(NOW) }) },
+    log: { '2026-11-12': { c: 3, n: 1, r: 2, p: 2, e: 1.8, ms: 24000 } },
+    marks: [],
+    xp: 30,
+    bestE: 412,
+    ...extra,
+  })
+
+  it('a saved state of every version loads; the fields are ignored, gone from the next save; the log keeps its inert `e`', async () => {
+    for (const v of [2, 3, 4] as const) {
+      const { store, ls, srs } = await boot({ now: NOW, ...(v === 4 ? { saved: withExam(4) } : { legacy: withExam(v) }) })
+      const s = store.getState()
+      expect(s.settings).toEqual({ target: 4, dailyNew: 10, theme: 'light', autoSpeak: false, includeLower: true, fastTrack: true })
+      expect(s).not.toHaveProperty('bestE')
+      expect(s.log['2026-11-12']).toEqual({ c: 3, n: 1, r: 2, p: 2, e: 1.8, ms: 24000 })
+      expect(srs.buildQueue(s, new Date(NOW)).review).toBe(1)
+      store.update((d) => void (d.xp = 31))
+      const saved = JSON.parse(ls.getItem(KEY)!)
+      expect(saved.settings).not.toHaveProperty('examDate')
+      expect(saved.settings).not.toHaveProperty('goal')
+      expect(saved).not.toHaveProperty('bestE')
+    }
+  })
+
+  it('a backup of every format with the fields imports, and its export round-trips without them', async () => {
+    const { store } = await boot({ now: NOW })
+    const backup = await import('../../src/backup')
+    const files = [
+      withExam(2),
+      { format: 'jlpt-luma-backup', formatVersion: 1, ...withExam(2) },
+      { format: 'jlpt-luma-backup', formatVersion: 2, ...withExam(3) },
+      { format: 'jlpt-luma-backup', formatVersion: 3, ...withExam(4) },
+    ]
+    for (const f of files) {
+      const read = backup.readBackup(JSON.parse(JSON.stringify(f)))
+      expect(read.ok, JSON.stringify(f).slice(0, 80)).toBe(true)
+      if (!read.ok) continue
+      store.importState(read.state)
+      const out = JSON.parse(JSON.stringify(backup.backupFile(store.getState())))
+      expect(out.settings).not.toHaveProperty('examDate')
+      expect(out).not.toHaveProperty('bestE')
+      const again = backup.readBackup(out)
+      expect(again.ok && again.state.cards).toEqual(store.getState().cards)
+      expect(again.ok && again.state.settings).toEqual(store.getState().settings)
+    }
+  })
+
+  it('the two-tab merge with a copy that still has the fields: progress merged, the fields stay gone', async () => {
+    const { store } = await boot({ now: NOW, saved: withExam(4, { bestE: undefined }) })
+    const other = store.migrate(withExam(3, { xp: 99 }) as never)
+    const merged = store.mergeStates(store.getState(), other)
+    expect(merged.xp).toBe(99)
+    expect(merged.settings).not.toHaveProperty('examDate')
+    expect(merged).not.toHaveProperty('bestE')
   })
 })

@@ -61,15 +61,12 @@ test.describe('accessibility (Q7, Q8)', () => {
     await expect(page.getByRole('button', { name: 'N5' })).toBeVisible()
     expect(await violations(page)).toEqual([])
     await page.getByRole('button', { name: 'N3' }).click()
-    await expect(page.getByRole('button', { name: '아직 몰라요' })).toBeVisible()
-    expect(await violations(page)).toEqual([])
-    await page.getByRole('button', { name: '아직 몰라요' }).click()
     await expect(page.getByRole('button', { name: '첫 학습 시작' })).toBeVisible()
     expect(await violations(page)).toEqual([])
   })
 
   test('Ruma’s tips on home and on the study screen', async ({ page }) => {
-    const guide = { done: ['level', 'exam'] }
+    const guide = { done: ['level'] }
     await open(page, { state: { ...user({ fastTrack: true }), v: 4, guide }, hash: '/study' })
     for (let i = 0; i < 20; i++) {
       await expect(page.locator('.flash')).toBeVisible()
@@ -100,6 +97,31 @@ test.describe('accessibility (Q7, Q8)', () => {
     expect(await violations(page)).toEqual([])
   })
 
+  // home without the exam-day estimate (2026-11-14): a new learner after the first session, an established one and a
+  // backlog, at 320 and 390, light and dark
+  const t = NOW.getTime()
+  const established = Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`5-${i}`, { ...review(t + ((i % 20) - 6) * DAY), stability: 5 + (i % 40), scheduled_days: 5 + (i % 40) }]))
+  const backlog = Object.fromEntries(Array.from({ length: 600 }, (_, i) => [`5-${i}`, review(t - 7 * DAY + i * 60_000)]))
+  const homes: Record<string, (theme: string) => unknown> = {
+    'a new learner after the first session': (theme) => ({ ...user({ includeLower: true, fastTrack: true, dailyNew: 20, theme }, { log: { '2026-11-13': { c: 40, n: 20, r: 0, p: 0 } } }), guide: { done: ['level', 'srs'] } }),
+    'an established learner': (theme) => user({ target: 4, includeLower: true, dailyNew: 10, theme }, { cards: established, log: { '2026-11-12': { c: 60, n: 10, r: 40, p: 36 } } }),
+    'a backlog': (theme) => user({ dailyNew: 20, theme }, { cards: backlog }),
+  }
+  for (const [name, state] of Object.entries(homes))
+    for (const width of [320, 390])
+      for (const theme of ['light', 'dark'])
+        test(`home, ${name}, ${width}px ${theme}: no violations, no sideways scroll, at most one primary, nothing about an exam`, async ({ page }) => {
+          await page.setViewportSize({ width, height: 800 })
+          await open(page, { state: state(theme) })
+          await homeShown(page)
+          await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+          await expect(page.locator('.words-card')).toBeVisible()
+          expect(await violations(page)).toEqual([])
+          expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+          expect(await page.locator('.btn[data-variant="primary"]').count()).toBeLessThanOrEqual(1)
+          await expect(page.getByText(/시험|D-\d|예상/)).toHaveCount(0)
+        })
+
   test('the largest iOS text sizes do not make the home screen scroll sideways at 320px (Q9)', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 })
     await open(page, { state: user({ dailyNew: 10 }) })
@@ -114,23 +136,15 @@ test.describe('accessibility (Q7, Q8)', () => {
   })
 })
 
-test.describe('exam date (Q3)', () => {
-  test('a date typed far in the future is not taken (it froze the home screen)', async ({ page }) => {
-    await open(page, { state: user(), hash: '/settings' })
-    const input = page.locator('#exam')
-    await input.fill('2099-12-06')
-    await page.waitForTimeout(200)
-    expect((await saved(page))?.settings.examDate ?? '2026-12-06').toBe('2026-12-06')
-    await input.fill('2027-12-05')
-    await expect.poll(async () => (await saved(page)).settings.examDate).toBe('2027-12-05')
-    await page.goto('./#/')
+test.describe('exam date (Q3, removed 2026-11-14)', () => {
+  test('a far exam date saved before loads; home and settings show nothing of it, and the next save drops it', async ({ page }) => {
+    await open(page, { state: user({ examDate: '2099-12-06', goal: 0.9 }) })
     await homeShown(page)
-  })
-
-  test('a far exam date saved before is put back to the next exam at launch', async ({ page }) => {
-    await open(page, { state: user({ examDate: '2099-12-06' }) })
-    await homeShown(page)
-    await expect(page.locator('.home-ctx')).toContainText('12월 6일')
-    expect((await saved(page)).settings.examDate).toBe('2026-12-06')
+    await expect(page.getByText(/시험|D-/)).toHaveCount(0)
+    expect((await saved(page)).settings).not.toHaveProperty('examDate')
+    await page.goto('./#/settings')
+    await expect(page.getByRole('heading', { name: '학습 계획' })).toBeVisible()
+    await expect(page.getByText(/시험일|시험날/)).toHaveCount(0)
+    await expect(page.locator('input[type="date"]')).toHaveCount(0)
   })
 })

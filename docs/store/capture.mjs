@@ -14,8 +14,8 @@
 // Chromium: Playwright's bundled browser (PLAYWRIGHT_BROWSERS_PATH); set PW_CHROMIUM to use another binary.
 // Never runs `playwright install`.
 //
-// The learner is simulated with ts-fsrs (the app's own scheduler library) day by day, so card states, the
-// daily log and the exam-day estimate are the kind the app would produce itself. Nothing here is a mock-up:
+// The learner is simulated with ts-fsrs (the app's own scheduler library) day by day, so card states and the
+// daily log are the kind the app would produce itself. Nothing here is a mock-up:
 // every screen is the real app rendering seeded data.
 
 import { spawn, spawnSync } from 'node:child_process'
@@ -81,7 +81,7 @@ const KST = '+09:00'
 const DAY = 86_400_000
 const at = (ymd, hm = '20:00') => Date.parse(`${ymd}T${hm}:00${KST}`)
 const ymdOf = (ms) => new Date(ms + 9 * 3_600_000).toISOString().slice(0, 10)
-/** "Now" in every screenshot: Saturday 2026-11-14, 08:30 in Seoul, 22 days before the 2026-12-06 exam. */
+/** "Now" in every screenshot: Saturday 2026-11-14, 08:30 in Seoul. */
 const TODAY = '2026-11-14'
 const NOW = at(TODAY, '08:30')
 
@@ -111,7 +111,7 @@ const ser = (c) => ({
 
 /**
  * An N3 learner who also studies N5·N4 (the app's default for new learners), 20 new words a day with the
- * cognate fast-track on, since 2026-07-06 (the day after the July exam), missing a few days. Returns the saved state as the app stores it.
+ * cognate fast-track on, since 2026-07-06, missing a few days. Returns the saved state as the app stores it.
  */
 function simulate() {
   const f = fsrs(generatorParameters({ request_retention: 0.9, enable_fuzz: false }))
@@ -133,7 +133,7 @@ function simulate() {
   for (let d = start; ymdOf(d) < TODAY; d += DAY) {
     const ymd = ymdOf(d)
     if (skip.has(ymd)) continue
-    const day = { c: 0, n: 0, r: 0, p: 0, e: 0 }
+    const day = { c: 0, n: 0, r: 0, p: 0 }
     let t = at(ymd, rand() < 0.7 ? '21:10' : '07:40')
     const end = at(ymd, '23:59')
     // reviews due before midnight, oldest due first
@@ -143,7 +143,6 @@ function simulate() {
       const ok = rand() < r
       day.r++
       day.p += ok ? 1 : 0
-      day.e += r
       answer(id, c, t, ok ? (rand() < 0.12 ? Rating.Easy : Rating.Good) : Rating.Again, day)
       t += 6_000 + Math.floor(rand() * 5_000)
     }
@@ -187,12 +186,10 @@ function simulate() {
     onboarded: true,
     settings: {
       target: 3,
-      examDate: '2026-12-06',
       dailyNew: 20,
       theme: 'light',
       autoSpeak: false,
       includeLower: true,
-      goal: 0.8,
       fastTrack: true,
     },
     cards: Object.fromEntries([...cards].map(([id, c]) => [id, ser(c)])),
@@ -214,7 +211,7 @@ function onlyCard(id, theme = 'light') {
   s.settings.theme = theme
   const tomorrow = at('2026-11-15', '09:00')
   for (const c of Object.values(s.cards)) if (c.due <= at(TODAY, '23:59')) c.due = tomorrow
-  s.log[TODAY] = { c: 31, n: 20, r: 11, p: 10, e: 9.6, xp: 310, ms: 232_000 }
+  s.log[TODAY] = { c: 31, n: 20, r: 11, p: 10, xp: 310, ms: 232_000 }
   s.cards[id] = {
     due: at(TODAY, '07:00'),
     stability: 14.2,
@@ -290,7 +287,7 @@ const SHOTS = [
     name: '01-home',
     state: () => base,
     hash: '/',
-    ready: (p) => p.getByRole('heading', { name: /시험날 기억할 단어/ }).waitFor(),
+    ready: (p) => p.getByRole('heading', { name: '오늘의 계획' }).waitFor(),
   },
   {
     name: '02-reading-card',
@@ -355,7 +352,7 @@ const SHOTS = [
     name: '07-home-dark',
     state: () => ({ ...clone(base), settings: { ...base.settings, theme: 'dark' } }),
     hash: '/',
-    ready: (p) => p.getByRole('heading', { name: /시험날 기억할 단어/ }).waitFor(),
+    ready: (p) => p.getByRole('heading', { name: '오늘의 계획' }).waitFor(),
   },
   {
     name: '08-level',

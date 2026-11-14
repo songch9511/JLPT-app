@@ -1,13 +1,12 @@
-import { useEffect, type CSSProperties } from 'react'
-import { readiness } from '../readiness'
-import { forecast, retention } from '../srs'
-import { update, useStore, type State } from '../store'
+import { type CSSProperties } from 'react'
+import { forecast, retention, studyProgress } from '../srs'
+import { useStore, type State } from '../store'
 import { addDays, dayKey, daysBetween, useClock } from '../util'
 import { Card } from '../components/ui'
 
 const WEEKS = 15
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
-/** One stamp for every 50 words expected to be recalled on the exam (03 §6). */
+/** One stamp for every 50 words met in the levels studied (03 §6). */
 export const STAMP_STEP = 50
 
 /** About how many em wide a summary number is in the bold rounded face: digits ~0.62, separators ~0.3, Hangul 1. */
@@ -62,17 +61,18 @@ function Forecast({ counts, today }: { counts: number[]; today: Date }) {
   )
 }
 
-/** Vermilion 済 seals, one per 50 expected words; a seal once stamped stays even if the figure drops. */
-function Stamps({ best, now, total }: { best: number; now: number; total: number }) {
+/** Vermilion 済 seals, one per 50 words met; the next one is outlined. */
+function Stamps({ met, total }: { met: number; total: number }) {
   const n = Math.ceil(total / STAMP_STEP)
-  const earned = Math.floor(best / STAMP_STEP)
+  // the last seal is earned with the list's last word, however few words that leg has
+  const earned = met >= total ? n : Math.floor(met / STAMP_STEP)
   return (
     <ol className="stamps" aria-label={`도장 ${n}개 중 ${earned}개`}>
       {Array.from({ length: n }, (_, i) => {
         const goal = Math.min((i + 1) * STAMP_STEP, total)
         const done = i < earned
         return (
-          <li key={i} className={done ? 'done' : now >= i * STAMP_STEP && !done ? 'now' : ''} aria-hidden="true">
+          <li key={i} className={done ? 'done' : i === earned ? 'now' : ''} aria-hidden="true">
             <span lang="ja">{done ? '済' : ''}</span>
             <small>{goal}</small>
           </li>
@@ -86,27 +86,12 @@ export function Stats() {
   const s = useStore((x) => x)
   useClock()
   const today = new Date()
-  const r = readiness(s, today)
-  const stop = Math.round(r.stop)
-  const best = Math.max(s.bestE ?? 0, stop)
-  // remember the best figure so stamps are never taken away
-  useEffect(() => {
-    if (stop > (s.bestE ?? 0)) update((d) => void (d.bestE = stop))
-  }, [stop, s.bestE])
+  // the same counts as Home's word card and the 단어장 level rows
+  const { levels, total, met } = studyProgress(s)
 
   const kept = retention(s, today)
-  let r30 = 0
-  let e30 = 0
   let ms7 = 0
-  for (let i = 0; i < 30; i++) {
-    const log = s.log[dayKey(addDays(today, -i))]
-    if (log?.e !== undefined) {
-      r30 += log.r
-      e30 += log.e
-    }
-    if (i < 7) ms7 += log?.ms ?? 0
-  }
-  const predicted = r30 >= 10 ? e30 / r30 : null
+  for (let i = 0; i < 7; i++) ms7 += s.log[dayKey(addDays(today, -i))]?.ms ?? 0
 
   return (
     <>
@@ -117,11 +102,11 @@ export function Stats() {
       <Card role="region" aria-labelledby="stamps-title">
         <h2 id="stamps-title" className="card-title">
           도장 여정
-          <span className="muted">예상 기억 {STAMP_STEP}단어마다</span>
+          <span className="muted">만난 단어 {STAMP_STEP}개마다</span>
         </h2>
-        <Stamps best={best} now={stop} total={r.total} />
+        <Stamps met={met} total={total} />
         <p className="hint">
-          지금 그만둬도 시험날 {stop.toLocaleString()}개를 기억할 것으로 예상해요. 한 번 찍은 도장은 지워지지 않아요.
+          {levels.length === 1 ? `N${levels[0]}` : `N${levels[0]}~N${levels[levels.length - 1]}`} 단어 {total.toLocaleString()}개 중 {met.toLocaleString()}개를 만났어요.
         </p>
       </Card>
 
@@ -129,7 +114,7 @@ export function Stats() {
         <Card className="stat" padding={3}>
           <span className="stat-label">기억 유지율</span>
           <StatNumber text={kept == null ? '–' : `${Math.round(kept * 100)}%`} />
-          <small className="muted">{predicted == null ? '최근 30일' : `예측 ${Math.round(predicted * 100)}%${r.calibrated ? ' · 보정함' : ''}`}</small>
+          <small className="muted">최근 30일</small>
         </Card>
         <Card className="stat" padding={3}>
           <span className="stat-label">최근 7일 학습</span>

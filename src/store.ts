@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { LEVELS, type Level } from './data'
 import { fromLegacy, isWordId, LEGACY_ID, WORD_ID } from './ids'
-import { upcomingExams } from './util'
 
 /** A scheduled card (ts-fsrs Card with timestamps as epoch ms). Words without an entry are still new. */
 export interface SCard {
@@ -37,8 +36,8 @@ export interface DayLog {
   q?: number
   /** active study time in ms: from a card appearing to its answer, at most 60 s per card (03 §5.1) */
   ms?: number
-  /** sum of the predicted recall of the review answers counted in `r`, to compare with `p` (03 §4.1) */
-  e?: number
+  // `e` (the predicted recall of the day's review answers, for the removed exam-day estimate) is no longer written.
+  // Logs saved before keep it: a count like the others, ignored, carried in backups and merges.
 }
 
 export interface State {
@@ -50,14 +49,11 @@ export interface State {
   onboarded: boolean
   settings: {
     target: Level
-    examDate: string
     dailyNew: number
     theme: 'system' | 'light' | 'dark'
     autoSpeak: boolean
-    /** also study (and count towards readiness) the levels below the target, e.g. N5·N4 for an N3 learner */
+    /** also study the levels below the target, e.g. N5·N4 for an N3 learner */
     includeLower: boolean
-    /** share of the readiness word set the learner aims to remember on the exam day (0.7 · 0.8 · 0.9) */
-    goal: number
     /**
      * Cognate fast-track (02 F3, 03 §2.4): words that mean the same as their Korean hanja word (k = S) are
      * learned with a reading card (`<id>:r`) instead of a meaning card. Off: every word uses a meaning card
@@ -70,8 +66,6 @@ export interface State {
   log: Record<string, DayLog>
   marks: string[]
   xp: number
-  /** highest expected recall reached so far: journey stamps once earned stay (03 §6) */
-  bestE?: number
   /**
    * Save counter, +1 on every change (added for the iOS app, docs/plan/10). The app keeps a second copy of the
    * state outside the web view's storage and, at launch, keeps whichever copy has the higher count; a counter
@@ -95,7 +89,7 @@ export interface State {
    * Ruma's first-run guide on Home (src/guide.ts): the steps of the first-run conversation answered and the
    * in-context tips already shown, by id. Only learners who started with this version have it: a state saved before
    * it existed, or a backup of one, with `onboarded` true has none and never sees a first-run prompt. Added within
-   * v4 (an optional field, like `bestE`); carried in backups.
+   * v4 (an optional field); carried in backups.
    */
   guide?: { done: string[] }
 }
@@ -103,7 +97,6 @@ export interface State {
 // storage keys keep the app's former name (Kasane) so existing learners keep their records
 /** New words a day never go above this, whatever the setting or an older saved value says (03 §5.1). */
 export const MAX_DAILY_NEW = 40
-export const GOALS = [0.7, 0.8, 0.9] as const
 
 /**
  * Stable-id states (v4) live under their own key. A tab still running the version before stable ids reads and
@@ -128,7 +121,7 @@ function initial(): State {
     v: STATE_VERSION,
     onboarded: false,
     // new learners include the lower levels; states saved before this setting existed keep it off (normalize)
-    settings: { target: 5, examDate: upcomingExams()[0], dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, goal: 0.8, fastTrack: true },
+    settings: { target: 5, dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, fastTrack: true },
     cards: {},
     log: {},
     marks: [],
@@ -143,7 +136,7 @@ export type StoredState = Omit<State, 'v' | 'settings'> & { v: 2 | 3 | 4; settin
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x)
 const isNum = (x: unknown) => typeof x === 'number' && Number.isFinite(x)
 /**
- * A card the scheduler and the readiness model can read: every FSRS number there, a known state, and a last review
+ * A card the scheduler can read: every FSRS number there, a known state, and a last review
  * for any card already studied (ts-fsrs throws on a studied card without one, and that happened while rendering
  * Home: an imported file with such a card opened the recovery screen on every launch). Every card this app has saved
  * since it moved to FSRS has all of these.
@@ -231,7 +224,7 @@ export const orphanCount = (s: Pick<State, 'orphans'>) => Object.keys(s.orphans?
  * meaning card keep it and only words introduced from now on can get a reading card.
  * Within v2 fields were only added: a missing `includeLower` means a learner from before the setting (kept off
  * so their plan does not suddenly grow); `dailyNew` is held to MAX_DAILY_NEW; the API key of the removed AI
- * feature is dropped.
+ * feature and the removed exam settings (`RETIRED_SETTINGS`) are dropped.
  */
 export function migrate(s: StoredState): State {
   const { cards, marks, orphans } = migrateIds(s)
@@ -239,42 +232,36 @@ export function migrate(s: StoredState): State {
   return normalize({ ...rest, cards, marks, ...(orphans ? { orphans } : {}), v: STATE_VERSION } as State)
 }
 
-/** How far ahead an exam date may be: the readiness projection's work grows with the days left (03 §4.3). */
-export const MAX_EXAM_DAYS = 3 * 366
-
 /**
- * Whether `d` is an exam date the app can plan for: a calendar day (yyyy-mm-dd) no more than MAX_EXAM_DAYS ahead. A
- * date in the past is fine (Home asks for the next one). A far date — a mistyped year in the date field, or a file —
- * made the projection run for many seconds on every Home render (a year 9999 ran out of memory), and a date that is
- * not a text crashed it.
+ * Fields of states saved before the exam date and the exam-day estimate were removed (2026-11-14, owner decision):
+ * `settings.examDate`, `settings.goal`, `bestE` (the stamps' best estimate). Ignored on load and gone from the
+ * next save; a backup without them still imports in the versions that had them (they fill in their defaults).
  */
-export function examDateOk(d: unknown, now = new Date()): d is string {
-  if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false
-  const [y, m, day] = d.split('-').map(Number)
-  const t = new Date(y, m - 1, day)
-  if (Number.isNaN(t.getTime())) return false
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return Math.round((t.getTime() - today.getTime()) / 86_400_000) <= MAX_EXAM_DAYS
-}
+const RETIRED_SETTINGS = ['examDate', 'goal', 'apiKey'] as const
+/** First-run steps and tips that no longer exist: the exam-date question and its "아직 몰라요", the readiness tip. */
+const RETIRED_GUIDE = new Set(['exam', 'exam-unknown', 'ready'])
 
 function normalize(s: State): State {
   const base = initial()
-  const { apiKey: _apiKey, ...settings } = { ...base.settings, ...s.settings } as State['settings'] & { apiKey?: unknown }
+  // the API key of the removed AI feature, and the removed exam settings, are dropped
+  const settings = { ...base.settings, ...s.settings } as State['settings'] & Partial<Record<(typeof RETIRED_SETTINGS)[number], unknown>>
+  for (const k of RETIRED_SETTINGS) delete settings[k]
   if (s.settings.includeLower === undefined) settings.includeLower = false
   const daily = Number(settings.dailyNew)
   settings.dailyNew = Number.isFinite(daily) ? Math.min(MAX_DAILY_NEW, Math.max(0, Math.round(daily))) : base.settings.dailyNew
-  if (!GOALS.includes(settings.goal as (typeof GOALS)[number])) settings.goal = base.settings.goal
   settings.includeLower = settings.includeLower === true
   settings.fastTrack = settings.fastTrack !== false
-  if (!examDateOk(settings.examDate)) settings.examDate = base.settings.examDate
-  const { guide: _g, ...rest } = { ...base, ...s, v: STATE_VERSION as typeof STATE_VERSION, settings }
+  const { guide: _g, bestE: _b, ...rest } = { ...base, ...s, v: STATE_VERSION as typeof STATE_VERSION, settings } as State & { bestE?: unknown }
   const out: State = rest
   // The first-run guide: kept (cleaned) where a state has one; a state without one gets it only if it never finished
   // the first run (an install that never got past the old onboarding page). An onboarded state without it — every
   // learner and backup from before the guide — stays without, so it never sees a first-run prompt.
   const g = s.guide
-  if (isObj(g) && Array.isArray(g.done)) out.guide = { done: [...new Set(g.done.filter((x): x is string => typeof x === 'string'))] }
+  if (isObj(g) && Array.isArray(g.done)) out.guide = { done: [...new Set(g.done.filter((x): x is string => typeof x === 'string' && !RETIRED_GUIDE.has(x)))] }
   else if (!s.onboarded) out.guide = { done: [] }
+  // The first run used to ask the exam date after the level; it now starts right after the level. A learner saved
+  // between the two questions (level answered, not yet onboarded) continues at the first session.
+  if (out.guide && !out.onboarded && out.guide.done.includes('level')) out.onboarded = true
   return out
 }
 
@@ -299,8 +286,7 @@ function parseStored(raw: string | null): StoredState | null {
 /**
  * Records saved by a tab still running the version before stable ids, merged into the current state: every card
  * the other copy has learned more recently (later last review, then more reviews) is taken, new cards and
- * bookmarks are added, a day's log takes the larger count of each field, XP and the best expected recall the
- * larger value. Nothing the current state has is removed or rolled back, and merging the same text twice changes
+ * bookmarks are added, a day's log takes the larger count of each field, XP the larger value. Nothing the current state has is removed or rolled back, and merging the same text twice changes
  * nothing. Settings stay as they are here. (A tab of the old version cannot be told about this version's saves —
  * it never reads STATE_KEY — so the two are reconciled card by card instead of by replacing the whole state.)
  */
@@ -343,8 +329,6 @@ export function mergeStates(cur: State, other: State): State {
     if (other.guide) out.guide = other.guide
     else delete out.guide
   }
-  const bestE = Math.max(cur.bestE ?? 0, other.bestE ?? 0)
-  if (bestE > 0) out.bestE = bestE
   if (Object.keys(orphanCards).length || orphanMarks.length) out.orphans = { cards: orphanCards, marks: orphanMarks }
   return out
 }

@@ -1,27 +1,27 @@
 # App Review notes (English)
 
-Written 2026-11-14. Section 1 goes into App Store Connect › App Review Information › Notes as is. Apple limits that field to **4,000 bytes** ([Platform version information](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information), checked 2026-11-14); the block below is **3,432 bytes** (UTF-8, counted with Python). Section 2 has prepared replies for the Resolution Center if a reviewer raises one of the likely issues; do not paste them pre-emptively.
+Written 2026-11-14. Section 1 goes into App Store Connect › App Review Information › Notes as is. Apple limits that field to **4,000 bytes** ([Platform version information](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information), checked 2026-11-14); the block below is **3,151 bytes** (2026-11-14, after the exam-day estimate was removed) (UTF-8, counted with Python). Section 2 has prepared replies for the Resolution Center if a reviewer raises one of the likely issues; do not paste them pre-emptively.
 
-This replaces the shorter draft in `docs/plan/10-ios-build.md` §6 (same facts, plus the quick tour, data sources and the estimate wording). Remove the widget line if the widget does not ship in 1.0 (10, decision 4).
+This replaces the shorter draft in `docs/plan/10-ios-build.md` §6 (same facts, plus the quick tour and data sources). Remove the widget line if the widget does not ship in 1.0 (10, decision 4).
 
 Sign-in information: tick **"Sign-in required: No"**. No demo account is needed.
 
 ## 1. Notes (paste)
 
 ```
-JLPT Ruma (JLPT 루마) is a Korean-language vocabulary trainer for Korean speakers preparing for the Japanese-Language Proficiency Test (N5-N1). It schedules reviews with the FSRS spaced-repetition algorithm and estimates how many words of the learner's list they will still remember on the exam day.
+JLPT Ruma (JLPT 루마) is a Korean-language vocabulary trainer for Korean speakers preparing for the Japanese-Language Proficiency Test (N5-N1). It schedules reviews with the FSRS spaced-repetition algorithm and shows each day's reviews and new words.
 
 NO LOGIN. No account, no network use, no data collected. All 8,130 words are bundled; study records stay on the device. The UI is Korean; key labels are given below.
 
 QUICK TOUR (about 3 minutes)
-1. First launch opens on Home: the mascot asks the target level (tap e.g. N3), then the exam date (a date, or 아직 몰라요 = not sure yet), then tap 첫 학습 시작 (Start first session). New words per day default to 20 (Settings).
-2. Home (홈): card 시험날 기억할 단어 (예상) = estimated words remembered on the exam day. On a fresh install the number starts near zero and the on-track label appears after about 30 review answers.
+1. First launch opens on Home: the mascot asks the target level (tap e.g. N3), then tap 첫 학습 시작 (Start first session). New words per day default to 20 (Settings).
+2. Home (홈): today's plan (오늘의 계획: reviews, new words, minutes) and a count of the level's words met so far (만남) and in long-term memory (장기 기억).
 3. Tap 오늘의 학습 시작 (Start today's study). Meaning cards: tap the card, then answer 모르겠어요 / 알아요 / 쉬워요 (don't know / know / easy). Words that share a Korean hanja reading (e.g. 産業 = 산업) come as reading cards: pick the reading among four, the app then shows the Korean-to-Japanese reading bridge. Words whose meaning differs from the Korean look-alike (e.g. 大丈夫) show a red "meaning differs" note.
 4. Tabs: 단어장 (Words: search all 8,130 words, word sheet), 기록 (Records: stamps, 7-day review forecast, calendar), 설정 (Settings).
 
 iOS-ONLY FEATURES (not in the web version)
 1. Review reminders (local notifications). Permission is asked only after the first finished daily session, from an explanation card, never at launch. At most one a day, at the chosen time, only on days with reviews due, with the real count. To test: Settings > 알림 · 진동 · 발음 > turn on 복습 알림, set the time 2 minutes ahead, start today's study, answer 모르겠어요 on two cards, leave the app.
-2. Home Screen widget 오늘의 복습: today's reviews and the exam-day estimate (small and medium).
+2. Home Screen widget 오늘의 복습: today's reviews and new words (small); also the words met so far (medium).
 3. Japanese pronunciation with on-device iOS voices (speaker button on every card); voice choice in Settings.
 4. Haptics when answering and when the day is finished (respects Reduce Motion).
 5. Backup export through the share sheet / Files, import through the document picker (Settings > 데이터).
@@ -33,8 +33,6 @@ DATA SOURCES AND LICENCES (Settings > 정보)
 - Word list: open-anki-jlpt-decks (MIT), based on the tanos.co.uk lists (Jonathan Waller). The JLPT publishes no official vocabulary list.
 - Frequency order: wordfreq (CC BY-SA 4.0). Dictionary data: JMdict and KANJIDIC2 (EDRDG, CC BY-SA). Korean hanja readings checked against Unicode Unihan (Unicode License v3).
 - Korean meanings: machine translation, not yet fully reviewed; the app says it may contain errors.
-
-The estimate is not a pass probability: the app says so on the home card (it covers vocabulary only, not grammar, reading or listening).
 
 Contact: [name] [email] [phone]
 ```
@@ -73,11 +71,6 @@ Common causes here: data failing to load on first launch, a dead button, a broke
 - the app was run on iOS 16.4 (the minimum) and a current iOS;
 - the app was opened in Airplane Mode on first launch;
 - no entry point for unfinished features is visible (the explanation and story features are hidden while `src/content.ts` reports them unavailable — keep it that way).
-
-### 2.3.1 / 2.3 Accurate metadata: the readiness estimate
-
-If a reviewer reads the estimate as a pass prediction:
-> The number is an estimate of how many words of the chosen JLPT level lists the learner will remember on the exam morning, computed from their own review history with the FSRS memory model. The app never shows a pass probability, and the home card says so: vocabulary only, not grammar, reading or listening.
 
 ### 5.1.1(i) Privacy policy in the app
 

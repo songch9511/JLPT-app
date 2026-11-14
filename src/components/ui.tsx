@@ -159,7 +159,7 @@ export function Choice<T extends string | number>({
 }
 
 /**
- * A row of pill toggles: filters, exam dates. Wraps (or scrolls with `scroll`) instead of clipping labels.
+ * A row of pill toggles: filters. Wraps (or scrolls with `scroll`) instead of clipping labels.
  * Single choice; each chip says whether it is on (aria-pressed).
  */
 export function ChipGroup<T extends string | number>({
@@ -249,8 +249,8 @@ export function SearchField({ label, value, onChange, placeholder }: { label: st
   )
 }
 
-/** A plain bar (no highlight stripe). `valueText` is what a screen reader hears; `mark` a goal tick on the bar. */
-export function ProgressBar({ label, value, max, valueText, mark, className }: { label: string; value: number; max: number; valueText: string; mark?: number; className?: string }) {
+/** A plain bar (no highlight stripe). `valueText` is what a screen reader hears. */
+export function ProgressBar({ label, value, max, valueText, className }: { label: string; value: number; max: number; valueText: string; className?: string }) {
   const pct = (v: number) => `${Math.min(100, Math.max(0, max > 0 ? (v / max) * 100 : 0))}%`
   return (
     <div
@@ -263,7 +263,6 @@ export function ProgressBar({ label, value, max, valueText, mark, className }: {
       aria-valuetext={valueText}
     >
       <i style={{ width: pct(value) }} />
-      {mark !== undefined && <span className="progress-mark" style={{ left: pct(mark) }} />}
     </div>
   )
 }

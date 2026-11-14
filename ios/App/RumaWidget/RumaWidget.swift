@@ -1,7 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-// Home-screen widget: today's reviews and the readiness figure ("시험날 기억할 단어").
+// Home-screen widget: today's reviews and new words, and (medium) the words of the studied levels met so far.
 // The app writes a JSON snapshot (src/platform/widget.ts) to the App Group's shared UserDefaults through
 // WidgetBridgePlugin; it holds one entry per day for the next week, so the timeline below switches to the
 // right day at each midnight without the app running.
@@ -20,15 +20,17 @@ struct SnapshotDay: Decodable {
     let done: Bool
 }
 
+// Decoded leniently both ways: the app still writes `plan`, `goal` and `examDate` (inert) for a widget built before
+// they were retired, and this widget ignores them; `met` and `mature` are optional, so a snapshot an older app
+// wrote (before the app is opened once after an update) still decodes and shows today's counts.
 struct Snapshot: Decodable {
     let v: Int
     let at: Double
     let onboarded: Bool
     let levels: String
-    let plan: Int?
     let total: Int
-    let goal: Int
-    let examDate: String
+    let met: Int?
+    let mature: Int?
     let days: [SnapshotDay]
 }
 
@@ -112,7 +114,7 @@ struct RumaWidgetView: View {
                 HStack(alignment: .top, spacing: 16) {
                     today
                     Divider()
-                    readiness
+                    words
                 }
             } else {
                 today
@@ -163,25 +165,27 @@ struct RumaWidgetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    @ViewBuilder private var readiness: some View {
+    @ViewBuilder private var words: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("시험날 기억할 단어")
+            Text(entry.snapshot.map { "\($0.levels) 단어" } ?? "단어")
                 .font(.caption.weight(.bold))
                 .foregroundColor(p.muted)
-            if let snapshot = entry.snapshot, snapshot.onboarded, let plan = snapshot.plan, snapshot.total > 0 {
-                Text("\(plan)")
+            if let snapshot = entry.snapshot, snapshot.onboarded, let met = snapshot.met, snapshot.total > 0 {
+                Text("\(met)")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(p.ink)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
-                Text("\(snapshot.levels) \(snapshot.total)개 중 · 예상")
+                Text("\(snapshot.total)개 중 만남")
                     .font(.caption)
                     .foregroundColor(p.muted)
-                ProgressView(value: Double(min(plan, snapshot.total)), total: Double(snapshot.total))
+                ProgressView(value: Double(min(met, snapshot.total)), total: Double(snapshot.total))
                     .tint(p.accent)
-                Text("목표 \(snapshot.goal)")
-                    .font(.caption2)
-                    .foregroundColor(p.muted)
+                if let mature = snapshot.mature {
+                    Text("장기 기억 \(mature)")
+                        .font(.caption2)
+                        .foregroundColor(p.muted)
+                }
             } else {
                 Text("—")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -213,7 +217,7 @@ struct RumaWidget: Widget {
             RumaWidgetView(entry: entry)
         }
         .configurationDisplayName("오늘의 복습")
-        .description("오늘 복습할 단어 수와 시험날 기억할 단어를 보여 줘요.")
+        .description("오늘 복습할 단어와 새 단어 수, 지금까지 만난 단어를 보여 줘요.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

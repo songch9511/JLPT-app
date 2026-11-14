@@ -104,7 +104,6 @@ test('iOS evicted localStorage: the study state comes back from the durable copy
 test('first launch with nothing saved: Ruma asks on home; progress is mirrored to the durable copy', async ({ page }) => {
   await openShell(page)
   await page.getByRole('button', { name: 'N5' }).click()
-  await page.getByRole('button', { name: '아직 몰라요' }).click()
   await expect(page.getByRole('button', { name: '첫 학습 시작' })).toBeVisible()
   await homeShown(page)
   await expect.poll(async () => JSON.parse((await fakeFile(page, 'LIBRARY/ruma/state-a.json')) ?? 'null')?.onboarded).toBe(true)

@@ -4,24 +4,20 @@ import { levelOfId } from '../../src/ids'
 
 test('first run on home → a full day of study → done screen → home', async ({ page }) => {
   await open(page)
-  // no onboarding page: Ruma asks on home, one question at a time
+  // no onboarding page: Ruma asks the level on home
   await page.getByRole('button', { name: 'N4' }).click()
   // a new learner studies the lower level too (settings turn it off)
-  await expect(page.locator('.guide-card .bubble')).toContainText('쉬운 N5 단어도 함께 나와요. 시험은 언제예요?')
+  await expect(page.locator('.guide-card .bubble')).toContainText('좋아요, N4! 쉬운 N5 단어도 함께 나와요.')
   await expect(page.locator('.first-note')).toHaveText('JLPT 주최 기관(JF·JEES)과 관계없는 비공식 학습 앱이에요.')
-  await page.getByRole('button', { name: '2026년 12월 6일' }).click()
   // daily new words have a default and are changed in settings
   await page.getByRole('link', { name: '설정' }).click()
   await page.getByRole('radio', { name: '10', exact: true }).click()
   await page.getByRole('link', { name: '홈' }).click()
 
-  // home before studying: Ruma's first session on top, then readiness and today's plan
-  await expect(page.getByRole('heading', { name: /시험날 기억할 단어/ })).toBeVisible()
-  await expect(page.locator('.home-ctx b')).toHaveText('N4')
-  await expect(page.locator('.ready-info')).toContainText('N5~N4 목록 기준')
-  await expect(page.locator('.ready-status')).toContainText('아직 판단하기 일러요')
+  // home before studying: Ruma's first session on top, then today's plan
+  await expect(page.getByRole('heading', { name: '오늘의 계획' })).toBeVisible()
+  await expect(page.locator('.home-head .subtitle b')).toHaveText('N4')
   await expect(page.locator('.plan-counts .c-new b')).toHaveText('10')
-  await expect(page.locator('.plan-gain')).toContainText('오늘 하면 시험날 예상 +')
   await expect(page.locator('.guide-card .bubble')).toContainText('오늘은 새 단어 10개')
   // one primary: Ruma's
   await expect(page.getByRole('button', { name: '오늘의 학습 시작' })).toHaveCount(0)

@@ -69,18 +69,6 @@ test('the word sheet traps focus, closes on Escape and gives focus back to the r
   await expect(row).toBeFocused()
 })
 
-test('the readiness sheet closes with its close button and returns focus to ⓘ', async ({ page }) => {
-  await open(page, { state: user() })
-  await homeShown(page)
-  const info = page.locator('.ready-info')
-  await info.click()
-  const sheet = page.getByRole('dialog', { name: '이 숫자는 무엇인가요?' })
-  await expect(sheet).toBeVisible()
-  await sheet.getByRole('button', { name: '닫기' }).click()
-  await expect(sheet).toBeHidden()
-  await expect(info).toBeFocused()
-})
-
 test('theme modes reach the controls: light, dark and system (following the OS)', async ({ page }) => {
   await open(page, { state: user({ theme: 'light' }), hash: '/settings' })
   const card = '.card'

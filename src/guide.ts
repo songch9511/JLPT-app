@@ -1,16 +1,15 @@
 // Ruma's first run (docs/design-system.md §3 "루마의 안내"): no onboarding page. A new learner lands on Home, where
-// Ruma asks the two things the plan needs (level, exam date) one at a time in the mascot card, then offers the first
-// session; what the app does is explained once each, in context, when it becomes relevant.
+// Ruma asks the one thing the plan needs (the level) in the mascot card, then offers the first session; what the app
+// does is explained once each, in context, when it becomes relevant.
 //
 // Progress lives in `State.guide.done` (store.ts). A state without `guide` — every learner from before this version,
 // and their backups — never sees any of it.
 import { update, type State } from './store'
-import { upcomingExams } from './util'
 
-/** Answered steps of the first-run conversation, and a note that the exam date was not known. */
-export type Step = 'level' | 'exam' | 'exam-unknown'
-/** In-context tips, each shown once: spaced repetition (after the first study), reading cards, the readiness figure. */
-export type Tip = 'srs' | 'reading' | 'ready'
+/** Answered steps of the first-run conversation. */
+export type Step = 'level'
+/** In-context tips, each shown once: spaced repetition (after the first study), reading cards. */
+export type Tip = 'srs' | 'reading'
 
 export const done = (s: Pick<State, 'guide'>, id: Step | Tip) => !!s.guide?.done.includes(id)
 
@@ -25,51 +24,41 @@ export function markDone(...ids: (Step | Tip)[]) {
 export const studied = (s: Pick<State, 'cards' | 'log'>) => Object.keys(s.cards).length > 0 || Object.values(s.log).some((l) => (l?.c ?? 0) > 0)
 
 /**
- * Where the first run stands: `level` and `exam` while Ruma asks, `start` until the first answer (Ruma offers the first
- * session at the top of Home), `null` after that and for every learner without a guide.
+ * Where the first run stands: `level` while Ruma asks, `start` until the first answer (Ruma offers the first session at
+ * the top of Home), `null` after that and for every learner without a guide.
  */
-export type Phase = 'level' | 'exam' | 'start' | null
+export type Phase = 'level' | 'start' | null
 export function phase(s: Pick<State, 'guide' | 'onboarded' | 'cards' | 'log'>): Phase {
   if (!s.guide) return null
-  if (!s.onboarded) return done(s, 'level') ? 'exam' : 'level'
+  if (!s.onboarded) return 'level'
   return studied(s) ? null : 'start'
 }
 
-/** The Home tip due now, if any: after the first study, then once the readiness status has something to say. */
-export function homeTip(s: Pick<State, 'guide' | 'onboarded' | 'cards' | 'log'>, readinessStatusKnown: boolean): Tip | null {
+/** The Home tip due now, if any: once, after the first study. */
+export function homeTip(s: Pick<State, 'guide' | 'onboarded' | 'cards' | 'log'>): Tip | null {
   if (!s.guide || !s.onboarded || !studied(s)) return null
-  if (!done(s, 'srs')) return 'srs'
-  if (readinessStatusKnown && !done(s, 'ready')) return 'ready'
-  return null
+  return done(s, 'srs') ? null : 'srs'
 }
 
+/** The level answers the first-run question: the plan is complete and the first session can start. */
 export const chooseLevel = (target: State['settings']['target']) =>
   update((d) => {
     d.settings.target = target
+    d.onboarded = true
     d.guide = { done: [...new Set([...(d.guide?.done ?? []), 'level'])] }
   })
 
-/** Back to the level question from the exam question. */
+/** "급수 다시 고르기" before the first session: back to the level question. */
 export const askLevelAgain = () =>
   update((d) => {
-    if (d.guide) d.guide = { done: d.guide.done.filter((x) => x !== 'level') }
+    if (!d.guide) return
+    d.guide = { done: d.guide.done.filter((x) => x !== 'level') }
+    d.onboarded = false
   })
 
-/**
- * The exam date, or `null` for "아직 몰라요": the app always plans for a date, so it keeps the default every new
- * state starts with (store.ts `initial`: the next JLPT date) and says so; settings change it any time.
- */
-export const chooseExam = (examDate: string | null, now = new Date()) =>
-  update((d) => {
-    d.settings.examDate = examDate ?? upcomingExams(now)[0]
-    d.onboarded = true
-    const keep = (d.guide?.done ?? []).filter((x) => x !== 'exam-unknown')
-    d.guide = { done: [...new Set([...keep, 'level', 'exam', ...(examDate ? [] : ['exam-unknown'])])] }
-  })
-
-/** Settings › "루마의 안내 다시 보기": the tips come back (the first-run questions do not: they are settings now). */
+/** Settings › "루마의 안내 다시 보기": the tips come back (the first-run question does not: it is a setting now). */
 export const replayTips = () =>
   update((d) => {
-    d.guide = { done: (d.guide?.done ?? ['level', 'exam']).filter((x) => x !== 'srs' && x !== 'reading' && x !== 'ready') }
-    if (!d.guide.done.includes('level')) d.guide.done.push('level', 'exam')
+    d.guide = { done: (d.guide?.done ?? ['level']).filter((x) => x !== 'srs' && x !== 'reading') }
+    if (!d.guide.done.includes('level')) d.guide.done.push('level')
   })

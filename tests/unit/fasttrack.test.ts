@@ -1,5 +1,5 @@
 // The cognate fast-track (03 §2.4, §3 C): frequency order, reading cards for words tagged S, per-word stats,
-// the state migration, and readiness with mixed card types.
+// the state migration, and word counts with mixed card types.
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { at, boot, bootUser, card, DAY, KEY, L } from './helpers'
@@ -7,7 +7,6 @@ import type { SCard, State } from '../../src/store'
 
 const NOW = '2026-11-13T09:00:00'
 const T = Date.parse(NOW)
-const EXAM = Date.parse('2026-12-06T09:00:00')
 
 type Data = typeof import('../../src/data')
 
@@ -24,7 +23,7 @@ function n5(data: Data, order: number[], fast: number[] = []) {
 }
 
 async function setup(settings: Partial<State['settings']> = {}, cards: Record<string, SCard> = {}) {
-  const b = await bootUser(NOW, { target: 5, includeLower: false, dailyNew: 10, examDate: '2026-12-06', ...settings })
+  const b = await bootUser(NOW, { target: 5, includeLower: false, dailyNew: 10, ...settings })
   b.store.update((d) => void (d.cards = cards))
   const data = await import('../../src/data')
   return { ...b, data }
@@ -156,8 +155,7 @@ describe('a word whose tag stops being S', () => {
     expect(srs.breakdowns(s)[5].new).toBe(718)
     expect(srs.forecast(s, at(NOW))[0]).toBe(0)
     expect(srs.leechIds(s.cards)).toEqual([])
-    const rd = await import('../../src/readiness')
-    expect(rd.readiness(s, at(NOW)).unseen).toBe(718)
+    expect(srs.studyProgress(s)).toMatchObject({ total: 718, met: 0 })
 
     // the meaning card is learned like any new word's; the reading card stays exactly as it was, never shown
     srs.answer(L('5-10'), srs.Rating.Good, at(NOW))
@@ -245,26 +243,21 @@ describe('words, not cards, in stats and queues', () => {
   })
 })
 
-describe('readiness with mixed card types', () => {
+describe('word counts with mixed card types', () => {
   const rev = (s: number, ago: number, dueIn: number) => card({ due: T + dueIn * DAY, last_review: T - ago * DAY, stability: s, scheduled_days: ago + dueIn })
 
   it('reading-only, meaning-only and two-card words each count once; a two-card word counts its weaker card', async () => {
-    const cards = { [L('5-0:r')]: rev(30, 1, 40), [L('5-1')]: rev(30, 1, 40), [L('5-2')]: rev(30, 1, 40), [L('5-2:r')]: rev(2, 3, 40) }
-    const { store } = await setup({ dailyNew: 0 }, cards)
-    const rd = await import('../../src/readiness')
-    const r = rd.readiness(store.getState(), at(NOW))
-    const R = (c: SCard) => rd.recallAt(c, EXAM)
-    expect(r.unseen).toBe(718 - 3)
-    expect(r.stop).toBeCloseTo(R(cards[L('5-0:r')]) + R(cards[L('5-1')]) + Math.min(R(cards[L('5-2')]), R(cards[L('5-2:r')])), 9)
+    const cards = { [L('5-0:r')]: rev(30, 1, 40), [L('5-1')]: rev(30, 1, 40), [L('5-2')]: rev(30, 1, 40), [L('5-2:r')]: rev(2, 3, 2) }
+    const { store, srs } = await setup({ dailyNew: 0 }, cards)
+    const s = store.getState()
+    expect(srs.studyProgress(s)).toEqual({ levels: [5], total: 718, met: 3, mature: 2 })
+    expect(srs.wordStage(s, L('5-2'))).toBe('young')
   })
 
   it('with the fast-track off, resting reading cards do not count: those words are unseen', async () => {
-    const cards = { [L('5-0:r')]: rev(30, 1, 40), [L('5-1')]: rev(30, 1, 40), [L('5-2')]: rev(30, 1, 40), [L('5-2:r')]: rev(2, 3, 40) }
-    const { store } = await setup({ dailyNew: 0, fastTrack: false }, cards)
-    const rd = await import('../../src/readiness')
-    const r = rd.readiness(store.getState(), at(NOW))
-    expect(r.unseen).toBe(718 - 2)
-    expect(r.stop).toBeCloseTo(rd.recallAt(cards[L('5-1')], EXAM) + rd.recallAt(cards[L('5-2')], EXAM), 9)
+    const cards = { [L('5-0:r')]: rev(30, 1, 40), [L('5-1')]: rev(30, 1, 40), [L('5-2')]: rev(30, 1, 40), [L('5-2:r')]: rev(2, 3, 2) }
+    const { store, srs } = await setup({ dailyNew: 0, fastTrack: false }, cards)
+    expect(srs.studyProgress(store.getState())).toEqual({ levels: [5], total: 718, met: 2, mature: 2 })
   })
 })
 
@@ -273,6 +266,7 @@ describe('state v2 → v3 → v4 and backups', () => {
   const v2 = {
     v: 2,
     onboarded: true,
+    // as saved then, with the exam date and goal the app had until 2026-11-14
     settings: { target: 5, examDate: '2026-12-06', dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: false, goal: 0.8 },
     cards: { '5-10': card({ due: T + DAY }) },
     log: {},

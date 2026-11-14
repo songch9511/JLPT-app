@@ -1,6 +1,11 @@
 // Offline simulation behind the backlog order (03 §5.3): which overdue reviews should come first when there
 // are more than a day can hold? Not imported by the app: tests/unit/backlog-sim.test.ts runs a small version
 // and checks the conclusion recorded in docs/plan/03-curriculum-dashboard.md §5.3.
+//
+// The yardstick is how much of the deck is remembered a few weeks after the return (expected recall summed over
+// the deck on a fixed later day, `horizon`). It was first written against the exam day the app used to plan for;
+// the exam date is gone from the app (2026-11-14), the order it chose is not, and the question it answers — does
+// any smarter order keep more words than oldest-due-first — does not depend on an exam.
 import { createEmptyCard, fsrs, generatorParameters, Rating, State, type Card } from 'ts-fsrs'
 
 const DAY = 86_400_000
@@ -31,28 +36,28 @@ export interface BacklogSimOptions {
   history: number
   /** days away: no reviews at all */
   away: number
-  /** days from the return to the exam morning */
-  exam: number
+  /** days from the return to the day recall is measured */
+  horizon: number
   /** reviews a day after the return */
   cap: number
   trials: number
   seed: number
 }
 
-export const BACKLOG_SIM_DEFAULTS: BacklogSimOptions = { cards: 1200, history: 60, away: 7, exam: 23, cap: 120, trials: 12, seed: 20261114 }
+export const BACKLOG_SIM_DEFAULTS: BacklogSimOptions = { cards: 1200, history: 60, away: 7, horizon: 23, cap: 120, trials: 12, seed: 20261114 }
 
 /**
- * Exam-day expected recall (sum of R over the deck) for each policy, per trial. The deck is made by a learner who
+ * Expected recall on the measurement day (sum of R over the deck, `horizon` days after the return) for each policy, per trial. The deck is made by a learner who
  * introduced `cards` words over `history` days and reviewed every card on its due day, answering with the card's
  * recall at that moment (forgotten → 다시, relearned the same day); then stopped for `away` days. From the return
- * on, `cap` reviews a day are done, chosen from everything due by the policy, until the exam morning. No new
+ * on, `cap` reviews a day are done, chosen from everything due by the policy, until the measurement day. No new
  * words are introduced after the return, so only the order differs. Default FSRS parameters, no fuzz.
  *
  * - `due`: oldest due first (the app's order before this change)
  * - `lowR`: lowest recall now first, i.e. most overdue relative to stability (elapsed / S)
- * - `gain`: largest one-step exam benefit first: r·R_T(알아요) + (1−r)·R_T(다시) − R_T(no review)
+ * - `gain`: largest one-step benefit on the measurement day first: r·R_T(알아요) + (1−r)·R_T(다시) − R_T(no review)
  * - `wait`: largest benefit of reviewing today over reviewing when the backlog would reach it (today + the
- *   days the queue needs at `cap` a day), each one step: the exam-day value of the gain that waiting loses
+ *   days the queue needs at `cap` a day), each one step: the measurement-day value of the gain that waiting loses
  * - `highR`, `random`: for contrast
  */
 export function simulateBacklog(opts: Partial<BacklogSimOptions> = {}, policies: BacklogPolicy[] = ['due', 'lowR', 'gain', 'wait', 'highR', 'random']) {
@@ -75,7 +80,7 @@ export function simulateBacklog(opts: Partial<BacklogSimOptions> = {}, policies:
     const seed = o.seed + trial
     const t0 = Date.UTC(2026, 0, 1, 0)
     const back = t0 + (o.history + o.away) * DAY
-    const exam = back + o.exam * DAY
+    const end = back + o.horizon * DAY
     // build the deck: card i introduced on day floor(i / perDay), reviewed on every due day until the break
     const perDay = Math.ceil(o.cards / o.history)
     const deck: Card[] = []
@@ -100,7 +105,7 @@ export function simulateBacklog(opts: Partial<BacklogSimOptions> = {}, policies:
       const cards = deck.slice()
       const n = reps.slice()
       const rnd = mulberry32(seed * 31 + 7)
-      for (let day = 0; day < o.exam; day++) {
+      for (let day = 0; day < o.horizon; day++) {
         const at = back + day * DAY
         const due: number[] = []
         for (let i = 0; i < cards.length; i++) if (cards[i].due.getTime() < at + DAY) due.push(i)
@@ -122,24 +127,24 @@ export function simulateBacklog(opts: Partial<BacklogSimOptions> = {}, policies:
               const g = model.next(c, new Date(at), Rating.Good).card
               const again = model.next(c, new Date(at), Rating.Again).card
               const relearned = model.next(again, new Date(at + 10 * MIN), Rating.Good).card
-              return -(r * R(g, exam) + (1 - r) * R(relearned, exam) - R(c, exam))
+              return -(r * R(g, end) + (1 - r) * R(relearned, end) - R(c, end))
             }
           }
         }
         const wait = Math.ceil(due.length / o.cap)
         const step = (c: Card, t: number) => {
-          if (t >= exam - 9 * 3_600_000) return R(c, exam)
+          if (t >= end - 9 * 3_600_000) return R(c, end)
           const r = R(c, t)
           const g = model.next(c, new Date(t), Rating.Good).card
           const again = model.next(c, new Date(t), Rating.Again).card
           const relearned = model.next(again, new Date(t + 10 * MIN), Rating.Good).card
-          return r * R(g, exam) + (1 - r) * R(relearned, exam)
+          return r * R(g, end) + (1 - r) * R(relearned, end)
         }
         const keys = new Map(due.map((i) => [i, policy === 'wait' ? -(step(cards[i], at) - step(cards[i], at + wait * DAY)) : key(i)]))
         due.sort((a, b) => keys.get(a)! - keys.get(b)! || a - b)
         for (const i of due.slice(0, o.cap)) cards[i] = review(cards[i], at, seed, i, n[i]++)
       }
-      out[policy].push(cards.reduce((sum, c) => sum + R(c, exam), 0))
+      out[policy].push(cards.reduce((sum, c) => sum + R(c, end), 0))
     }
   }
   const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length

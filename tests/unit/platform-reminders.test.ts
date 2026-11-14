@@ -106,20 +106,36 @@ describe('planReminders', () => {
 })
 
 describe('widget snapshot', () => {
-  it('one entry per day, today done flag, readiness figure', async () => {
+  it('one entry per day, today done flag, the studied levels’ words met', async () => {
     const { store } = await setup({ cards: { [L('5-0')]: card({ due: at('2026-11-13T08:00:00').getTime() }) } })
     const { widgetSnapshot } = await import('../../src/platform/widget')
     const w = widgetSnapshot(store.getState(), at(NOW))
     expect(w.days.map((d) => d.day)).toEqual(['2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19'])
     expect(w.days[0]).toEqual({ day: '2026-11-13', due: 1, fresh: 10, done: false })
-    expect(w).toMatchObject({ v: 1, onboarded: true, levels: 'N5', total: 718, examDate: '2026-12-06' })
-    expect(typeof w.plan).toBe('number')
+    expect(w).toMatchObject({ v: 1, onboarded: true, levels: 'N5', total: 718, met: 1, mature: 0 })
     expect(JSON.parse(JSON.stringify(w))).toEqual(w)
   })
-  it('no readiness figure once the exam is past', async () => {
-    const { store } = await setup({}, { examDate: '2026-07-05' })
+
+  it('a widget built before the exam fields were retired still decodes the snapshot (App Group key unchanged)', async () => {
+    const { store } = await setup({}, { target: 3, includeLower: true })
     const { widgetSnapshot } = await import('../../src/platform/widget')
-    expect(widgetSnapshot(store.getState(), at(NOW)).plan).toBeNull()
+    const w = JSON.parse(JSON.stringify(widgetSnapshot(store.getState(), at(NOW))))
+    // the Swift `Snapshot` of that widget: every one of these keys is required, with these JSON types
+    const old: Record<string, (x: unknown) => boolean> = {
+      v: Number.isInteger,
+      at: (x) => typeof x === 'number',
+      onboarded: (x) => typeof x === 'boolean',
+      levels: (x) => typeof x === 'string',
+      plan: (x) => x === null || Number.isInteger(x),
+      total: Number.isInteger,
+      goal: Number.isInteger,
+      examDate: (x) => typeof x === 'string',
+      days: Array.isArray,
+    }
+    for (const [k, ok] of Object.entries(old)) expect(ok(w[k]), k).toBe(true)
+    // null: that widget shows its dash instead of an estimate, and still shows today's counts
+    expect(w.plan).toBeNull()
+    expect(w.levels).toBe('N5~N3')
   })
 })
 

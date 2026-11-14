@@ -1,8 +1,8 @@
 // QA round 2 (docs/plan/13): every user-visible count that more than one screen shows must agree, whatever the
 // state. Home, Study (both `buildQueue`), the 기록 forecast, the level screen (word by word), the 단어장 level rows
-// (`breakdowns`), readiness and the iOS widget payload are computed by different functions; this checks them
-// against each other on states that exercise backlogs, reading cards (active, resting, re-tagged), lower levels and
-// the exam day.
+// (`breakdowns`), Home's word card and the 기록 stamps (`studyProgress`), Home's catch-up days (`spreadReviews`) and the
+// iOS widget payload are computed by different functions; this checks them against each other on states that exercise
+// backlogs, reading cards (active, resting, re-tagged) and lower levels.
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { boot, card, DAY, HOUR, L, MIN } from './helpers'
@@ -16,7 +16,7 @@ async function setup(settings: Partial<State['settings']>, cards: Record<string,
   const b = await boot({ now: NOW })
   b.store.update((d) => {
     d.onboarded = true
-    Object.assign(d.settings, { target: 5, includeLower: true, dailyNew: 20, examDate: '2026-12-06', fastTrack: true, ...settings })
+    Object.assign(d.settings, { target: 5, includeLower: true, dailyNew: 20, fastTrack: true, ...settings })
     d.cards = cards
     d.log = log
   })
@@ -26,19 +26,18 @@ async function setup(settings: Partial<State['settings']>, cards: Record<string,
     const rows = JSON.parse(readFileSync(new URL(`../../public/data/words-n${l}.json`, import.meta.url), 'utf8')) as Row[]
     data.setLevelInfo(l, rows.map((r, i) => data.parseRow(l, r, i)))
   }
-  const readiness = await import('../../src/readiness')
   const widget = await import('../../src/platform/widget')
   const reminders = await import('../../src/platform/reminders')
-  return { ...b, data, readiness, widget, reminders }
+  return { ...b, data, widget, reminders }
 }
 
 type Env = Awaited<ReturnType<typeof setup>>
 
-function agree({ store, srs, data, readiness, widget, reminders }: Env) {
+function agree({ store, srs, data, widget, reminders }: Env) {
   const s = store.getState()
   const now = new Date(T)
   const q = srs.buildQueue(s, now)
-  const r = readiness.readiness(s, now)
+  const p = srs.studyProgress(s)
   const b = srs.breakdowns(s)
   const levels = srs.studyLevels(s.settings)
 
@@ -48,15 +47,22 @@ function agree({ store, srs, data, readiness, widget, reminders }: Env) {
   expect(today.fresh).toBe(q.fresh)
   const w = widget.widgetSnapshot(s, now)
   expect(w.days[0]).toMatchObject({ due: q.review + q.learning, fresh: q.fresh })
-  // the headline figure on Home and in the widget
-  expect(w.plan).toBe(r.past ? null : Math.round(r.plan))
-  expect(w.total).toBe(r.total)
-  // the backlog stated on Home ("밀린 복습 …장", queue) and the one the readiness plan assumes (spread)
-  expect(r.held).toBe(q.held)
-  // words not yet met: Home's "다음 급수" logic, readiness, and the level rows
-  expect(r.unseen).toBe(srs.newWordsLeft(s))
-  expect(r.total).toBe(levels.reduce((n, l) => n + data.COUNTS[l], 0))
-  expect(r.total - r.unseen).toBe(levels.reduce((n, l) => n + data.COUNTS[l] - b[l].new, 0))
+  // Home's word card, the 기록 stamps and the widget: words of the studied levels, met, in long-term memory
+  expect({ levels: w.levels, total: w.total, met: w.met, mature: w.mature }).toEqual({
+    levels: levels.length === 1 ? `N${levels[0]}` : `N${levels[0]}~N${levels[levels.length - 1]}`,
+    total: p.total,
+    met: p.met,
+    mature: p.mature,
+  })
+  // the retired exam fields stay inert for a widget built before their removal
+  expect({ plan: w.plan, goal: w.goal, examDate: w.examDate }).toEqual({ plan: null, goal: 0, examDate: '' })
+  // the backlog stated on Home ("밀린 복습 …장", queue) and the one its catch-up days count from (spread)
+  expect(srs.spreadReviews(s, now).held[0] ?? 0).toBe(q.held)
+  // words not yet met: Home's "다음 급수" logic, the word card, and the level rows
+  expect(p.total - p.met).toBe(srs.newWordsLeft(s))
+  expect(p.total).toBe(levels.reduce((n, l) => n + data.COUNTS[l], 0))
+  expect(p.met).toBe(levels.reduce((n, l) => n + data.COUNTS[l] - b[l].new, 0))
+  expect(p.mature).toBe(levels.reduce((n, l) => n + b[l].mature, 0))
   // the level screen counts word by word (`wordStage`), the rows by card (`breakdowns`)
   for (const l of data.LEVELS) {
     const ids = data.levelInfo(l)!.order
@@ -74,7 +80,7 @@ function agree({ store, srs, data, readiness, widget, reminders }: Env) {
   const tomorrow = reminders.workOn(s, new Date(2026, 10, 15), now)
   expect(w.days[1]).toMatchObject({ due: tomorrow.reviews, fresh: tomorrow.fresh })
   expect({ reviews: tomorrow.reviews, fresh: tomorrow.fresh }).toEqual({ reviews: tq.review + tq.learning, fresh: tq.fresh })
-  return { q, r, f }
+  return { q, p, f }
 }
 
 const due = (offsetDays: number, extra: Partial<SCard> = {}) => card({ due: T + offsetDays * DAY, ...extra })
@@ -108,7 +114,7 @@ describe('counts agree across screens', () => {
     agree(await setup({ fastTrack: false }, cards))
   })
 
-  it('N3 with lower levels, cards in N1 outside the studied levels, the exam day and after it', async () => {
+  it('N3 with and without lower levels, cards in N1 outside the studied levels', async () => {
     const cards: Record<string, SCard> = {}
     for (let i = 0; i < 100; i++) {
       cards[L(`5-${i}`)] = due((i % 5) - 2)
@@ -116,8 +122,7 @@ describe('counts agree across screens', () => {
       cards[L(`1-${i}`)] = due(-2)
     }
     agree(await setup({ target: 3 }, cards))
-    agree(await setup({ target: 3, examDate: '2026-11-14' }, cards))
-    agree(await setup({ target: 3, examDate: '2026-11-01' }, cards))
+    agree(await setup({ target: 3, includeLower: false }, cards))
   })
 
   it('every level-data word that is S has its reading card counted once with its meaning card', async () => {

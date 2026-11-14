@@ -2,11 +2,16 @@
 // extension through the App Group container (ios/App/RumaWidget). The widget cannot run the scheduler, so
 // the app gives it one entry per day for the next week; the widget's timeline switches entries at midnight
 // and the app refreshes them whenever the state changes or it comes to the foreground.
-import { readiness } from '../readiness'
+import { studyProgress } from '../srs'
 import type { State } from '../store'
 import { addDays, dayKey } from '../util'
 import { HORIZON_DAYS, workOn } from './reminders'
 
+/**
+ * Still 1: the payload only gained fields (`met`, `mature`). The fields of the removed exam-day estimate are still
+ * written with inert values (`plan: null`, `goal: 0`, `examDate: ''`) so a widget built before their removal decodes
+ * the snapshot (its decoder requires them) and keeps showing today's counts; the widget of this version ignores them.
+ */
 export const WIDGET_SNAPSHOT_VERSION = 1
 
 export interface WidgetDay {
@@ -27,12 +32,16 @@ export interface WidgetSnapshot {
   onboarded: boolean
   /** e.g. "N3" or "N5~N3" */
   levels: string
-  /** readiness: words expected on the exam morning if the plan is followed, of the list's total (null when the exam is past) */
-  plan: number | null
+  /** words in the studied levels */
   total: number
-  goal: number
-  examDate: string
+  /** …of which met (introduced), and in long-term memory: the counts of Home's word card */
+  met: number
+  mature: number
   days: WidgetDay[]
+  /** retired with the exam-day estimate: always null, 0 and '' (see WIDGET_SNAPSHOT_VERSION) */
+  plan: null
+  goal: 0
+  examDate: ''
 }
 
 export function widgetSnapshot(s: State, now: Date): WidgetSnapshot {
@@ -42,17 +51,18 @@ export function widgetSnapshot(s: State, now: Date): WidgetSnapshot {
     const w = workOn(s, day, now)
     days.push({ day: dayKey(day), due: w.reviews, fresh: w.fresh, done: w.done })
   }
-  const r = readiness(s, now)
-  const lv = r.levels
+  const { levels: lv, total, met, mature } = studyProgress(s)
   return {
     v: WIDGET_SNAPSHOT_VERSION,
     at: now.getTime(),
     onboarded: s.onboarded,
     levels: lv.length === 1 ? `N${lv[0]}` : `N${lv[0]}~N${lv[lv.length - 1]}`,
-    plan: r.past ? null : Math.round(r.plan),
-    total: r.total,
-    goal: r.goalWords,
-    examDate: s.settings.examDate,
+    total,
+    met,
+    mature,
     days,
+    plan: null,
+    goal: 0,
+    examDate: '',
   }
 }
