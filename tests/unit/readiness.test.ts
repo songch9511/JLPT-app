@@ -92,12 +92,17 @@ describe('readiness: edge states', () => {
     expect(r.todayGain).toBe(0)
   })
 
-  it('the plan figure follows the lookahead formula r·R(Good) + (1−r)·R(Again) for a card due before the exam', async () => {
+  it('the plan figure follows the card through every review due before the exam (multi-step), not just the next one', async () => {
     const { rd, store } = await setup({ dailyNew: 0 })
+    const pj = await import('../../src/projection')
     const c = rev(4, 4, 3)
     store.update((d) => void (d.cards = { '5-0': c }))
     const r = rd.readiness(store.getState(), at(NOW))
-    expect(r.plan).toBeCloseTo(rd.recallAfterReview(c, c.due, EXAM), 9)
+    // reviewed on its due day, then on every due day after it until the exam
+    expect(r.plan).toBeCloseTo(pj.examRecall(c, c.due, EXAM), 9)
+    expect(r.plan).toBeCloseTo(pj.examRecall(c, c.due, EXAM, true), 2)
+    // a review 3 days from now with 20 days left comes back before the exam: more than the one-step lookahead
+    expect(r.plan).toBeGreaterThan(rd.recallAfterReview(c, c.due, EXAM) + 0.05)
     expect(r.plan).toBeGreaterThan(r.stop)
   })
 
@@ -220,7 +225,8 @@ describe('readiness: monotonicity', () => {
     let prev = -1
     for (const n of rd.PACES) {
       const r = rd.readiness(store.getState(), at(NOW), { dailyNew: n })
-      expect(r.plan).toBeGreaterThanOrEqual(prev)
+      // (equal paces once the list runs out may differ in the last bits of a float sum)
+      expect(r.plan).toBeGreaterThanOrEqual(prev - 1e-9)
       prev = r.plan
     }
   })

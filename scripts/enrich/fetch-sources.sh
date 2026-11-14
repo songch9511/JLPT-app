@@ -37,3 +37,4 @@ fi
 
 echo "sources ready in $cache"
 echo "next: $cache/venv/bin/python -I $here/freq.py   and   $cache/venv/bin/python -I $here/kanji-table.py"
+echo "      python3 -I $here/alt-readings.py   (other JMdict readings of the reading-card words, column x)"

@@ -11,19 +11,22 @@ import {
   buildQueue,
   leechIds,
   minutesFor,
+  MORE_REVIEWS,
+  NEW_WHILE_BEHIND,
   newWordsLeft,
   quests,
+  reviewQuota,
   secondsPerAnswer,
+  spreadReviews,
   streak,
   unlockMoreNew,
+  unlockMoreReviews,
   weekDays,
 } from '../srs'
 import { update, useStore, type State } from '../store'
 import { dayKey, daysBetween, formatDay, parseDay, upcomingExams, useClock } from '../util'
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
-/** A backlog worth its own message: more reviews due than a 20-minute day can hold at the measured pace. */
-const BACKLOG_MINUTES = 20
 
 const levelsLabel = (levels: Level[]) => (levels.length === 1 ? `N${levels[0]}` : `N${levels[0]}~N${levels[levels.length - 1]}`)
 const examShort = (key: string) => {
@@ -123,8 +126,24 @@ function ReadinessCard({ r, onInfo }: { r: Readiness; onInfo: () => void }) {
   )
 }
 
+/**
+ * "오늘 하면 시험날 예상 +N단어" (03 §4.3): the plan with today's session against the plan resumed tomorrow. When the
+ * difference rounds to nothing it says so instead of showing "+0", and what is still true: put off, the reviews
+ * are tomorrow's.
+ */
+function PlanGain({ gain, reviews }: { gain: number; reviews: boolean }) {
+  const n = Math.round(gain)
+  if (n >= 1)
+    return (
+      <p className="plan-gain">
+        오늘 하면 시험날 예상 <b className="num">+{n}</b>단어
+      </p>
+    )
+  return <p className="plan-gain muted">오늘 분량은 시험날 예상을 거의 바꾸지 않아요.{reviews && ' 미루면 내일 할 복습이 늘어요.'}</p>
+}
+
 /** 03 §7.3: what the number is and what it cannot say. */
-function ReadinessSheet({ r, isOpen, onClose }: { r: Readiness; isOpen: boolean; onClose: () => void }) {
+function ReadinessSheet({ r, cap, isOpen, onClose }: { r: Readiness; cap: number; isOpen: boolean; onClose: () => void }) {
   return (
     <Sheet isOpen={isOpen} onClose={onClose} label="이 숫자는 무엇인가요?">
       <div className="sheet info-sheet">
@@ -140,10 +159,13 @@ function ReadinessSheet({ r, isOpen, onClose }: { r: Readiness; isOpen: boolean;
             값이에요.
           </li>
           <li>
-            ‘계획대로면’은 오늘부터 계획을 지킨다고 가정한 값이에요. 시험 전에 돌아오는 복습을 한 번 더 하고, 아직 안 본 단어를 하루{' '}
-            {r.plannedNew > 0 ? '설정한 개수만큼' : '0개'} 새로 배운다고 봐요.
+            ‘계획대로면’은 오늘부터 계획을 지킨다고 가정한 값이에요. 시험 전에 돌아오는 복습은 그날그날 하고(밀리면 하루{' '}
+            {cap.toLocaleString()}장까지, 오래된 것부터), 아직 안 본 단어는 하루 {r.plannedNew > 0 ? '설정한 개수만큼' : '0개'}
+            {r.plannedNew > 0 ? `(밀린 동안은 ${NEW_WHILE_BEHIND}개까지)` : ''} 새로 배운다고 봐요. 복습할 때마다 그때 기억할 확률만큼 맞히고, 못
+            맞히면 다시 익힌다고 계산해요.
           </li>
           <li>‘지금 그만두면’은 오늘부터 아무것도 하지 않을 때의 값이에요.</li>
+          <li>‘오늘 하면 +N단어’는 오늘 분량을 할 때와, 오늘은 쉬고 내일부터 계획대로 할 때의 차이예요.</li>
           <li>합격 확률이 아니에요. 어휘는 언어지식 과목의 일부예요. 문법·독해·청해는 따로 준비해야 해요.</li>
           <li>단어 목록은 공식 목록이 아니에요(JLPT는 공식 어휘 목록을 공개하지 않아요).</li>
           <li>스스로 채점하는 카드가 많을수록 실제보다 높게 나올 수 있어요.</li>
@@ -180,9 +202,18 @@ export function Home() {
   const nextLevel = levelDone ? LEVELS.find((l) => l < target && all[l].new > 0) : undefined
   const sec = secondsPerAnswer(s, today)
   const minutes = minutesFor(q, sec)
-  // only worth a word when the reviews clearly exceed a 20-minute day (half as much again)
-  const dayCap = Math.floor((BACKLOG_MINUTES * 60) / sec)
-  const backlog = q.review > 1.5 * dayCap ? dayCap : 0
+  const { cap } = reviewQuota(s, today)
+  // reviews due beyond today's quota wait for the coming days (03 §5.3); "더 하기" lets some of them in today
+  const behind = q.held > 0
+  const more = Math.min(MORE_REVIEWS, q.held)
+  // the same schedule readiness uses (memoised), so the days stated here are the ones the figure assumes
+  const catchUp = behind ? spreadReviews(s, today).catchUp : 0
+  const [added, setAdded] = useState<number | null>(null)
+  useEffect(() => {
+    if (added === null) return
+    const t = setTimeout(() => setAdded(null), 4000)
+    return () => clearTimeout(t)
+  }, [added])
   // recomputed per hour, like readiness itself
   const pace = useMemo(() => paceToGoal(s, today), [s, hour])
   const nextExam = upcomingExams(today, 2).find((d) => d > s.settings.examDate)
@@ -242,18 +273,31 @@ export function Home() {
                 {q.freshReading > 0 && <small className="muted"> (읽기만 {q.freshReading})</small>}
               </span>
             </p>
-            {backlog > 0 && (
-              <p className="plan-note">
-                밀린 복습 {q.review.toLocaleString()}장 — 오늘 다 못 해도 괜찮아요. 약 {backlog}장({BACKLOG_MINUTES}분)만 해도 오래된 것부터
-                정리돼요.
+            {behind && (
+              <p className="plan-note backlog-note">
+                밀린 복습이 {(q.review + q.held).toLocaleString()}장이에요. 오늘은 오래된 것부터 {q.review.toLocaleString()}장만 하고, 나머지는 나눠서 해요.
+                {catchUp > 1 && ` ${catchUp}일이면 따라잡아요.`}
+                {s.settings.dailyNew > NEW_WHILE_BEHIND && ` 그동안 새 단어는 하루 ${NEW_WHILE_BEHIND}개예요.`}
               </p>
             )}
-            {!r.past && !r.examDay && r.todayGain >= 0.5 && (
-              <p className="plan-gain">
-                오늘 하면 시험날 예상 <b className="num">+{Math.round(r.todayGain)}</b>단어
-              </p>
-            )}
+            {!r.past && !r.examDay && <PlanGain gain={r.todayGain} reviews={q.review + q.learning > 0} />}
             <Button label={started ? '이어서 하기' : '오늘의 학습 시작'} variant="primary" size="lg" width="100%" onClick={() => go('/study')} />
+          </>
+        ) : behind ? (
+          <>
+            <p className="plan-done">
+              {cleared ? '오늘 몫을 끝냈어요.' : '오늘 몫은 없어요.'} 남은 밀린 복습 {q.held.toLocaleString()}장은 내일부터 나눠서 해요.
+            </p>
+            <Button
+              label={`복습 ${more}장 더 하기`}
+              variant="secondary"
+              size="lg"
+              width="100%"
+              onClick={() => {
+                unlockMoreReviews(more)
+                go('/study')
+              }}
+            />
           </>
         ) : unseen > 0 ? (
           <>
@@ -286,7 +330,34 @@ export function Home() {
         ) : (
           <p className="plan-done">{cleared ? '오늘 분량을 끝냈어요.' : '오늘은 할 카드가 없어요.'}</p>
         )}
-        {changed ? (
+        {added !== null ? (
+          <p className="plan-lever" role="status">
+            오늘 복습을 {added}장 늘렸어요.
+            <Button
+              label="되돌리기"
+              variant="ghost"
+              className="text-action"
+              onClick={() => {
+                unlockMoreReviews(-added)
+                setAdded(null)
+              }}
+            />
+          </p>
+        ) : behind && todo > 0 ? (
+          <p className="plan-lever">
+            여유가 있으면 오늘 더 해도 돼요.
+            <Button
+              label={`${more}장 더 하기`}
+              variant="ghost"
+              className="text-action"
+              endContent={<Icon name="chevron" size={16} />}
+              onClick={() => {
+                unlockMoreReviews(more)
+                setAdded(more)
+              }}
+            />
+          </p>
+        ) : behind ? null : changed ? (
           <p className="plan-lever" role="status">
             하루 새 단어 {changed.to}개로 바꿨어요.
             <Button
@@ -353,7 +424,7 @@ export function Home() {
         </a>
       </nav>
 
-      <ReadinessSheet r={r} isOpen={info} onClose={() => setInfo(false)} />
+      <ReadinessSheet r={r} cap={cap} isOpen={info} onClose={() => setInfo(false)} />
     </>
   )
 }

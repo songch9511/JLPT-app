@@ -28,6 +28,8 @@ export interface DayLog {
   p: number
   /** extra new words unlocked for this day on top of the daily limit */
   x?: number
+  /** extra reviews let into this day's quota with "더 하기" while reviews are held for later days (03 §5.3) */
+  xr?: number
   /** XP earned this day */
   xp?: number
   /** quests already rewarded this day (bitmask by quest index) */

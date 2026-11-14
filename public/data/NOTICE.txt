@@ -1,6 +1,6 @@
 JLPT 루마 — word data notice (public/data/n1.json … n5.json)
 
-Each row is [w, r, ko, en, o, f, k, sk, ff, rt, a]. The first four columns (word, reading, Korean
+Each row is [w, r, ko, en, o, f, k, sk, ff, rt, a, x]. The first four columns (word, reading, Korean
 meaning, English meaning) come from the word list and the app's own translation. The other columns
 are computed by this project from the sources below:
 
@@ -20,9 +20,11 @@ are computed by this project from the sources below:
          © Unicode, Inc., Unicode License v3, https://www.unicode.org/license.txt) and
          KANJIDIC2 (© EDRDG, licence as above, https://www.edrdg.org/wiki/index.php/KANJIDIC_Project).
   a      the reading split per kanji, computed from KANJIDIC2 on-readings (© EDRDG, licence as above).
+  x      for reading-card words, the other readings JMdict gives the written form (© EDRDG, licence
+         as above); the app never offers them as wrong choices.
 
-Licence of the derived data: the data in the columns o, f and a, and the candidate tables they were
-built from (data/freq/, data/hanja/ in the source repository), are distributed under
+Licence of the derived data: the data in the columns o, f, a and x, and the candidate tables they were
+built from (data/freq/, data/hanja/, data/readings/ in the source repository), are distributed under
 Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0):
 https://creativecommons.org/licenses/by-sa/4.0/legalcode
 If you reuse them, credit wordfreq (and its sources, including OpenSubtitles) and the EDRDG, and keep
