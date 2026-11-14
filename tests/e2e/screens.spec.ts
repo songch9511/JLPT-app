@@ -180,7 +180,7 @@ test.describe('settings', () => {
     expect((await saved(page)).xp).toBe(5)
   })
 
-  test('reset asks first, then returns to onboarding', async ({ page }) => {
+  test('reset asks first, then starts the first run again', async ({ page }) => {
     await open(page, { state: user({}, { xp: 50 }), hash: '/settings' })
     await page.getByRole('button', { name: '모든 기록 초기화' }).click()
     const ask = page.getByRole('alertdialog', { name: '모든 기록을 지울까요?' })
@@ -191,7 +191,8 @@ test.describe('settings', () => {
     expect((await saved(page)).xp).toBe(50)
     await page.getByRole('button', { name: '모든 기록 초기화' }).click()
     await ask.getByRole('button', { name: '모두 지우기' }).click()
-    await expect(page.getByRole('button', { name: '시작하기' })).toBeVisible()
+    await page.getByRole('link', { name: '홈' }).click()
+    await expect(page.getByRole('button', { name: 'N5' })).toBeVisible()
     expect((await saved(page)).onboarded).toBe(false)
   })
 

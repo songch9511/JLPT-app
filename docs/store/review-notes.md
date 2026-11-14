@@ -1,6 +1,6 @@
 # App Review notes (English)
 
-Written 2026-11-14. Section 1 goes into App Store Connect › App Review Information › Notes as is. Apple limits that field to **4,000 bytes** ([Platform version information](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information), checked 2026-11-14); the block below is **3,319 bytes** (UTF-8, counted with Python). Section 2 has prepared replies for the Resolution Center if a reviewer raises one of the likely issues; do not paste them pre-emptively.
+Written 2026-11-14. Section 1 goes into App Store Connect › App Review Information › Notes as is. Apple limits that field to **4,000 bytes** ([Platform version information](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information), checked 2026-11-14); the block below is **3,432 bytes** (UTF-8, counted with Python). Section 2 has prepared replies for the Resolution Center if a reviewer raises one of the likely issues; do not paste them pre-emptively.
 
 This replaces the shorter draft in `docs/plan/10-ios-build.md` §6 (same facts, plus the quick tour, data sources and the estimate wording). Remove the widget line if the widget does not ship in 1.0 (10, decision 4).
 
@@ -14,7 +14,7 @@ JLPT Ruma (JLPT 루마) is a Korean-language vocabulary trainer for Korean speak
 NO LOGIN. No account, no network use, no data collected. All 8,130 words are bundled; study records stay on the device. The UI is Korean; key labels are given below.
 
 QUICK TOUR (about 3 minutes)
-1. First launch: pick a target level (목표 급수, e.g. N3), new words per day and an exam date, tap 시작하기 (Start).
+1. First launch opens on Home: the mascot asks the target level (tap e.g. N3), then the exam date (a date, or 아직 몰라요 = not sure yet), then tap 첫 학습 시작 (Start first session). New words per day default to 20 (Settings).
 2. Home (홈): card 시험날 기억할 단어 (예상) = estimated words remembered on the exam day. On a fresh install the number starts near zero and the on-track label appears after about 30 review answers.
 3. Tap 오늘의 학습 시작 (Start today's study). Meaning cards: tap the card, then answer 모르겠어요 / 알아요 / 쉬워요 (don't know / know / easy). Words that share a Korean hanja reading (e.g. 産業 = 산업) come as reading cards: pick the reading among four, the app then shows the Korean-to-Japanese reading bridge. Words whose meaning differs from the Korean look-alike (e.g. 大丈夫) show a red "meaning differs" note.
 4. Tabs: 단어장 (Words: search all 8,130 words, word sheet), 기록 (Records: stamps, 7-day review forecast, calendar), 설정 (Settings).

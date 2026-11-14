@@ -91,6 +91,13 @@ export interface State {
    * was merged in. A different text there means such a tab saved again (see `mergeLegacy`).
    */
   legacy?: { h: string }
+  /**
+   * Ruma's first-run guide on Home (src/guide.ts): the steps of the first-run conversation answered and the
+   * in-context tips already shown, by id. Only learners who started with this version have it: a state saved before
+   * it existed, or a backup of one, with `onboarded` true has none and never sees a first-run prompt. Added within
+   * v4 (an optional field, like `bestE`); carried in backups.
+   */
+  guide?: { done: string[] }
 }
 
 // storage keys keep the app's former name (Kasane) so existing learners keep their records
@@ -126,6 +133,7 @@ function initial(): State {
     log: {},
     marks: [],
     xp: 0,
+    guide: { done: [] },
   }
 }
 
@@ -259,7 +267,15 @@ function normalize(s: State): State {
   settings.includeLower = settings.includeLower === true
   settings.fastTrack = settings.fastTrack !== false
   if (!examDateOk(settings.examDate)) settings.examDate = base.settings.examDate
-  return { ...base, ...s, v: STATE_VERSION, settings }
+  const { guide: _g, ...rest } = { ...base, ...s, v: STATE_VERSION as typeof STATE_VERSION, settings }
+  const out: State = rest
+  // The first-run guide: kept (cleaned) where a state has one; a state without one gets it only if it never finished
+  // the first run (an install that never got past the old onboarding page). An onboarded state without it — every
+  // learner and backup from before the guide — stays without, so it never sees a first-run prompt.
+  const g = s.guide
+  if (isObj(g) && Array.isArray(g.done)) out.guide = { done: [...new Set(g.done.filter((x): x is string => typeof x === 'string'))] }
+  else if (!s.onboarded) out.guide = { done: [] }
+  return out
 }
 
 /** A cheap fingerprint of a stored text (length + FNV-1a), to tell whether LEGACY_KEY changed since it was read. */
@@ -321,6 +337,11 @@ export function mergeStates(cur: State, other: State): State {
     marks,
     xp: Math.max(cur.xp, isNum(other.xp) ? other.xp : 0),
     rev: Math.max(cur.rev ?? 0, other.rev ?? 0),
+  }
+  // the first run was finished in the other copy only: its guide (none, for a learner from before the guide) goes with it
+  if (!cur.onboarded && other.onboarded) {
+    if (other.guide) out.guide = other.guide
+    else delete out.guide
   }
   const bestE = Math.max(cur.bestE ?? 0, other.bestE ?? 0)
   if (bestE > 0) out.bestE = bestE

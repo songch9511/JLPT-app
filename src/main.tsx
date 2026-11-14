@@ -13,10 +13,25 @@ import { startPlatform } from './platform'
 import { useStore } from './store'
 import { syncTextSize, useThemeMode } from './themeRoot'
 
+/**
+ * The launch screen (index.html #launch) goes as soon as the first screen is drawn: no minimum time, a short fade
+ * (none with reduced motion). It never takes taps (pointer-events: none), so nothing waits for it.
+ */
+function hideLaunch() {
+  const el = document.getElementById('launch')
+  if (!el) return
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return el.remove()
+  requestAnimationFrame(() => {
+    el.classList.add('out')
+    setTimeout(() => el.remove(), 300)
+  })
+}
+
 /** The root: `data-theme` on <html> (system / light / dark from settings) and the reader's text size. */
 function Root() {
   useThemeMode(useStore((s) => s.settings.theme))
   useEffect(() => syncTextSize(), [])
+  useEffect(hideLaunch, [])
   // the dialogs and sheets are a separate chunk, kept out of the first load; fetch it once the app is idle, so the
   // first sheet opens as quickly as later ones (measured at 4× CPU throttle: ~540 ms cold vs ~120 ms loaded)
   useEffect(() => {

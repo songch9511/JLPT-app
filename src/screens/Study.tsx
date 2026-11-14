@@ -3,7 +3,8 @@ import { go } from '../App'
 import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
-import { Badge, Button, IconButton, ProgressBar, Skeleton } from '../components/ui'
+import { Announce, Badge, Button, IconButton, ProgressBar, Skeleton } from '../components/ui'
+import { done as guideDone, markDone } from '../guide'
 import { Bridge, FalseFriend, SoundHints, TypeLine } from '../components/WordNotes'
 import { isReadingCard, levelOf, meaning, useAllWords, useLevel, useLevels, wordById } from '../data'
 import { legacySeed } from '../ids'
@@ -38,6 +39,8 @@ const DOUBLE_TAP_MS = 350
 /** How long the "26일 뒤" note and the undo chip stay after an answer. */
 const NOTE_MS = 900
 const UNDO_CHIP_MS = 4000
+/** Ruma's words on the first reading card (src/guide.ts). */
+const READING_TIP = '읽기 카드예요. 한국어와 뜻이 같은 한자어는 읽는 법만 골라요.'
 
 /** "알아요, 26일 뒤 다시" — the interval read as part of the button's name. */
 const answerLabel = (label: string, interval?: string) =>
@@ -157,6 +160,16 @@ export function Study() {
   const intervals = useMemo(() => (id ? previewIntervals(s, id, now) : null), [s, id, now])
   const cardKey = `${id}:${answered}`
   const activeMs = useActiveTime(cardKey)
+
+  // Ruma's tip on the first reading card of a learner who started with the first-run guide (src/guide.ts): shown with
+  // that card only, counted as shown at once so it never comes back
+  const [readingTip, setReadingTip] = useState<string | null>(null)
+  const tipDue = quiz && !!word && !!s.guide && s.onboarded && !guideDone(s, 'reading')
+  useEffect(() => {
+    if (!tipDue) return
+    setReadingTip(cardKey)
+    markDone('reading')
+  }, [tipDue, cardKey])
 
   useEffect(() => {
     setRevealed(false)
@@ -400,6 +413,17 @@ export function Study() {
           </span>
         )}
       </p>
+
+      {readingTip === cardKey && (
+        <div className="study-tip">
+          <Ruma progress={dayTotal > 0 ? todayCount / dayTotal : 0} size={40} />
+          <div className="bubble">
+            <p>{READING_TIP}</p>
+            <IconButton label="루마의 안내 닫기" icon={<Icon name="close" size={18} />} onClick={() => setReadingTip(null)} />
+          </div>
+          <Announce text={`루마: ${READING_TIP}`} />
+        </div>
+      )}
 
       <div className="card-area">
         {error && (

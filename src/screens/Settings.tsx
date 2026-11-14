@@ -3,6 +3,7 @@ import { exportBackup, readBackup, useMeta } from '../backup'
 import { APP_VERSION, TITLE, UNOFFICIAL_NOTICE } from '../brand'
 import { Banner, Button, Card, ChipGroup, Choice, ConfirmDialog, MessageDialog, RowLink, Switch } from '../components/ui'
 import { LEVELS } from '../data'
+import { replayTips } from '../guide'
 import { canUndoImport, examDateOk, GOALS, importState, MAX_DAILY_NEW, MAX_EXAM_DAYS, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
 import { docHref, type DocName } from './Doc'
@@ -30,6 +31,8 @@ export function Settings() {
   const [confirmReset, setConfirmReset] = useState(false)
   const [pending, setPending] = useState<State | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
+  const onboarded = useStore((s) => s.onboarded)
+  const [replayed, setReplayed] = useState(false)
 
   const importData = async (f: File) => importText(await f.text())
   const importText = (text: string) => {
@@ -103,6 +106,23 @@ export function Settings() {
           value={st.fastTrack}
           onChange={(fastTrack) => set({ fastTrack })}
         />
+        {onboarded && (
+          <p className="replay-tips" role="status">
+            {replayed ? (
+              '루마가 홈과 학습 화면에서 다시 알려 드릴게요.'
+            ) : (
+              <Button
+                label="루마의 안내 다시 보기"
+                variant="ghost"
+                className="text-action"
+                onClick={() => {
+                  replayTips()
+                  setReplayed(true)
+                }}
+              />
+            )}
+          </p>
+        )}
       </Card>
 
       <Card className="form" role="region" aria-labelledby="display-title">

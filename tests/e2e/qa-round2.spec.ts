@@ -1,7 +1,7 @@
 // Regressions from the second QA round (docs/plan/13-qa-round2.md): each failed before its fix.
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { homeShown, L, NOW, open, READ_MS, saved, todayLog, user } from './fixtures'
+import { answer, homeShown, L, NOW, open, READ_MS, saved, todayLog, user } from './fixtures'
 
 const DAY = 86400_000
 const review = (due: number) => ({ due, stability: 5, difficulty: 5, elapsed_days: 5, scheduled_days: 5, learning_steps: 0, reps: 3, lapses: 0, state: 2, last_review: due - 5 * DAY })
@@ -56,9 +56,30 @@ test.describe('accessibility (Q7, Q8)', () => {
     })
   }
 
-  test('onboarding has a main landmark', async ({ page }) => {
+  test('the first run on home: every step of Ruma’s questions, and the first session offer', async ({ page }) => {
     await open(page)
-    await expect(page.getByRole('button', { name: '시작하기' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'N5' })).toBeVisible()
+    expect(await violations(page)).toEqual([])
+    await page.getByRole('button', { name: 'N3' }).click()
+    await expect(page.getByRole('button', { name: '아직 몰라요' })).toBeVisible()
+    expect(await violations(page)).toEqual([])
+    await page.getByRole('button', { name: '아직 몰라요' }).click()
+    await expect(page.getByRole('button', { name: '첫 학습 시작' })).toBeVisible()
+    expect(await violations(page)).toEqual([])
+  })
+
+  test('Ruma’s tips on home and on the study screen', async ({ page }) => {
+    const guide = { done: ['level', 'exam'] }
+    await open(page, { state: { ...user({ fastTrack: true }), v: 4, guide }, hash: '/study' })
+    for (let i = 0; i < 20; i++) {
+      await expect(page.locator('.flash')).toBeVisible()
+      if (await page.locator('.reading-card').count()) break
+      await answer(page, '알아요')
+    }
+    await expect(page.locator('.study-tip')).toBeVisible()
+    expect(await violations(page)).toEqual([])
+    await page.getByRole('button', { name: /나가기/ }).click()
+    await expect(page.locator('.bubble.tip')).toBeVisible()
     expect(await violations(page)).toEqual([])
   })
 

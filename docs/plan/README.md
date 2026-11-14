@@ -24,7 +24,7 @@
 | `src/srs.ts`, `src/readiness.ts`, `src/projection.ts`, `src/pnew.ts` | 스케줄러·오늘의 큐·밀린 복습 나누기, 준비도와 "+N" 계산 |
 | `src/store.ts`, `src/ids.ts`, `src/backup.ts` | 상태 구조·저장·이전(v2/v3 → v4), 단어 ID, 백업 내보내기·가져오기 |
 | `src/data.ts`, `src/distractors.ts` | 단어 데이터 불러오기, 읽기 카드 오답 보기 |
-| `src/screens/*.tsx` | Home, Study, Level, Words, Stats(기록), Settings, Onboarding, Doc(처리방침·도움말) |
+| `src/screens/*.tsx` | Home, Study, Level, Words, Stats(기록), Settings, HomeGuide(루마의 첫 실행 질문·안내, 온보딩 화면 대신), Doc(처리방침·도움말) |
 | `src/components/ui.tsx`, `overlays.tsx`, `Ruma.tsx` | 컨트롤, Astryx 대화상자·시트, 마스코트 |
 | `src/themes/ruma/` | 테마 원본과 빌드 결과(`npm run theme`) |
 | `src/platform/` | 웹과 iOS 앱이 다른 곳 하나(알림, 음성, 햅틱, 파일, 내구 저장, 위젯) |

@@ -36,7 +36,7 @@ test.describe('error screen', () => {
     await page.getByRole('button', { name: /모든 기록 지우고/ }).click()
     await expect(page.getByText('되돌릴 수 없어요.')).toBeVisible()
     await page.getByRole('button', { name: '모두 지우기' }).click()
-    await expect(page.getByRole('button', { name: '시작하기' })).toBeVisible()
+    await expect(page.getByRole('group', { name: /어느 급수를 준비해요/ })).toBeVisible()
     expect(await saved(page)).toBeNull()
   })
 

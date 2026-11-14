@@ -320,6 +320,27 @@ export function Empty({ title, description }: { title: string; description?: str
   )
 }
 
+/**
+ * Says `text` once, politely, to screen readers: text that is already on screen when a live region appears is not
+ * read, so this region starts empty and is filled a moment later, then emptied (it is not read twice when browsing).
+ */
+export function Announce({ text }: { text: string }) {
+  const [said, setSaid] = useState('')
+  useEffect(() => {
+    const a = setTimeout(() => setSaid(text), 250)
+    const b = setTimeout(() => setSaid(''), 8000)
+    return () => {
+      clearTimeout(a)
+      clearTimeout(b)
+    }
+  }, [text])
+  return (
+    <span className="sr-only" role="status">
+      {said}
+    </span>
+  )
+}
+
 /** A placeholder block while something loads. */
 export function Skeleton({ width, height }: { width: number; height: number }) {
   return <span className="skeleton-block" style={{ width, height }} aria-hidden="true" />
