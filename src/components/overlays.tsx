@@ -74,7 +74,7 @@ export function Message({ isOpen, title, message, onClose }: MessageProps) {
       <DialogHeader title={title} hasDivider={false} />
       <div className="dialog-body">
         <p>{message}</p>
-        <Button label="확인" variant="primary" width="100%" onClick={onClose} />
+        <Button label="알겠어요" variant="primary" width="100%" onClick={onClose} />
       </div>
     </Dialog>
   )

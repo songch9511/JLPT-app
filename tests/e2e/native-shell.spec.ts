@@ -124,7 +124,7 @@ test('settings: native section shown, export through the share sheet, import thr
   await expect.poll(async () => (await calls(page, 'Share', 'share')).length).toBe(1)
   const [, , share] = (await calls(page, 'Share', 'share'))[0] as Call
   expect(share).toEqual({ title: 'jlpt-ruma-backup-2026-11-13.json', files: ['file:///CACHE/jlpt-ruma-backup-2026-11-13.json'] })
-  await expect(page.getByText('마지막 백업: 2026년 11월 13일')).toBeVisible()
+  await expect(page.getByText('마지막 백업 2026년 11월 13일')).toBeVisible()
   expect(downloaded).toBe(false)
 
   await page.getByRole('button', { name: '백업 가져오기' }).click()
@@ -184,11 +184,11 @@ test('finishing the day: haptics, then the reminder offer; permission is asked o
   await openShell(page, { state: user({ dailyNew: 1 }) })
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   await answer(page, '쉬워요')
-  await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
   expect((await calls(page, 'Haptics', 'impact')).length).toBe(1)
   await expect.poll(async () => (await calls(page, 'Haptics', 'notification')).length).toBe(1)
 
-  const offer = page.getByRole('region', { name: /복습할 때가 되면 알려 드릴까요/ })
+  const offer = page.getByRole('region', { name: '복습할 날 알려 드릴까요?' })
   await expect(offer).toBeVisible()
   expect(await calls(page, 'LocalNotifications', 'requestPermissions')).toEqual([])
   await offer.getByRole('button', { name: '알림 받기' }).click()
@@ -203,14 +203,14 @@ test('the offer is not repeated once answered “나중에”', async ({ page })
   await openShell(page, { state: user({ dailyNew: 1 }) })
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   await answer(page, '쉬워요')
-  await page.getByRole('region', { name: /복습할 때가 되면/ }).getByRole('button', { name: '나중에' }).click()
-  await expect(page.getByRole('region', { name: /복습할 때가 되면/ })).toHaveCount(0)
+  await page.getByRole('region', { name: '복습할 날 알려 드릴까요?' }).getByRole('button', { name: '나중에' }).click()
+  await expect(page.getByRole('region', { name: '복습할 날 알려 드릴까요?' })).toHaveCount(0)
   await expect.poll(async () => JSON.parse((await fakeFile(page, 'LIBRARY/ruma/prefs.json')) ?? '{}').reminderAsked).toBe(true)
   // the done screen again after a relaunch: still no offer
   await page.reload()
-  await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
   await page.waitForTimeout(500)
-  await expect(page.getByRole('region', { name: /복습할 때가 되면/ })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: '복습할 날 알려 드릴까요?' })).toHaveCount(0)
 })
 
 test('reset clears the durable copy of the old history', async ({ page }) => {

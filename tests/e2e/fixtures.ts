@@ -108,11 +108,11 @@ export async function answer(page: Page, choice: '알아요' | '쉬워요' | '�
     if (choice === '모르겠어요') await page.getByRole('button', { name: /^모르겠어요/ }).click()
     else await (await rightChoice(page)).click()
     await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: choice === '모르겠어요' ? /^확인했어요 · 다음/ : /^다음/ }).click()
+    await page.getByRole('button', { name: /^다음/ }).click()
   } else if (choice === '모르겠어요') {
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: '확인했어요 · 다음' }).click()
+    await page.getByRole('button', { name: '다음', exact: true }).click()
   } else {
     await card.click()
     await expect(page.locator('.flash-meaning')).toBeVisible()

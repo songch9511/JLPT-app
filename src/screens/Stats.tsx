@@ -88,6 +88,7 @@ export function Stats() {
   const today = new Date()
   // the same counts as Home's word card and the 단어장 level rows
   const { levels, total, met } = studyProgress(s)
+  const range = levels.length === 1 ? `N${levels[0]}` : `N${levels[0]}~N${levels[levels.length - 1]}`
 
   const kept = retention(s, today)
   let ms7 = 0
@@ -105,8 +106,14 @@ export function Stats() {
           <span className="muted">만난 단어 {STAMP_STEP}개마다</span>
         </h2>
         <Stamps met={met} total={total} />
+        {/* the same short label as Home's word row; read as a sentence */}
         <p className="hint">
-          {levels.length === 1 ? `N${levels[0]}` : `N${levels[0]}~N${levels[levels.length - 1]}`} 단어 {total.toLocaleString()}개 중 {met.toLocaleString()}개를 만났어요.
+          <span aria-hidden="true">
+            {range} 만난 단어 <b className="num">{met.toLocaleString()}</b> / {total.toLocaleString()}
+          </span>
+          <span className="sr-only">
+            {range} 단어 {total.toLocaleString()}개 중 {met.toLocaleString()}개 만남
+          </span>
         </p>
       </Card>
 
@@ -117,14 +124,14 @@ export function Stats() {
           <small className="muted">최근 30일</small>
         </Card>
         <Card className="stat" padding={3}>
-          <span className="stat-label">최근 7일 학습</span>
+          <span className="stat-label">학습 시간</span>
           <StatNumber text={`${Math.round(ms7 / 60_000).toLocaleString()}분`} />
-          <small className="muted">카드를 보는 동안만 셈</small>
+          <small className="muted">최근 7일</small>
         </Card>
         <Card className="stat" padding={3}>
-          <span className="stat-label">누적 XP</span>
+          <span className="stat-label">XP</span>
           <StatNumber text={formatXp(s.xp)} label={s.xp >= 1_000_000 ? s.xp.toLocaleString() : undefined} />
-          <small className="muted">카드당 10</small>
+          <small className="muted">누적</small>
         </Card>
       </section>
 
@@ -133,7 +140,6 @@ export function Stats() {
           7일 복습 예보
         </h2>
         <Forecast counts={forecast(s, today)} today={today} />
-        <p className="hint">기억이 흐려질 때쯤 다시 나와요. 기억할수록 간격이 길어져요.</p>
       </Card>
 
       <Card role="region" aria-labelledby="heat-title">
@@ -141,7 +147,7 @@ export function Stats() {
           학습 기록
         </h2>
         <Heatmap log={s.log} today={today} />
-        <p className="hint">최근 {WEEKS}주 · 진할수록 카드를 많이 본 날</p>
+        <p className="hint">최근 {WEEKS}주 · 진할수록 많이 본 날</p>
       </Card>
     </>
   )

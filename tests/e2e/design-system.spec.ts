@@ -24,7 +24,7 @@ test('reset and import confirm inside the app, never with confirm()/alert()', as
   // a real backup: asks first; the action is the primary, cancel is offered
   await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(user({}, { xp: 70 }))) })
   const ask = page.getByRole('alertdialog', { name: '백업으로 바꿀까요?' })
-  await expect(ask).toContainText('바로 되돌릴 수 있어요')
+  await expect(ask).toContainText('바꾼 뒤 이 화면에서 되돌릴 수 있어요.')
   await expect(ask.getByRole('button', { name: '백업으로 바꾸기' })).toHaveAttribute('data-variant', 'primary')
   await ask.getByRole('button', { name: '백업으로 바꾸기' }).click()
   await expect.poll(async () => (await saved(page)).xp).toBe(70)
@@ -133,7 +133,7 @@ for (const [xp, shown] of [
     await open(page, { state: user({}, { xp }), hash: '/stats' })
     for (const width of [320, 360, 390, 402, 430]) {
       await page.setViewportSize({ width, height: 844 })
-      const n = page.locator('.stat').filter({ hasText: '누적 XP' }).locator('b')
+      const n = page.locator('.stat').filter({ has: page.locator('.stat-label', { hasText: /^XP$/ }) }).locator('b')
       await expect(n).toHaveText(shown)
       const m = await n.evaluate((b) => {
         const tile = b.parentElement!.getBoundingClientRect()

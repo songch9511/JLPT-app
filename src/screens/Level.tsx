@@ -56,19 +56,18 @@ export function LevelScreen({ level }: { level: Level }) {
           <p className="fast-count">
             {s.settings.fastTrack ? (
               <>
-                한국어 한자어와 뜻이 같은 <b>{typeCounts.S.toLocaleString()}개</b>는 뜻 대신 읽기만 확인해요
+                뜻 같은 한자어 <b>{typeCounts.S.toLocaleString()}개</b>는 읽기만 물어요
               </>
             ) : (
-              <>한자어 빠른 통과가 꺼져 있어요. 모든 단어를 뜻 카드로 배워요</>
+              <>모든 단어를 뜻 카드로 배워요</>
             )}
-            {typeCounts.F > 0 && <> · 뜻이 다른 한자어 {typeCounts.F}개</>}
           </p>
         )}
         <StageBar b={b} total={COUNTS[level]} />
         <div className="breakdown">
           {(['mature', 'young', 'learning', 'new'] as Stage[]).map((k) => (
             <div key={k} className={k}>
-              <b>{b[k]}</b>
+              <b>{b[k].toLocaleString()}</b>
               <span>{STAGE_LABEL[k]}</span>
             </div>
           ))}
@@ -107,8 +106,8 @@ export function LevelScreen({ level }: { level: Level }) {
           </button>
         ))}
       </div>
-      {words && list.length === 0 && <Empty title="여기에 해당하는 단어가 아직 없어요." description="다른 기억 단계나 단어 유형을 골라 보세요." />}
-      {list.length > shown && <Button label={`더 보기 (${list.length - shown}개 남음)`} width="100%" onClick={() => setShown(shown + PAGE)} />}
+      {words && list.length === 0 && <Empty title="해당하는 단어가 없어요" />}
+      {list.length > shown && <Button label={`더 보기 · ${(list.length - shown).toLocaleString()}개 남음`} width="100%" onClick={() => setShown(shown + PAGE)} />}
       <WordSheet word={open} onClose={() => setOpen(null)} />
     </>
   )

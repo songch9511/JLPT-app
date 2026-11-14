@@ -11,6 +11,8 @@
 // own level breakdowns (N5~N2: 5,431 words, 2,655 new → 2,776 met; 631 + 566 + 634 + 259 = 2,090 long-term).
 // A third (2026-11-14, Home "루마의 하늘"): the same counts in the new plan sheet — 159 left (130 + 12 + 17), 26 min,
 // "계속하기" — and the word line without the long-term count and the "(읽기만 6)" note; rewritten by hand from the above.
+// A fourth (2026-11-14, copy pass, docs/copy-inventory.md): same counts, new formatting — the level breakdowns with
+// thousands separators (1,068 · 1,583 · 2,299) and the study bar's "159장 남음" (was "남은 159장"); edited by hand.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { homeShown, KEY, L, NOW, open, saved, user } from './fixtures'
@@ -84,7 +86,7 @@ const review = (due: number, extra: Record<string, number> = {}) => ({ due, stab
 test('records whose word this version does not know are kept apart, and settings says so calmly (only then)', async ({ page }) => {
   const t = NOW.getTime()
   await open(page, { state: user({}, { cards: { '5-0': review(t + DAY), '9-0': review(t + DAY), '5-718': review(t + DAY) } }), hash: '/settings' })
-  await expect(page.getByText('이 버전에 없는 단어의 기록 2개도 지우지 않고 함께 보관하고 있어요.', { exact: false })).toBeVisible()
+  await expect(page.getByText('이 버전에 없는 단어의 기록 2개도 보관하고 백업에 담아요.', { exact: false })).toBeVisible()
   const s = await saved(page)
   expect(Object.keys(s.cards)).toEqual([L('5-0')])
   expect(Object.keys(s.orphans.cards)).toEqual(['9-0', '5-718'])

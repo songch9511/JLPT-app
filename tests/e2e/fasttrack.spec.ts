@@ -55,7 +55,7 @@ test('an S word is asked for its reading: four choices, a wrong pick shows the a
   // no "쉬워요" on a reading card
   await expect(page.getByRole('button', { name: /^쉬워요/ })).toHaveCount(0)
   await page.waitForTimeout(READ_MS)
-  await page.getByRole('button', { name: /^확인했어요 · 다음/ }).click()
+  await page.getByRole('button', { name: /^다음/ }).click()
 
   await expect.poll(async () => (await saved(page)).cards[L(`5-${idx}:r`)]?.state).toBe(1)
   const s = await saved(page)
@@ -65,8 +65,8 @@ test('an S word is asked for its reading: four choices, a wrong pick shows the a
 
   // the word sheet and level screen know the word type
   await page.goto('./#/level/5')
-  await expect(page.locator('.fast-count')).toContainText('뜻 대신 읽기만 확인해요')
-  await page.getByRole('button', { name: /^같은 한자어/ }).click()
+  await expect(page.locator('.fast-count')).toContainText('읽기만 물어요')
+  await page.getByRole('button', { name: /^뜻 같은 한자어/ }).click()
   // the word counts as "익히는 중" through its reading card
   await page.getByRole('button', { name: '익히는 중', exact: true }).click()
   await expect(page.locator('.word-row')).toHaveCount(1)
@@ -128,7 +128,7 @@ test('turning the fast-track off in settings: the S word comes as a meaning card
   await expect(page.getByRole('button', { name: '정답 보기' })).toBeVisible()
 
   await page.goto('./#/level/5')
-  await expect(page.locator('.fast-count')).toContainText('한자어 빠른 통과가 꺼져 있어요')
+  await expect(page.locator('.fast-count')).toContainText('모든 단어를 뜻 카드로 배워요')
   await page.goto('./#/settings')
   await page.getByRole('switch', { name: /한자어 빠른 통과/ }).check()
   await page.goto('./#/study')

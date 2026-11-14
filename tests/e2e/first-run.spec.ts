@@ -170,7 +170,7 @@ test('restoring an existing learner’s backup during the first run ends it, wit
 test('settings: “루마의 안내 다시 보기” brings the tips back', async ({ page }) => {
   await open(page, { state: user({}, { log: { '2026-11-12': { c: 5, n: 5, r: 0, p: 0 } } }), hash: '/settings' })
   await page.getByRole('button', { name: '루마의 안내 다시 보기' }).click()
-  await expect(page.getByText('루마가 홈과 학습 화면에서 다시 알려 드릴게요.')).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: '루마의 안내를 다시 켰어요.' })).toBeVisible()
   await page.getByRole('link', { name: '홈' }).click()
   await expect(page.locator('.ruma-line.tip')).toContainText('잊을 때쯤 돌아와요')
 })

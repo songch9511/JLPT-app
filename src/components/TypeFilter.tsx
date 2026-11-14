@@ -5,7 +5,7 @@ import { ChipGroup } from './ui'
 export type TypeGroup = 'all' | 'S' | 'F' | 'J' | 'N' | 'other'
 export const TYPE_GROUPS: [TypeGroup, string][] = [
   ['all', '모든 유형'],
-  ['S', '같은 한자어'],
+  ['S', '뜻 같은 한자어'],
   ['F', '뜻 다른 한자어'],
   ['J', '일본 한자어'],
   ['N', '고유어'],

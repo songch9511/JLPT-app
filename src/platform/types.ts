@@ -8,8 +8,8 @@ export interface Platform {
   readonly native: boolean
   /** Read a word aloud in Japanese. Callers keep the rule: only inside or after a user gesture. */
   speak(text: string): void
-  /** Light feedback: `answer` on grading a card, `done` on finishing the day. No-op on the web. */
-  haptic(kind: 'answer' | 'done'): void
+  /** Light feedback: `answer` on grading a card, `turn` on swiping to another card, `done` on finishing the day. No-op on the web. */
+  haptic(kind: 'answer' | 'turn' | 'done'): void
   /**
    * Hand a JSON file to the user: a download on the web, the share sheet (Files, AirDrop, …) in the app.
    * true / a promise of true once the file was handed over, false when the user cancelled or it failed.

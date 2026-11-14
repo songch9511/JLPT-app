@@ -81,8 +81,7 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
               <Row key={w.id} w={w} onOpen={setOpen} />
             ))}
           </div>
-          {!q.trim() && type === 'all' && <p className="hint center">N5부터 N1까지 8,130개 단어에서 찾아요.</p>}
-          {(q.trim() || type !== 'all') && all && results.length === 0 && <Empty title="찾는 단어가 없어요." description="다른 표기나 뜻으로 찾아보세요." />}
+          {(q.trim() || type !== 'all') && all && results.length === 0 && <Empty title="찾는 단어가 없어요" />}
         </>
       )}
 
@@ -93,7 +92,7 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
               <Row key={w.id} w={w} onOpen={setOpen} />
             ))}
           </div>
-          {marks.length === 0 && <Empty title="북마크한 단어가 없어요." description="학습 카드나 단어 정보의 책갈피를 누르면 여기 모여요." />}
+          {marks.length === 0 && <Empty title="북마크한 단어가 없어요" description="학습 카드나 단어 정보에서 북마크하면 여기 모여요." />}
         </>
       )}
 
@@ -104,7 +103,7 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
               <Row key={w.id} w={w} onOpen={setOpen} extra={`${wordLapses({ cards, settings: { fastTrack } }, w.id)}번 잊음`} />
             ))}
           </div>
-          {weak.length === 0 && <Empty title="약한 단어가 없어요." description="복습에서 두 번 이상 잊어버린 단어가 여기에 모여요." />}
+          {weak.length === 0 && <Empty title="약한 단어가 없어요" description="복습에서 두 번 이상 잊은 단어가 여기 모여요." />}
         </>
       )}
 

@@ -40,6 +40,8 @@ type ButtonProps = {
   endContent?: ReactNode
   className?: string
   'aria-haspopup'?: 'dialog'
+  /** a toggle, or the chosen one of a few (the grade given to a card answered earlier) */
+  'aria-pressed'?: boolean
 }
 
 /** A flat face on a shallow edge that sinks when pressed (styles.css `.btn`). */

@@ -79,9 +79,10 @@ test.describe('backlog on home', () => {
     const state = user({ dailyNew: 0 }, { cards, log: { '2026-11-13': { c: 224, n: 0, r: 224, p: 200 } } })
     await open(page, { state, hash: '/study' })
     await answer(page, '알아요')
-    await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
-    await expect(page.locator('.done-text')).toContainText('남은 밀린 복습 225장은 내일부터')
-    await expect(page.getByRole('button', { name: '복습 50장 더 하기' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
+    await expect(page.locator('.done-text')).toContainText('밀린 복습 225장은 내일부터 나눠서 나와요.')
+    // the same button as Home's: short on screen, the whole action as its name
+    await expect(page.getByRole('button', { name: '밀린 복습 50장 더 하기' })).toHaveText('50장 더')
     await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toHaveCount(0)
   })
 })

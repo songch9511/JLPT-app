@@ -8,13 +8,13 @@ const review = (due: number) => ({ due, stability: 5, difficulty: 5, elapsed_day
 const due3 = () => ({ [L('5-1')]: review(NOW.getTime() - DAY), [L('5-2')]: review(NOW.getTime() - DAY), [L('5-3')]: review(NOW.getTime() - DAY) })
 
 test.describe('Space/Enter after a tap or click (Q1)', () => {
-  test('a clicked “확인했어요 · 다음” keeps focus, but Space on the next card only shows the answer', async ({ page }) => {
+  test('a clicked “다음” keeps focus, but Space on the next card only shows the answer', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 0 }, { cards: due3() }), hash: '/study' })
     await expect(page.locator('.flash')).toBeVisible()
     await page.waitForTimeout(READ_MS)
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: /^확인했어요/ }).click()
+    await page.getByRole('button', { name: '다음', exact: true }).click()
     await expect.poll(async () => (await todayLog(page))?.c).toBe(1)
     await page.waitForTimeout(READ_MS)
     // the button that was clicked is now the next card's "모르겠어요", still focused
@@ -33,7 +33,7 @@ test.describe('Space/Enter after a tap or click (Q1)', () => {
     await page.waitForTimeout(READ_MS)
     await page.keyboard.press('2')
     await expect.poll(async () => (await todayLog(page))?.c).toBe(1)
-    const undo = page.getByRole('button', { name: '방금 선택 되돌리기' })
+    const undo = page.getByRole('button', { name: '방금 답 되돌리기' })
     await undo.focus()
     await page.keyboard.press('Enter')
     await expect.poll(async () => (await todayLog(page))?.c ?? 0).toBe(0)

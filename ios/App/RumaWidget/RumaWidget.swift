@@ -134,11 +134,11 @@ struct RumaWidgetView: View {
                     Text("済")
                         .font(.system(size: 34, weight: .bold, design: .serif))
                         .foregroundColor(p.seal)
-                    Text("오늘 분량 끝")
+                    Text("오늘 끝")
                         .font(.footnote.weight(.semibold))
                         .foregroundColor(p.ink)
                 } else {
-                    Text("\(day.due)")
+                    Text(day.due.formatted())
                         .font(.system(size: 40, weight: .bold, design: .rounded))
                         .foregroundColor(day.due > 0 ? p.accent : p.ink)
                         .minimumScaleFactor(0.5)
@@ -156,7 +156,7 @@ struct RumaWidgetView: View {
                 Text("루마")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(p.accent)
-                Text("앱을 열어 오늘의 단어를 확인해요")
+                Text("앱을 열어 주세요")
                     .font(.caption)
                     .foregroundColor(p.muted)
             }
@@ -171,18 +171,18 @@ struct RumaWidgetView: View {
                 .font(.caption.weight(.bold))
                 .foregroundColor(p.muted)
             if let snapshot = entry.snapshot, snapshot.onboarded, let met = snapshot.met, snapshot.total > 0 {
-                Text("\(met)")
+                Text(met.formatted())
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(p.ink)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
-                Text("\(snapshot.total)개 중 만남")
+                Text("\(snapshot.total.formatted())개 중 만남")
                     .font(.caption)
                     .foregroundColor(p.muted)
                 ProgressView(value: Double(min(met, snapshot.total)), total: Double(snapshot.total))
                     .tint(p.accent)
                 if let mature = snapshot.mature {
-                    Text("장기 기억 \(mature)")
+                    Text("장기 기억 \(mature.formatted())")
                         .font(.caption2)
                         .foregroundColor(p.muted)
                 }
@@ -217,7 +217,7 @@ struct RumaWidget: Widget {
             RumaWidgetView(entry: entry)
         }
         .configurationDisplayName("오늘의 복습")
-        .description("오늘 복습할 단어와 새 단어 수, 지금까지 만난 단어를 보여 줘요.")
+        .description("오늘 복습할 단어와 새 단어, 만난 단어를 보여 줘요.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
