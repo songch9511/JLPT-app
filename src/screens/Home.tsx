@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { go } from '../App'
-import { Button, Card, IconButton, ProgressBar, Sheet } from '../components/ui'
+import { Button, Card, IconButton, ProgressBar, RowLink, Sheet } from '../components/ui'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
 import { BackupNudge } from '../components/Notices'
@@ -412,16 +412,8 @@ export function Home() {
       <BackupNudge today={today} />
 
       <nav className="home-links" aria-label="더 보기">
-        {weak > 0 && (
-          <a href="#/words/weak" className="row-link">
-            <span className="grow">약한 단어 {weak}개</span>
-            <Icon name="chevron" size={18} />
-          </a>
-        )}
-        <a href="#/stats" className="row-link">
-          <span className="grow">기록 · 도장 여정 · 복습 예보</span>
-          <Icon name="chevron" size={18} />
-        </a>
+        {weak > 0 && <RowLink href="#/words/weak" label={`약한 단어 ${weak}개`} />}
+        <RowLink href="#/stats" label="기록 · 도장 여정 · 복습 예보" />
       </nav>
 
       <ReadinessSheet r={r} cap={cap} isOpen={info} onClose={() => setInfo(false)} />

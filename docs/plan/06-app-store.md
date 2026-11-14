@@ -83,7 +83,7 @@
 | 데이터 로딩 | `fetch(BASE_URL + 'data/n5.json')` | 번들 안의 상대 경로라 동작 | 변경 없음 |
 | 세이프 에어리어 | `viewport-fit=cover`와 `env(safe-area-inset-*)`를 이미 사용(`styles.css` 111·321·332·353·361·430행) | 동작. 상태 표시줄 색은 따로 설정 | `@capacitor/status-bar`로 라이트·다크 테마에 맞춤. 스플래시는 `@capacitor/splash-screen` |
 | 데이터 내보내기 | `Blob` + `<a download>`(`Settings.tsx`) | WKWebView에서는 다운로드가 기본으로 동작하지 않음(미확인, 기기에서 확인 필요) | 네이티브에서는 Filesystem에 쓰고 `@capacitor/share` 공유 시트로 내보냄. 가져오기(`<input type=file>`)는 동작 |
-| 외부 링크 | 거의 없음 | 앱 안에서 웹으로 빠지면 "웹 래퍼" 인상 | 개인정보처리방침·문의 링크는 `@capacitor/browser`(SFSafariViewController)로 엶 |
+| 외부 링크 | 거의 없음 | 앱 안에서 웹으로 빠지면 "웹 래퍼" 인상 | 개인정보처리방침·문의 링크는 `@capacitor/browser`(SFSafariViewController)로 엶 → 2026-11-14 구현은 다름: 앱에 들어 있는 같은 페이지를 앱 안 화면으로 보여 줌(오프라인에서도 열림, `src/screens/Doc.tsx`) |
 | Anthropic 직접 호출 | `ai-client.ts`가 사용자 키로 브라우저에서 호출(`dangerouslyAllowBrowser`) | 기술적으로는 동작하지만 스토어 제품으로는 부적합 | 아래 2.3 |
 | 바운스·텍스트 선택·확대 | 브라우저 기본값 | 웹 느낌을 줌 | `user-select: none`(카드 외), `overscroll-behavior: none`, 길게 누르기 메뉴 끄기 |
 

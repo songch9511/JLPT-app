@@ -100,6 +100,7 @@ props 이름은 Astryx를 따랐습니다(`label`, `variant`, `isDisabled` …).
 | `Banner` (`.banner`) | 저장 실패(error, 떠 있음), 가져오기 되돌리기(success) | 아이콘·제목·설명, 선택적 행동과 닫기 |
 | `Empty` (`.empty`) | 검색 결과·북마크·약한 단어·필터 결과 없음 | `role="status"`로 나타날 때 읽힘 |
 | `Skeleton` (`.skeleton-block`) | 단어를 불러오는 동안의 학습 카드 | 느린 깜빡임(동작 줄이기면 멈춤) |
+| `RowLink` (`.row-link`) | 홈의 "약한 단어"·"기록" 줄, 설정 › 정보의 "개인정보 처리방침"·"도움말 · 문의" | 48px 줄 + 셰브런, 아래 1px 선. `newWindow`면 새 창(웹의 공개 페이지) |
 
 ### Astryx (`src/components/overlays.tsx`, 따로 불러옴)
 
@@ -152,6 +153,7 @@ props 이름은 Astryx를 따랐습니다(`label`, `variant`, `isDisabled` …).
 | 하단 탭바 | Astryx에 하단 탭바가 없음(`MobileNav`는 서랍 메뉴). Lucide 아이콘 |
 | 단어 유형 메모(가짜 친구, 한자음 대응) | 내용이 제품 고유 |
 | 마스코트 루마 | 컴포넌트와 CSS 그대로 |
+| 처리방침·도움말 화면(`src/screens/Doc.tsx`, `.doc`) | `public/privacy/`·`public/support/`의 정적 페이지(`npm run pages`가 `docs/store/`에서 만듦) 본문을 iOS 앱 안에서 보여 줌. 정적 페이지 자체는 앱 CSS 없이 같은 팔레트(`rumaTheme.ts`에서 읽음)로 라이트/다크 |
 | iOS 앱 전용 설정·알림 제안(`src/platform/`) | 플랫폼 층은 손대지 않음. 같은 `.card`·`.btn`·`.chip-btn`·스위치 트랙 스타일을 씀 |
 
 ## 7. 쓰지 않은 것과 이유

@@ -69,7 +69,7 @@ Open items before relying on this reply: the original tanos.co.uk licence wordin
 ### 2.1 App completeness
 
 Common causes here: data failing to load on first launch, a dead button, a broken privacy policy or support URL, a crash on an older iOS. Reply only with specifics (which build, what was fixed). Before submitting:
-- the privacy policy and support pages are live at the URLs entered in App Store Connect (and the privacy policy is reachable **inside the app** — not yet true, see `checklist.md`);
+- the privacy policy and support pages are live at the URLs entered in App Store Connect, with the operator blanks filled in (the privacy policy is reachable **inside the app**: Settings › 정보 › 개인정보 처리방침, offline, since 2026-11-14);
 - the app was run on iOS 16.4 (the minimum) and a current iOS;
 - the app was opened in Airplane Mode on first launch;
 - no entry point for unfinished features is visible (the explanation and story features are hidden while `src/content.ts` reports them unavailable — keep it that way).
@@ -81,7 +81,8 @@ If a reviewer reads the estimate as a pass prediction:
 
 ### 5.1.1(i) Privacy policy in the app
 
-Guideline 5.1.1(i): "All apps must include a link to their privacy policy in the App Store Connect metadata field and within the app in an easily accessible manner" (guidelines page, 2026-11-14). The current Settings screen has no such link. Fix before submission (see `checklist.md`, E-1).
+Guideline 5.1.1(i): "All apps must include a link to their privacy policy in the App Store Connect metadata field and within the app in an easily accessible manner" (guidelines page, 2026-11-14). Done 2026-11-14: Settings › 정보 has "개인정보 처리방침" and "도움말 · 문의" rows; in the iOS app they open the bundled pages in place (works offline), on the web the published pages (`checklist.md` C3–C4). If a reviewer cannot find it:
+> The privacy policy is in Settings (설정, the gear tab) > 정보 (About) > 개인정보 처리방침 (Privacy Policy). It opens inside the app, also offline; the same text is published at the privacy policy URL.
 
 ### 3.1.1 In-App Purchase (when 루마 플러스 arrives)
 

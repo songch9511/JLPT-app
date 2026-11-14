@@ -135,3 +135,30 @@ test('touch targets: every button and link on home and in study is at least 44px
   await page.locator('.flash').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
   expect(await small()).toEqual([])
 })
+
+for (const [xp, shown] of [
+  [174_670, '174,670'],
+  [999_999, '999,999'],
+  [1_234_567, '123만'],
+] as const)
+  test(`records: XP ${shown} stays on one line inside its tile from 320 to 430px, never below the 16px step`, async ({ page }) => {
+    await open(page, { state: user({}, { xp }), hash: '/stats' })
+    for (const width of [320, 360, 390, 402, 430]) {
+      await page.setViewportSize({ width, height: 844 })
+      const n = page.locator('.stat').filter({ hasText: '누적 XP' }).locator('b')
+      await expect(n).toHaveText(shown)
+      const m = await n.evaluate((b) => {
+        const tile = b.parentElement!.getBoundingClientRect()
+        const r = document.createRange()
+        r.selectNodeContents(b)
+        const text = r.getBoundingClientRect()
+        return { height: text.height, size: parseFloat(getComputedStyle(b).fontSize), left: text.left - tile.left, right: tile.right - text.right }
+      })
+      expect(m.height, `${width}px: one line`).toBeLessThan(m.size * 1.6)
+      expect(m.size, `${width}px`).toBeGreaterThanOrEqual(16)
+      expect(m.left, `${width}px: inside the tile`).toBeGreaterThanOrEqual(0)
+      expect(m.right, `${width}px: inside the tile`).toBeGreaterThanOrEqual(0)
+    }
+    // the short form's name is the whole number
+    if (xp >= 1_000_000) await expect(page.locator('.stat b', { hasText: '123만' })).toHaveAttribute('aria-label', '1,234,567')
+  })

@@ -21,6 +21,23 @@ const dropLegacyData = () => ({
 })
 
 /**
+ * The dev server answers every unknown path with the app's index.html; GitHub Pages (and `vite preview`) serve a
+ * folder's index.html. So that `npm run dev` and the e2e tests open public/privacy/ and public/support/ (made by
+ * scripts/build-pages.mjs) as the pages they are, a folder path there is served its index.html.
+ */
+const servePageFolders = () => ({
+  name: 'serve-page-folders',
+  apply: 'serve' as const,
+  configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: unknown, next: () => void) => void) => void } }) {
+    server.middlewares.use((req, _res, next) => {
+      const [path, query] = (req.url ?? '').split('?')
+      if (/\/(privacy|privacy\/en|support)\/$/.test(path)) req.url = `${path}index.html${query ? `?${query}` : ''}`
+      next()
+    })
+  },
+})
+
+/**
  * Two builds from the same code (docs/plan/10-ios-build.md):
  * - `vite build` (web, GitHub Pages): PWA with a service worker, exactly as before; the native platform code
  *   is not in this bundle at all (`import.meta.env.MODE === 'native'` is false at build time, so the dynamic
@@ -58,6 +75,7 @@ export default defineConfig(({ mode }) => {
       : undefined,
     plugins: [
       react(),
+      servePageFolders(),
       ...(native
         ? [dropLegacyData()]
         : [
@@ -68,6 +86,9 @@ export default defineConfig(({ mode }) => {
                 globPatterns: ['**/*.{js,css,html,svg,png,json}'],
                 globIgnores: ['**/data/n[1-5].json'],
                 maximumFileSizeToCacheInBytes: 3_000_000,
+                // the privacy and support pages (public/privacy, public/support: scripts/build-pages.mjs) are pages of
+                // their own: a navigation to them is never answered with the app's index.html (precached, so offline too)
+                navigateFallbackDenylist: [/\/(privacy|support)(\/|$)/],
               },
               manifest: {
                 name: 'JLPT 루마',

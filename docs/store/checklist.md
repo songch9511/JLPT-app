@@ -27,7 +27,7 @@
   - `ASC_KEY_P8` — `.p8` 파일 내용 전체
   - 그리고 Settings › Secrets and variables › Actions › **Variables**에 `IOS_RELEASE_ENABLED` = `true`(이 값이 없으면 워크플로가 건너뜀).
   - 워크플로 이름과 비밀값 이름은 `.github/workflows/ios-testflight.yml`에서 확인함. **이 워크플로는 한 번도 실행된 적이 없음**(10 §4).
-- [ ] **B7 [소유자]** Actions › "iOS TestFlight upload (signed, manual)" 실행, `marketing_version` = `1.0.0`. (`package.json`의 `version`은 `0.1.0`이라 다름 — 맞출지 결정.)
+- [ ] **B7 [소유자]** Actions › "iOS TestFlight upload (signed, manual)" 실행. 입력값은 없습니다: 앱 버전은 `package.json`의 `version`(**1.0.0**) 하나이고, 워크플로가 그것을 읽어 `CFBundleShortVersionString`으로 씁니다. Xcode 프로젝트의 `MARKETING_VERSION`도 1.0.0이며 단위 테스트(`tests/unit/pages.test.ts`)가 둘이 같은지 확인합니다. 다음 버전은 둘을 함께 바꿉니다.
 
 ## C. 공개 페이지 (개인정보 처리방침·지원)
 
@@ -35,15 +35,15 @@ App Store Connect에 처리방침 URL과 지원 URL이 필수이고, 처리방�
 
 - [ ] **C1 [소유자]** `privacy-policy-ko.md` 1부의 자리표시자 채우기 → **법률 검토**(처리방침 필수 항목, 기관 연락처 최신값) → 승인.
 - [ ] **C2 [소유자]** `support-ko.md`의 연락처 채우기 → 승인.
-- [ ] **C3 [엔지니어] 게시 위치 제안 — 지금의 GitHub Pages 배포에 함께 싣기**
+- [x] **C3 [엔지니어] 게시 위치 — 지금의 GitHub Pages 배포에 함께 싣기** (2026-11-14 구현: `npm run pages`(`scripts/build-pages.mjs`)가 `privacy-policy-ko.md`·`privacy-policy-en.md`의 1부와 `support-ko.md`에서 아래 세 페이지를 만들고, 단위 테스트가 최신인지·2부가 없는지 확인합니다. 서비스 워커의 앱 대체 응답에서 빠져 있어 웹에서는 진짜 페이지로 열리고(미리 캐시라 오프라인도), iOS 앱은 같은 파일을 번들에 담아 앱 안 화면 `#/doc/privacy`로 보여 줍니다 — 오프라인에서 열리고 앱을 벗어나지 않음. 자리표시자 `[대괄호]`는 페이지에 노란 표시로 그대로 보이므로, C1·C2를 채운 뒤 `npm run pages`를 다시 실행하고 배포해야 합니다.) 처음 제안:
   - 이 저장소는 `deploy.yml`이 `dist/`를 `https://songch9511.github.io/JLPT-app/`에 올립니다. Vite는 `public/` 아래 파일을 그대로 `dist/`에 복사하므로:
     - `public/privacy/index.html` → **`https://songch9511.github.io/JLPT-app/privacy/`**(한국어), `public/privacy/en/index.html` → `…/privacy/en/`(영어)
     - `public/support/index.html` → **`https://songch9511.github.io/JLPT-app/support/`**
   - 장점: 추가 호스팅이 없고, 같은 파일이 iOS 앱 번들(`dist-native/`)에도 들어가 **오프라인에서도 앱 안에서 처리방침을 열 수 있음**. 다만 지금 앱의 번들 파일 시트(`native.ts`의 `showTextSheet`)는 내용을 일반 텍스트로 보여 주므로 HTML을 그대로 열면 태그가 보임 — 앱 안에서는 웹 주소를 앱 안 Safari 뷰로 열거나, 같은 내용의 `.txt`를 함께 두는 등 작은 조정이 필요.
   - 주의: 서비스 워커 precache에 HTML이 포함되므로 웹에서는 갱신이 한 번 늦게 보일 수 있음. 정적 HTML이라 앱 디자인 시스템을 쓸 필요는 없지만 라이트/다크 대응과 모바일 폭은 맞출 것.
   - 대안: 별도 저장소의 Pages(`songch9511.github.io/ruma-legal/…`)나 도메인을 사면 그 도메인. 번들 ID처럼 영구적일 필요는 없지만, 주소를 바꾸면 App Store Connect와 앱을 함께 바꿔야 함.
-- [ ] **C4 [엔지니어]** 설정 › 정보에 "개인정보 처리방침", "도움말·문의" 링크와 앱 버전 표시 추가. **지금 `src/screens/Settings.tsx` 정보 카드에는 둘 다 없음.**
-- [ ] **C5 [엔지니어]** 배포 후 두 URL이 200으로 열리는지, 휴대폰 폭에서 읽히는지 확인.
+- [x] **C4 [엔지니어]** 설정 › 정보에 "개인정보 처리방침", "도움말 · 문의" 행과 "버전 1.0.0" 표시(2026-11-14). 웹은 새 창으로 페이지를, iOS 앱은 앱 안 화면으로 엶. e2e: `platform-web.spec.ts`, `native-shell.spec.ts`.
+- [ ] **C5 [엔지니어]** 배포 후 두 URL이 200으로 열리는지, 휴대폰 폭에서 읽히는지 확인. (`vite preview`로 세 경로가 200·HTML인 것과 390px 라이트/다크 화면은 확인함. GitHub Pages에서는 아직.)
 
 ## D. 빌드 품질 (엔지니어 + 기기)
 

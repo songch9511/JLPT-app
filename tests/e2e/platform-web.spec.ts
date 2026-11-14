@@ -55,6 +55,28 @@ test('licence links still open in a new browser window', async ({ page, context 
   expect(page.url()).toContain('#/settings')
 })
 
+test('settings › 정보: the version, and the privacy policy and support pages open as pages of the site in a new window', async ({ page }) => {
+  await open(page, { state: user(), hash: '/settings' })
+  const version = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')).version
+  await expect(page.getByText(`버전 ${version}`)).toBeVisible()
+  const [privacy] = await Promise.all([page.waitForEvent('popup'), page.getByRole('link', { name: '개인정보 처리방침' }).click()])
+  await privacy.waitForLoadState()
+  expect(new URL(privacy.url()).pathname).toBe('/privacy/')
+  await expect(privacy.getByRole('heading', { level: 1 })).toHaveText('JLPT 루마 개인정보 처리방침')
+  await expect(privacy.locator('main')).not.toContainText('RevenueCat')
+  // the page itself, not the app (no service-worker or server fallback to index.html)
+  await expect(privacy.locator('#root')).toHaveCount(0)
+  await privacy.getByRole('link', { name: 'English' }).click()
+  await expect(privacy.getByRole('heading', { level: 1 })).toHaveText('JLPT Ruma Privacy Policy')
+  const [support] = await Promise.all([page.waitForEvent('popup'), page.getByRole('link', { name: '도움말 · 문의' }).click()])
+  await support.waitForLoadState()
+  expect(new URL(support.url()).pathname).toBe('/support/')
+  await expect(support.getByRole('heading', { level: 1 })).toHaveText('JLPT 루마 도움말')
+  // operator details are blanks, marked as such, until the owner fills them in
+  await expect(support.locator('mark.placeholder', { hasText: '[지원 이메일 주소]' })).toBeVisible()
+  expect(page.url()).toContain('#/settings')
+})
+
 test('finishing the day on the web: no reminder offer', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 1 }) })
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()

@@ -171,3 +171,16 @@ test.describe('backups', () => {
     await expect.poll(calls).toBe(1)
   })
 })
+
+test('word data that fails to load once: “다시 시도” loads it again and the session starts', async ({ page }) => {
+  // the studied levels' data (the queue's order and fast-track words): the first request fails, later ones go through
+  let failures = 0
+  await page.route('**/data/words-n5.json', (r) => (failures++ === 0 ? r.fulfill({ status: 503, body: 'unavailable' }) : r.fallback()))
+  await open(page, { state: user({ includeLower: true }), hash: '/study' })
+  await expect(page.getByRole('alert')).toContainText('단어 데이터를 불러오지 못했어요 (N5)')
+  await expect(page.locator('.flash')).toHaveCount(0)
+  await page.getByRole('button', { name: '다시 시도' }).click()
+  await expect(page.locator('.flash')).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  expect(failures).toBe(2)
+})

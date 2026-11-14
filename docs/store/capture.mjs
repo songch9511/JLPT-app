@@ -50,19 +50,25 @@ const SIZES = [
   { name: '6.3in-1206x2622', width: 402, height: 874, scale: 3 },
 ]
 
-// ── the word data and the card id scheme of this checkout ──────────────────────────────────────────────────
-const dataTs = readFileSync(path.join(ROOT, 'src', 'data.ts'), 'utf8')
-if (!dataTs.includes('export const wordId = (l: Level, idx: number) => `${l}-${idx}`'))
-  throw new Error(
-    'src/data.ts no longer builds word ids as `<level>-<idx>`. Update idOf() in docs/store/capture.mjs to the new id scheme before capturing.',
-  )
-const idOf = (level, idx) => `${level}-${idx}`
+// ── the word data of this checkout ─────────────────────────────────────────────────────────────────────────
+// Words are named by their stable ids (`w000`, docs/plan/08 §7), read from the generated data files
+// public/data/words-n{l}.json (each row starts with its id), and checked against the generated id table, so a
+// card in the seed is exactly the card the app would make. Never derived from a word's position.
 const READING = ':r'
 
+/** The generated id table's runs [first counter, how many, level]: which level the app files each id under. */
+const ID_RUNS = JSON.parse(/export const ID_RUNS[^=]*= (\[.*\])\s*$/m.exec(readFileSync(path.join(ROOT, 'src', 'generated', 'word-ids.ts'), 'utf8'))[1])
+const levelOfId = (id) => {
+  const n = /^w[0-9a-z]{3,}$/.test(id) ? parseInt(id.slice(1), 36) : -1
+  return ID_RUNS.find(([first, count]) => n >= first && n < first + count)?.[2]
+}
 const levels = {}
 for (const l of [5, 4, 3, 2, 1]) {
-  const rows = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', `n${l}.json`), 'utf8'))
-  levels[l] = rows.map(([w, r, ko, en, o, f, k = ''], idx) => ({ id: idOf(l, idx), level: l, idx, w, r, ko, o: typeof o === 'number' ? o : idx, k }))
+  const rows = JSON.parse(readFileSync(path.join(ROOT, 'public', 'data', `words-n${l}.json`), 'utf8'))
+  levels[l] = rows.map(([id, w, r, ko, en, o, f, k = ''], idx) => {
+    if (levelOfId(id) !== l) throw new Error(`N${l} row ${idx}: "${id}" is not an N${l} word in src/generated/word-ids.ts; rebuild the data (npm run data)`)
+    return { id, level: l, idx, w, r, ko, o: typeof o === 'number' ? o : idx, k }
+  })
 }
 const find = (level, written) => {
   const w = levels[level].find((x) => x.w === written)
@@ -177,7 +183,7 @@ function simulate() {
 
   const marks = [find(5, '大丈夫').id, find(4, '留守').id, find(5, '勉強').id]
   return {
-    v: 3,
+    v: 4,
     onboarded: true,
     settings: {
       target: 3,
@@ -271,7 +277,8 @@ async function serve() {
 }
 
 // ── screens ────────────────────────────────────────────────────────────────────────────────────────────────
-const KEY = 'kasane.state.v2'
+/** Where the app keeps its state since stable word ids (src/store.ts STATE_KEY); the seed is a v4 state. */
+const KEY = 'kasane.state.v4'
 const META_KEY = 'kasane.meta'
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 

@@ -4,6 +4,7 @@
 > - Needs legal review, the same points as the Korean version (`privacy-policy-ko.md`). The Korean text is the primary version for Korean users; this English text is a translation for App Review and non-Korean readers. If the two differ, say which prevails.
 > - `[brackets]` are for the operator to fill in.
 > - Part 1 is the app as it is today. **Publish Part 1 only.** Part 2 describes what changes when 루마 플러스 (Ruma Plus) and the server launch; merge it into Part 1 only when those features ship.
+> - The published page is generated from this file: `npm run pages` (`scripts/build-pages.mjs`) writes `public/privacy/en/index.html` without this box and without Part 2. Run it again after every change (a unit test checks).
 > - The code checks behind each statement are listed in `docs/store/privacy-labels.md`, section 5.
 
 Effective date: [YYYY-MM-DD]
@@ -78,7 +79,7 @@ Settings › 정보 (About) links to the sources and licences of the word data (
 
 ### 14. Changes
 
-We will post changes on this page 7 days before they take effect. If a new feature starts processing personal data (Part 2), the updated policy will be published before that app version is released, and the app will tell you.
+We will post changes on this page 7 days before they take effect. If a new feature starts processing personal data, the updated policy will be published before that app version is released, and the app will tell you.
 
 ---
 

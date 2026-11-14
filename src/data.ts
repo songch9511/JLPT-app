@@ -164,7 +164,15 @@ export function useLevels(ls: Level[]): { ready: boolean; error: string | null; 
     }
   }, [key, attempt])
   const cur = res.key === key ? res : { ready: false, error: null }
-  return { ready: cur.ready, error: cur.error, retry: () => setAttempt((n) => n + 1) }
+  return {
+    ready: cur.ready,
+    error: cur.error,
+    // loading again: the error goes while it does (a failed level is not cached, so it is fetched again)
+    retry: () => {
+      setRes({ key, ready: false, error: null })
+      setAttempt((n) => n + 1)
+    },
+  }
 }
 
 /** `attempt` changes to load again after a failure. */

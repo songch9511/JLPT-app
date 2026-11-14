@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Icon, type IconName } from './components/Icon'
 import { SaveWarning } from './components/Notices'
 import { useLevels, type Level } from './data'
+import { Doc, isDoc, type DocName } from './screens/Doc'
 import { Home } from './screens/Home'
 import { LevelScreen } from './screens/Level'
 import { Onboarding } from './screens/Onboarding'
@@ -16,10 +17,12 @@ type Route =
   | { name: 'home' | 'study' | 'stats' | 'settings' }
   | { name: 'words'; tab?: 'weak' }
   | { name: 'level'; level: Level }
+  | { name: 'doc'; doc: DocName }
 
 function parse(hash: string): Route {
   const [, a, b] = hash.split('/')
   if (a === 'level' && ['1', '2', '3', '4', '5'].includes(b)) return { name: 'level', level: Number(b) as Level }
+  if (a === 'doc' && isDoc(b)) return { name: 'doc', doc: b }
   if (a === 'words') return b === 'weak' ? { name: 'words', tab: 'weak' } : { name: 'words' }
   if (a === 'study' || a === 'stats' || a === 'settings') return { name: a }
   return { name: 'home' }
@@ -78,8 +81,8 @@ export default function App() {
       </>
     )
 
-  // a level's word list belongs to the 단어장 tab, where the level rows are
-  const tab = route.name === 'level' ? 'words' : route.name
+  // a level's word list belongs to the 단어장 tab, where the level rows are; the privacy and support pages to 설정
+  const tab = route.name === 'level' ? 'words' : route.name === 'doc' ? 'settings' : route.name
   return (
     <div className="app">
       <SaveWarning />
@@ -89,6 +92,7 @@ export default function App() {
         {route.name === 'words' && <Words key={route.tab ?? 'search'} initialTab={route.tab} />}
         {route.name === 'stats' && <Stats />}
         {route.name === 'settings' && <Settings />}
+        {route.name === 'doc' && <Doc name={route.doc} />}
       </main>
       <nav className="tabbar">
         {TABS.map((t) => (
