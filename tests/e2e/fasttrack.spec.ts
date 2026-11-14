@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import { NOW, open, READ_MS, saved, user } from './fixtures'
+import { L, NOW, open, READ_MS, saved, user } from './fixtures'
 
 // N5 in introduction order (frequency), straight from the shipped data
 const N5 = JSON.parse(readFileSync(new URL('../../public/data/n5.json', import.meta.url), 'utf8')) as (string | number)[][]
@@ -57,10 +57,10 @@ test('an S word is asked for its reading: four choices, a wrong pick shows the a
   await page.waitForTimeout(READ_MS)
   await page.getByRole('button', { name: /^확인했어요 · 다음/ }).click()
 
-  await expect.poll(async () => (await saved(page)).cards[`5-${idx}:r`]?.state).toBe(1)
+  await expect.poll(async () => (await saved(page)).cards[L(`5-${idx}:r`)]?.state).toBe(1)
   const s = await saved(page)
-  expect(s.cards[`5-${idx}`]).toBeUndefined()
-  expect(s.v).toBe(3)
+  expect(s.cards[L(`5-${idx}`)]).toBeUndefined()
+  expect(s.v).toBe(4)
   expect(s.log['2026-11-13']).toMatchObject({ c: 1, n: 1 })
 
   // the word sheet and level screen know the word type
@@ -90,7 +90,7 @@ test('the right reading moves on with "다음"; keys 1–4 choose', async ({ pag
   await expect(page.locator('#reading-prompt')).toHaveText('맞았어요')
   await page.waitForTimeout(READ_MS)
   await page.getByRole('button', { name: /^다음/ }).click()
-  await expect.poll(async () => (await saved(page)).cards[`5-${idx}:r`]?.reps).toBe(1)
+  await expect.poll(async () => (await saved(page)).cards[L(`5-${idx}:r`)]?.reps).toBe(1)
 })
 
 test('an F word warns after the reveal, not before, and on the word sheet', async ({ page }) => {

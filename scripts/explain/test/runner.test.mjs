@@ -13,21 +13,21 @@ const { words, byId } = fixtureWords()
 const noSleep = async () => {}
 
 test('classify: every result type and stop reason', () => {
-  assert.equal(classify(succeeded('n5-1', GOOD['n5-1']), byId).status, 'ok')
-  const ref = classify(succeeded('n5-1', null, { stop: 'refusal' }), byId)
+  assert.equal(classify(succeeded('w001', GOOD['w001']), byId).status, 'ok')
+  const ref = classify(succeeded('w001', null, { stop: 'refusal' }), byId)
   assert.equal(ref.status, 'refusal')
   assert.match(ref.detail, /cyber/)
-  assert.equal(classify(succeeded('n5-1', GOOD['n5-1'], { stop: 'max_tokens' }), byId).status, 'max_tokens')
-  assert.equal(classify(succeeded('n5-1', '{"examples": [', {}), byId).status, 'invalid_json')
-  const inv = classify(succeeded('n5-1', mutate('n5-1', (o) => (o.tip = '')), {}), byId)
+  assert.equal(classify(succeeded('w001', GOOD['w001'], { stop: 'max_tokens' }), byId).status, 'max_tokens')
+  assert.equal(classify(succeeded('w001', '{"examples": [', {}), byId).status, 'invalid_json')
+  const inv = classify(succeeded('w001', mutate('w001', (o) => (o.tip = '')), {}), byId)
   assert.equal(inv.status, 'invalid')
   assert.ok(inv.output)
-  const e1 = classify({ custom_id: 'n5-1', result: { type: 'errored', error: { type: 'error', error: { type: 'overloaded_error' } } } }, byId)
+  const e1 = classify({ custom_id: 'w001', result: { type: 'errored', error: { type: 'error', error: { type: 'overloaded_error' } } } }, byId)
   assert.deepEqual([e1.status, e1.retryable], ['errored', true])
-  const e2 = classify({ custom_id: 'n5-1', result: { type: 'errored', error: { type: 'error', error: { type: 'invalid_request_error' } } } }, byId)
+  const e2 = classify({ custom_id: 'w001', result: { type: 'errored', error: { type: 'error', error: { type: 'invalid_request_error' } } } }, byId)
   assert.deepEqual([e2.status, e2.retryable], ['errored', false])
-  assert.equal(classify({ custom_id: 'n5-1', result: { type: 'expired' } }, byId).status, 'expired')
-  assert.equal(classify({ custom_id: 'n5-1', result: { type: 'canceled' } }, byId).status, 'canceled')
+  assert.equal(classify({ custom_id: 'w001', result: { type: 'expired' } }, byId).status, 'expired')
+  assert.equal(classify({ custom_id: 'w001', result: { type: 'canceled' } }, byId).status, 'canceled')
   assert.equal(classify({ custom_id: 'zzz', result: { type: 'expired' } }, byId).status, 'unknown-id')
 })
 
@@ -41,10 +41,10 @@ test('batch results in arbitrary order are merged by custom_id', async () => {
   await resume(client, store, byId, { sleep: noSleep, log: quiet })
   for (const w of words) assert.deepEqual(store.accepted[w.id].output, GOOD[w.id], w.id)
   assert.equal(Object.keys(store.failed).length, 0)
-  // persisted per level, and readable by a fresh Store
+  // persisted per id group (`w` + first counter digit), and readable by a fresh Store
   const again = new Store(root)
   assert.equal(Object.keys(again.accepted).length, words.length)
-  assert.ok(fs.existsSync(path.join(root, 'data/explain/work/accepted/n5.json')))
+  assert.ok(fs.existsSync(path.join(root, 'data/explain/work/accepted/w0.json')))
   assert.equal(again.usage.length, words.length)
   assert.equal(fs.readFileSync(path.join(root, `data/explain/work/raw/${batch.id}.jsonl`), 'utf8').trim().split('\n').length, words.length)
 })
@@ -53,25 +53,25 @@ test('failures go to the retry list with reasons; missing and unexpected ids are
   const root = tmpRepo()
   const store = new Store(root)
   const client = mockClient((id) => {
-    if (id === 'n5-0') return { line: succeeded('n5-0', null, { stop: 'refusal' }) }
-    if (id === 'n5-1') return mutate('n5-1', (o) => (o.examples[0].kana = 'ていにはながあります。'))
-    if (id === 'n5-2') return { line: { result: { type: 'expired' } } }
-    if (id === 'n5-3') return { line: succeeded('n5-3', GOOD['n5-3'], { stop: 'max_tokens' }) }
+    if (id === 'w000') return { line: succeeded('w000', null, { stop: 'refusal' }) }
+    if (id === 'w001') return mutate('w001', (o) => (o.examples[0].kana = 'ていにはながあります。'))
+    if (id === 'w002') return { line: { result: { type: 'expired' } } }
+    if (id === 'w003') return { line: succeeded('w003', GOOD['w003'], { stop: 'max_tokens' }) }
     return GOOD[id]
   })
   await submit(client, store, words, { log: quiet })
   const b = client.batches.get(store.state.batches[0].id)
-  b.lines = b.lines.filter((l) => l.custom_id !== 'n4-1') // a result that never arrives
-  b.lines.push({ custom_id: 'n3-999', result: { type: 'expired' } }) // one we never sent
+  b.lines = b.lines.filter((l) => l.custom_id !== 'w0k1') // a result that never arrives
+  b.lines.push({ custom_id: 'w999', result: { type: 'expired' } }) // one we never sent
   await resume(client, store, byId, { sleep: noSleep, log: quiet })
-  assert.equal(store.failed['n5-0'].status, 'refusal')
-  assert.equal(store.failed['n5-1'].status, 'invalid')
-  assert.match(store.failed['n5-1'].reasons.join(), /headword-reading-missing/)
-  assert.equal(store.failed['n5-2'].status, 'expired')
-  assert.equal(store.failed['n5-3'].status, 'max_tokens')
-  assert.equal(store.failed['n4-1'].status, 'missing')
-  assert.ok(!store.failed['n3-999'] && !store.accepted['n3-999'])
-  assert.ok(store.accepted['n5-4'])
+  assert.equal(store.failed['w000'].status, 'refusal')
+  assert.equal(store.failed['w001'].status, 'invalid')
+  assert.match(store.failed['w001'].reasons.join(), /headword-reading-missing/)
+  assert.equal(store.failed['w002'].status, 'expired')
+  assert.equal(store.failed['w003'].status, 'max_tokens')
+  assert.equal(store.failed['w0k1'].status, 'missing')
+  assert.ok(!store.failed['w999'] && !store.accepted['w999'])
+  assert.ok(store.accepted['w004'])
 })
 
 test('retry selection: only failed, retryable, under the attempt cap; params per reason; only failed ids are re-sent', async () => {
@@ -79,9 +79,9 @@ test('retry selection: only failed, retryable, under the attempt cap; params per
   const store = new Store(root)
   let firstRound = true
   const client = mockClient((id, params) => {
-    if (firstRound && id === 'n5-0') return { line: succeeded('n5-0', null, { stop: 'refusal' }) }
-    if (firstRound && id === 'n5-3') return { line: succeeded('n5-3', GOOD['n5-3'], { stop: 'max_tokens' }) }
-    if (firstRound && id === 'n5-2') return { line: { result: { type: 'errored', error: { type: 'error', error: { type: 'invalid_request_error' } } } } }
+    if (firstRound && id === 'w000') return { line: succeeded('w000', null, { stop: 'refusal' }) }
+    if (firstRound && id === 'w003') return { line: succeeded('w003', GOOD['w003'], { stop: 'max_tokens' }) }
+    if (firstRound && id === 'w002') return { line: { result: { type: 'errored', error: { type: 'error', error: { type: 'invalid_request_error' } } } } }
     return GOOD[id]
   })
   await submit(client, store, words, { log: quiet })
@@ -89,26 +89,26 @@ test('retry selection: only failed, retryable, under the attempt cap; params per
   firstRound = false
 
   const todo = retryable(store, words).map((w) => w.id).sort()
-  assert.deepEqual(todo, ['n5-0', 'n5-3']) // n5-2 (invalid_request_error) is not auto-retryable
+  assert.deepEqual(todo, ['w000', 'w003']) // w002 (invalid_request_error) is not auto-retryable
   const optFor = retryOptFor(store)
-  assert.equal(optFor(byId.get('n5-0')).model, CONFIG.fallbackModel)
-  assert.equal(optFor(byId.get('n5-3')).maxTokens, CONFIG.maxTokens * 2)
+  assert.equal(optFor(byId.get('w000')).model, CONFIG.fallbackModel)
+  assert.equal(optFor(byId.get('w003')).maxTokens, CONFIG.maxTokens * 2)
 
   const before = client.calls.requests.length
   await submit(client, store, retryable(store, words), { optFor, purpose: 'retry', log: quiet })
   const sent = client.calls.requests.slice(before)
-  assert.deepEqual(sent.map((r) => r.custom_id).sort(), ['n5-0', 'n5-3'])
-  assert.equal(sent.find((r) => r.custom_id === 'n5-0').params.model, 'claude-sonnet-5')
-  assert.equal(sent.find((r) => r.custom_id === 'n5-3').params.max_tokens, 8000)
+  assert.deepEqual(sent.map((r) => r.custom_id).sort(), ['w000', 'w003'])
+  assert.equal(sent.find((r) => r.custom_id === 'w000').params.model, 'claude-sonnet-5')
+  assert.equal(sent.find((r) => r.custom_id === 'w003').params.max_tokens, 8000)
   await resume(client, store, byId, { sleep: noSleep, log: quiet })
-  assert.ok(store.accepted['n5-0'] && store.accepted['n5-3'])
-  assert.equal(store.accepted['n5-0'].meta.model, 'claude-sonnet-5')
-  assert.deepEqual(Object.keys(store.failed), ['n5-2'])
+  assert.ok(store.accepted['w000'] && store.accepted['w003'])
+  assert.equal(store.accepted['w000'].meta.model, 'claude-sonnet-5')
+  assert.deepEqual(Object.keys(store.failed), ['w002'])
 
   // attempt cap
-  store.failed['n5-1'] = { status: 'invalid', retryable: true, reasons: [] }
-  store.state.attempts['n5-1'] = CONFIG.maxAttempts
-  assert.ok(!retryable(store, words).some((w) => w.id === 'n5-1'))
+  store.failed['w001'] = { status: 'invalid', retryable: true, reasons: [] }
+  store.state.attempts['w001'] = CONFIG.maxAttempts
+  assert.ok(!retryable(store, words).some((w) => w.id === 'w001'))
 })
 
 test('resume: an interrupted run collects its open batch instead of resubmitting', async () => {
@@ -153,12 +153,12 @@ test('sync path (sample / regen) uses the same params and the same classificatio
   const root = tmpRepo()
   const store = new Store(root)
   let t = 0
-  const client = mockClient((id) => (id === 'n5-1' ? mutate('n5-1', (o) => (o.related = [])) : GOOD[id]))
-  const tally = await runSync(client, store, [byId.get('n5-1'), byId.get('n5-4')], { log: quiet, clock: () => (t += 1500) })
+  const client = mockClient((id) => (id === 'w001' ? mutate('w001', (o) => (o.related = [])) : GOOD[id]))
+  const tally = await runSync(client, store, [byId.get('w001'), byId.get('w004')], { log: quiet, clock: () => (t += 1500) })
   assert.deepEqual(tally, { invalid: 1, ok: 1 })
   assert.equal(client.calls.sync, 2)
   assert.equal(client.calls.create, 0)
   assert.equal(store.usage[0].ms, 1500)
-  assert.equal(store.accepted['n5-4'].meta.mode, 'sync')
-  assert.match(store.failed['n5-1'].reasons.join(), /count@related/)
+  assert.equal(store.accepted['w004'].meta.mode, 'sync')
+  assert.match(store.failed['w001'].reasons.join(), /count@related/)
 })

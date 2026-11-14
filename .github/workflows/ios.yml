@@ -79,7 +79,7 @@ jobs:
           test -f "$app/PlugIns/RumaWidget.appex/PrivacyInfo.xcprivacy"
           test -f "$app/PrivacyInfo.xcprivacy"
           test -f "$app/public/index.html"
-          for l in 1 2 3 4 5; do test -s "$app/public/data/n$l.json"; done
+          for l in 1 2 3 4 5; do test -s "$app/public/data/words-n$l.json"; done
           test ! -e "$app/public/sw.js"
           plutil -p "$app/Info.plist" | grep -E 'RumaAppGroup|ITSAppUsesNonExemptEncryption|CFBundleIdentifier'
       - name: Keep the build log

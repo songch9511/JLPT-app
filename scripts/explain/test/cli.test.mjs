@@ -12,8 +12,8 @@ const throwingClient = new Proxy({}, { get() { throw new Error('dry-run must not
 const env = (root, client, lines = []) => ({ root, client, log: (m) => lines.push(m), sleep: async () => {} })
 
 test('parseArgs: flags, lists, numbers, bad level', () => {
-  const a = parseArgs(['run', '--levels', 'n5,N4', '--limit', '3', '--ids=n5-1,n5-2', '--dry-run'])
-  assert.deepEqual([a._[0], a.levels, a.limit, a.ids, a['dry-run']], ['run', ['n5', 'n4'], 3, ['n5-1', 'n5-2'], true])
+  const a = parseArgs(['run', '--levels', 'n5,N4', '--limit', '3', '--ids=w001,w002', '--dry-run'])
+  assert.deepEqual([a._[0], a.levels, a.limit, a.ids, a['dry-run']], ['run', ['n5', 'n4'], 3, ['w001', 'w002'], true])
   assert.throws(() => parseArgs(['run', '--levels', 'n6']))
 })
 
@@ -24,7 +24,7 @@ test('--dry-run builds requests, prints an estimate and sends nothing', async ()
   assert.equal(r.requests, 4)
   const preview = fs.readFileSync(path.join(root, 'data/explain/work/requests-preview.jsonl'), 'utf8').trim().split('\n')
   assert.equal(preview.length, 4)
-  assert.equal(JSON.parse(preview[0]).custom_id, 'n5-0')
+  assert.equal(JSON.parse(preview[0]).custom_id, 'w000')
   assert.ok(lines.some((l) => /캐시 적중 50%/.test(l)))
   assert.ok(lines.some((l) => /heuristic/.test(l)))
   assert.ok(!fs.existsSync(path.join(root, 'data/explain/work/state.json')), 'no state written by a dry run')
@@ -41,7 +41,7 @@ test('without a key the CLI refuses network commands', async () => {
 test('sample → full run → validate → retry → review → export, end to end on the mock', async () => {
   const root = tmpRepo()
   let broken = true
-  const client = mockClient((id) => (broken && id === 'n4-1' ? mutate('n4-1', (o) => (o.examples[0].ja = '毎日日本語を読みます。')) : GOOD[id]))
+  const client = mockClient((id) => (broken && id === 'w0k1' ? mutate('w0k1', (o) => (o.examples[0].ja = '毎日日本語を読みます。')) : GOOD[id]))
   const lines = []
   const e = env(root, client, lines)
 
@@ -57,7 +57,7 @@ test('sample → full run → validate → retry → review → export, end to e
   assert.equal(client.calls.create, 1)
   assert.equal(client.calls.requests.length, 8 - 3)
   const store = new Store(root)
-  assert.ok(store.failed['n4-1'], 'n4-1 failed validation (headword missing)')
+  assert.ok(store.failed['w0k1'], 'w0k1 failed validation (headword missing)')
 
   // retry: only the failed id
   broken = false
@@ -69,13 +69,13 @@ test('sample → full run → validate → retry → review → export, end to e
   // a tag that changes after generation sends the word back to the retry list
   const tagFile = path.join(root, 'data/tags/n5-1.json')
   const tags = JSON.parse(fs.readFileSync(tagFile, 'utf8'))
-  tags['1'] = { k: 'S', sk: '정', rt: 'kun' }
+  tags['w001'] = { k: 'S', sk: '정', rt: 'kun' }
   fs.writeFileSync(tagFile, JSON.stringify(tags))
   const v = await main(['validate'], e)
   assert.equal(v.failed, 1)
   assert.equal(v.codes['tag-changed'], 1)
-  assert.match(new Store(root).failed['n5-1'].reasons.join(), /tag-changed/)
-  tags['1'] = { k: 'N', rt: 'kun' }
+  assert.match(new Store(root).failed['w001'].reasons.join(), /tag-changed/)
+  tags['w001'] = { k: 'N', rt: 'kun' }
   fs.writeFileSync(tagFile, JSON.stringify(tags))
   await main(['retry', '--sync'], e)
 
@@ -87,35 +87,38 @@ test('sample → full run → validate → retry → review → export, end to e
   const all = await main(['review', '--levels', 'n4', '--all'], e)
   assert.equal(all.rows, 2)
 
-  // export: shards + manifest
+  // export: shards (by the stable id's counter, whatever the level) + manifest
   const m = await main(['export'], e)
   assert.equal(m.totals.exported, 8)
   assert.equal(m.counts.n5.exported, 6)
-  const shard = JSON.parse(fs.readFileSync(path.join(root, 'data/explain/dist/n5/000.json'), 'utf8'))
+  const shard = JSON.parse(fs.readFileSync(path.join(root, 'data/explain/dist/000.json'), 'utf8'))
   assert.equal(shard.schemaVersion, 1)
-  assert.deepEqual(shard.items['1'].examples, GOOD['n5-1'].examples)
-  assert.ok(!('meaningFlag' in shard.items['1']), 'editor field not exported')
-  assert.ok(!('trap' in shard.items['1']), 'empty optional fields omitted')
-  assert.equal(shard.items['0'].trap, GOOD['n5-0'].trap)
+  assert.deepEqual(Object.keys(shard.items), ['w000', 'w001', 'w002', 'w003', 'w004', 'w005'])
+  assert.deepEqual(shard.items['w001'].examples, GOOD['w001'].examples)
+  assert.ok(!('meaningFlag' in shard.items['w001']), 'editor field not exported')
+  assert.ok(!('trap' in shard.items['w001']), 'empty optional fields omitted')
+  assert.equal(shard.items['w000'].trap, GOOD['w000'].trap)
+  // N4's two words (w0k0 = counter 720) are in shard 7
+  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(path.join(root, 'data/explain/dist/007.json'), 'utf8')).items), ['w0k0', 'w0k1'])
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'data/explain/dist/manifest.json'), 'utf8'))
   assert.equal(manifest.models['claude-sonnet-5-5'], 8)
   assert.ok(manifest.generated && manifest.promptVersion)
-  assert.equal(shardOf(2699), 26)
+  assert.equal(shardOf('w22z'), 26) // counter 2699
 })
 
 test('regen replaces one word synchronously', async () => {
   const root = tmpRepo()
   const client = mockClient((id) => GOOD[id])
   await main(['run'], env(root, client))
-  await main(['regen', '--ids', 'n5-4'], env(root, client))
+  await main(['regen', '--ids', 'w004'], env(root, client))
   assert.equal(client.calls.sync, 1)
-  assert.equal(new Store(root).accepted['n5-4'].meta.mode, 'sync')
+  assert.equal(new Store(root).accepted['w004'].meta.mode, 'sync')
 })
 
 test('adopt resolves an interrupted submission', async () => {
   const root = tmpRepo()
   const store = new Store(root)
-  store.state.pendingSubmit = { ids: ['n5-0', 'n5-1'], startedAt: 'x', purpose: 'main' }
+  store.state.pendingSubmit = { ids: ['w000', 'w001'], startedAt: 'x', purpose: 'main' }
   store.saveState()
   const client = mockClient((id) => GOOD[id])
   await assert.rejects(main(['run'], env(root, client)), /adopt/)
@@ -128,7 +131,7 @@ test('validate --stale-prompt sends outputs from an older prompt version back; r
   const client = mockClient((id) => GOOD[id])
   await main(['run'], env(root, client))
   const store = new Store(root)
-  store.accepted['n5-4'].meta.promptVersion = 'old'
+  store.accepted['w004'].meta.promptVersion = 'old'
   store.saveAccepted()
   assert.equal((await main(['validate'], env(root, client))).failed, 0)
   const v = await main(['validate', '--stale-prompt'], env(root, client))

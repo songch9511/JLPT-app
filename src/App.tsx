@@ -10,7 +10,7 @@ import { Stats } from './screens/Stats'
 import { Study } from './screens/Study'
 import { Words } from './screens/Words'
 import { studyLevels } from './srs'
-import { useStore } from './store'
+import { getLoadError, useStore } from './store'
 
 type Route =
   | { name: 'home' | 'study' | 'stats' | 'settings' }
@@ -37,6 +37,9 @@ const TABS: { path: string; name: Route['name']; label: string; icon: IconName }
 ]
 
 export default function App() {
+  // a saved state this version could not migrate: the recovery screen (export, reload), never a fresh start
+  const loadError = getLoadError()
+  if (loadError) throw loadError
   const [route, setRoute] = useState(() => parse(location.hash))
   const onboarded = useStore((s) => s.onboarded)
   const theme = useStore((s) => s.settings.theme)

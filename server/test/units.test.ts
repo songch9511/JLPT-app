@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
-import n1 from '../../public/data/n1.json'
-import n5 from '../../public/data/n5.json'
+import n1 from '../../public/data/words-n1.json'
+import n5 from '../../public/data/words-n5.json'
 import { WORD_COUNT } from '../src/generated/words'
 import { cleanup } from '../src/index'
 import { costMicros, dayKey, secondsUntilNextDay, worstCaseMicros } from '../src/quota'
@@ -13,20 +13,26 @@ describe('word data', () => {
     expect(WORD_COUNT).toBe(8130)
   })
 
-  it('ids are positional (<level>-<index>) and match the canonical files', () => {
-    const rows5 = n5 as [string, string, string, string][]
-    const rows1 = n1 as [string, string, string, string][]
+  it('ids are the stable ids the canonical files carry in each row (app docs/plan/08 §7)', () => {
+    const rows5 = n5 as [string, string, string, string, string][]
+    const rows1 = n1 as [string, string, string, string, string][]
     for (const i of [0, 1, 17, rows5.length - 1]) {
-      const [w, r, ko, en] = rows5[i]!
-      expect(lookupWord(`5-${i}`)).toEqual({ id: `5-${i}`, w, r, m: ko || en })
+      const [id, w, r, ko, en] = rows5[i]!
+      expect(lookupWord(id)).toEqual({ id, w, r, m: ko || en, l: 5 })
     }
-    expect(lookupWord(`1-${rows1.length - 1}`)?.w).toBe(rows1[rows1.length - 1]![0])
-    expect(lookupWord(`5-${rows5.length}`)).toBeUndefined()
+    const [lastId, lastW] = rows1[rows1.length - 1]!
+    expect(lookupWord(lastId)?.w).toBe(lastW)
+    // N5's first word is w000; the counters run on through the levels without gaps today
+    expect(rows5[0]![0]).toBe('w000')
+    expect(lookupWord('w69u')).toBeUndefined() // the next id, not issued yet
+    // positional ids of the app before stable ids are not word ids here
+    expect(lookupWord('5-1')).toBeUndefined()
   })
 
   it('rejects ids outside the known format without touching the data', () => {
-    for (const id of ['', '5', '5-', '0-1', '6-1', '5-01', '5--1', '5-1 ', 'x5-1', '5-123456'])
+    for (const id of ['', 'w', 'w0', 'w00', 'W000', 'w0000', 'w00a1', 'w000 ', ' w000', 'xw000', 'w-01', 'w0_1', 'w1234567', '5-1', '0-1'])
       expect(WORD_ID_PATTERN.test(id)).toBe(false)
+    for (const id of ['w000', 'w0k3', 'w69t', 'w1000', 'wzzzzzz']) expect(WORD_ID_PATTERN.test(id)).toBe(true)
   })
 })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { boot, card, DAY, KEY, MemoryStorage } from './helpers'
+import { boot, card, DAY, KEY, L, MemoryStorage } from './helpers'
 
 const NOW = '2026-11-13T09:00:00'
 
@@ -9,7 +9,7 @@ async function bootBackup(opts: Parameters<typeof boot>[0] = { now: NOW }) {
   return { ...b, backup }
 }
 
-const manyCards = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`5-${i}`, card({ due: Date.parse(NOW) + DAY })]))
+const manyCards = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [L(`5-${i}`), card({ due: Date.parse(NOW) + DAY })]))
 
 describe('store: save failure status', () => {
   it('reports a failed save once, stays quiet after dismissal, and resets after a successful save', async () => {
@@ -52,7 +52,7 @@ describe('store: import with undo', () => {
     store.update((d) => {
       d.onboarded = true
       d.xp = 5
-      d.marks = ['5-1']
+      d.marks = [L('5-1')]
     })
     expect(store.canUndoImport()).toBe(false)
     expect(store.undoImport()).toBe(false)
@@ -64,7 +64,7 @@ describe('store: import with undo', () => {
 
     expect(store.undoImport()).toBe(true)
     expect(store.getState().xp).toBe(5)
-    expect(store.getState().marks).toEqual(['5-1'])
+    expect(store.getState().marks).toEqual([L('5-1')])
     expect(JSON.parse(ls.getItem(KEY)!).xp).toBe(5)
     expect(ls.getItem(store.PREV_KEY)).toBeNull()
     expect(store.canUndoImport()).toBe(false)
@@ -88,11 +88,14 @@ describe('store: import with undo', () => {
 describe('backup file format', () => {
   it('adds format fields next to `v`, and an API key saved by an older version never reaches the file', async () => {
     const old = { v: 2, onboarded: true, settings: { target: 5, apiKey: 'sk-ant-secret' }, cards: {}, log: {}, marks: [], xp: 0 }
-    const { store, backup } = await bootBackup({ now: NOW, saved: old })
+    const { store, backup } = await bootBackup({ now: NOW, legacy: old })
     store.update((d) => void (d.xp = 40))
     const file = backup.backupFile(store.getState(), new Date(NOW))
-    // a v2 state loads migrated to v3 (fast-track), so its backup is written as v3 in format version 2
-    expect(file).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 2, v: 3, xp: 40, exportedAt: new Date(NOW).toISOString() })
+    // a v2 state loads migrated to v4 (fast-track, stable ids), so its backup is written as v4 in format version 3
+    expect(file).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 3, v: 4, xp: 40, exportedAt: new Date(NOW).toISOString() })
+    // nor does this device's bookkeeping (save counter, the pre-migration copy's fingerprint)
+    expect(file).not.toHaveProperty('rev')
+    expect(file).not.toHaveProperty('legacy')
     expect(file.app).toMatch(/^jlpt-ruma /)
     expect(file.settings).not.toHaveProperty('apiKey')
   })
@@ -113,6 +116,7 @@ describe('backup file format', () => {
     const old = { v: 2, onboarded: true, settings: { target: 4 }, cards: { '4-0': card({ due: 0 }) }, log: {}, marks: [], xp: 3 }
     const r = backup.readBackup(old)
     expect(r.ok && r.state.xp).toBe(3)
+    expect(r.ok && Object.keys(r.state.cards)).toEqual([L('4-0')])
   })
 
   it('rejects other formats, newer format versions and broken states', async () => {
@@ -120,7 +124,7 @@ describe('backup file format', () => {
     const state = { v: 2, onboarded: true, settings: {}, cards: {}, log: {} }
     expect(backup.readBackup({ ...state, format: 'something-else', formatVersion: 1 })).toEqual({ ok: false, reason: 'invalid' })
     expect(backup.readBackup({ ...state, format: 'jlpt-luma-backup' })).toEqual({ ok: false, reason: 'invalid' })
-    expect(backup.readBackup({ ...state, format: 'jlpt-luma-backup', formatVersion: 3 })).toEqual({ ok: false, reason: 'newer' })
+    expect(backup.readBackup({ ...state, format: 'jlpt-luma-backup', formatVersion: 4 })).toEqual({ ok: false, reason: 'newer' })
     expect(backup.readBackup({ ...state, format: 'jlpt-luma-backup', formatVersion: 1, cards: { '5-0': null } })).toEqual({ ok: false, reason: 'invalid' })
     for (const bad of [null, [], 'x', 3]) expect(backup.readBackup(bad).ok).toBe(false)
   })

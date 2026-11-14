@@ -29,7 +29,7 @@ export interface WordStory {
 export interface ExplanationSource {
   /** whether explanations can be asked for at all; screens hide their entry point when false */
   readonly available: boolean
-  /** the explanation of one word (`<level>-<idx>`), or null when there is none for it */
+  /** the explanation of one word (its stable id `w0k3`, docs/plan/08 §7), or null when there is none for it */
   explanationFor(wordId: string): Promise<WordExplanation | null>
 }
 

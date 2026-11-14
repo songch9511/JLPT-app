@@ -4,7 +4,7 @@
 //   add --quiet to hide warnings. Exit code 1 if there is any error.
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { basename } from 'node:path'
-import { root, levelWords } from './words.mjs'
+import { root, levelById } from './words.mjs'
 import { isHan } from './forms.mjs'
 import { loadManifest } from './tag-chunks.mjs'
 import { prepassLevel, loadKanjiTable } from './prepass.mjs'
@@ -20,25 +20,25 @@ const targets = files.length
   : readdirSync(dir).filter((f) => /^n[1-5]-\d+\.json$/.test(f)).sort().map((f) => `${dir}/${f}`)
 
 const manifest = loadManifest()
-// Warnings a reviewer has looked at and accepted (sk/rt overrides of the pre-pass candidates):
-// { "n1-1:277": "sk 부담: candidate table lacks the reading" }. They are counted, not printed.
+// Warnings a reviewer has looked at and accepted (sk/rt overrides of the pre-pass candidates), by word id:
+// { "w49v": "sk 부담: candidate table lacks the reading" }. They are counted, not printed.
 const reviewedPath = `${dir}/reviewed.json`
 const reviewed = existsSync(reviewedPath) ? JSON.parse(readFileSync(reviewedPath, 'utf8')) : {}
 let accepted = 0
 const table = loadKanjiTable()
 const cache = {}
-const level = (n) => (cache[n] ??= { ws: levelWords(n), pre: prepassLevel(n, table) })
+const level = (n) => (cache[n] ??= { ws: levelById(n), pre: prepassLevel(n, table) })
 
 let errors = 0, warnings = 0
-const seen = {} // level -> Map(idx -> file)
+const seen = {} // level -> Map(id -> file)
 const dist = {}
 const byWord = [] // {key, k, sk, ff, where} for the cross-file consistency check
 
 function check(path) {
   const name = basename(path).replace(/\.json$/, '')
   const err = (m) => { errors++; console.log(`ERROR ${name}: ${m}`) }
-  const warn = (m, idx) => {
-    if (idx !== undefined && reviewed[`${name}:${idx}`]) return void accepted++
+  const warn = (m, id) => {
+    if (id !== undefined && reviewed[id]) return void accepted++
     warnings++
     if (!quiet) console.log(`warn  ${name}: ${m}`)
   }
@@ -53,17 +53,18 @@ function check(path) {
   } catch (e) {
     return err(`not valid JSON: ${e.message}`)
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return err('top level must be an object keyed by idx')
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return err('top level must be an object keyed by word id')
   const { ws, pre } = level(n)
   const want = new Set(chunk.map(String))
   const missing = chunk.filter((i) => !(String(i) in data))
-  if (missing.length) err(`${missing.length} idx missing from this chunk: ${missing.slice(0, 15).join(', ')}${missing.length > 15 ? ' …' : ''}`)
-  for (const key of Object.keys(data)) if (!want.has(key)) err(`idx ${key} is not part of chunk ${name}`)
+  if (missing.length) err(`${missing.length} ids missing from this chunk: ${missing.slice(0, 15).join(', ')}${missing.length > 15 ? ' …' : ''}`)
+  for (const key of Object.keys(data)) if (!want.has(key)) err(`id ${key} is not part of chunk ${name}`)
   seen[n] ??= new Map()
   dist[n] ??= {}
   for (const key of Object.keys(data).filter((k) => want.has(k))) {
-    const i = Number(key), t = data[key], w = ws[i], p = pre[i]
-    const at = `idx ${i} (${w.expr})`
+    const i = key, t = data[key], w = ws.get(i), p = pre[i]
+    if (!w) { err(`id ${i} is not a word of N${n}`); continue }
+    const at = `${i} (${w.expr})`
     if (seen[n].has(i)) err(`${at} also labelled in ${seen[n].get(i)}`)
     seen[n].set(i, name)
     if (!t || typeof t !== 'object' || Array.isArray(t)) { err(`${at}: value must be an object like {"k":"S","sk":"산업","rt":"on"}`); continue }
@@ -72,7 +73,7 @@ function check(path) {
     if (!K_VALUES.includes(k)) { err(`${at}: k must be one of ${K_VALUES.join('/')} (got ${JSON.stringify(k)})`); continue }
     dist[n][k] = (dist[n][k] ?? 0) + 1
     // same headword = same core, reading and affix position (～中 and 中 may differ; 我(が～) and 我(われ) do)
-    byWord.push({ key: headwordKey({ ...w, core: p.core }), k, sk, ff, where: `${name} idx ${i}` })
+    byWord.push({ key: headwordKey({ ...w, core: p.core }), k, sk, ff, where: `${name} ${i}` })
     for (const m of ruleErrors({ core: p.core, coreReading: w.coreReading, affix: w.affix }, t)) err(`${at}: ${m}`)
     // script consistency
     if (!p.hk && !['L', 'K'].includes(k)) err(`${at}: no kanji in "${p.core}", so k must be L or K (got ${k})`)

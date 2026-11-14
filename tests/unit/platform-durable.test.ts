@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { bestDurable, DurableStore, parseCopy, reconcile, SLOTS, type FileAdapter } from '../../src/platform/durable'
-import { boot, KEY } from './helpers'
+import { boot, KEY, L } from './helpers'
 
 const st = (rev: number | undefined, extra: Record<string, unknown> = {}) =>
   JSON.stringify({ v: 3, onboarded: true, settings: { target: 5 }, cards: {}, log: {}, marks: [], xp: 0, ...(rev === undefined ? {} : { rev }), ...extra })
@@ -95,8 +95,8 @@ describe('reconcile: which copy the app starts from', () => {
 
   it('clock skew: the counter decides, not timestamps inside the state', () => {
     // the durable copy was saved later (higher counter) on a device whose clock had been moved back a year
-    const durable = st(31, { xp: 310, log: { '2025-11-13': { c: 5, n: 0, r: 0, p: 0 } }, cards: { '5-0': { due: Date.parse('2025-11-20'), state: 2 } } })
-    const local = st(30, { xp: 300, log: { '2026-11-13': { c: 1, n: 0, r: 0, p: 0 } }, cards: { '5-0': { due: Date.parse('2026-12-01'), state: 2 } } })
+    const durable = st(31, { xp: 310, log: { '2025-11-13': { c: 5, n: 0, r: 0, p: 0 } }, cards: { [L('5-0')]: { due: Date.parse('2025-11-20'), state: 2 } } })
+    const local = st(30, { xp: 300, log: { '2026-11-13': { c: 1, n: 0, r: 0, p: 0 } }, cards: { [L('5-0')]: { due: Date.parse('2026-12-01'), state: 2 } } })
     expect(reconcile(local, [durable, null]).use).toBe('durable')
     // …and the other way round: a lower counter never wins with "newer" dates
     expect(reconcile(durable.replace('"rev":31', '"rev":29'), [local, null]).use).toBe('durable')

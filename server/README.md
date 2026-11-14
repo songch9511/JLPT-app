@@ -251,9 +251,9 @@ RevenueCat 대시보드의 웹훅 설정에서 URL을 `https://<도메인>/v1/we
 
 ## 8. 단어 데이터
 
-- `npm run build:words`가 저장소의 `public/data/n{1..5}.json`(앱과 같은 원본)을 읽어 `src/generated/words.ts`(git에 올리지 않음)를 만듭니다. 손으로 복사하지 않습니다. `test`, `typecheck`, `dev`, `deploy` 전에 자동 실행됩니다.
-- 형식: 급수별 JSON 문자열 `[id, 표기, 읽기, 뜻]` — 뜻은 한국어, 없으면 영어. Worker는 요청에 나온 급수만 처음 쓸 때 파싱합니다. `words` 해시가 `/v1/health`에 나와 배포된 데이터를 추적할 수 있습니다.
-- **단어 ID는 지금 위치 기반**(`<급수>-<파일 안 순서>`, 앱의 `src/data.ts`와 같음)입니다. 데이터를 다시 만들면 ID가 다른 단어를 가리킬 수 있어 **안정 ID로 옮기는 작업이 계획되어 있습니다**(07 문서 A-2 #4). 그때 바꿀 곳은 세 군데뿐입니다: `scripts/build-words.mjs`의 `idOf()`, `src/words.ts`의 `WORD_ID_PATTERN`과 `shardOf()`. 앱과 서버를 같은 데이터로 함께 배포해야 합니다.
+- `npm run build:words`가 저장소의 `public/data/words-n{1..5}.json`(앱과 같은 원본)을 읽어 `src/generated/words.ts`(git에 올리지 않음)를 만듭니다. 손으로 복사하지 않습니다. `test`, `typecheck`, `dev`, `deploy` 전에 자동 실행됩니다.
+- 형식: 묶음별 JSON 문자열 `[id, 표기, 읽기, 뜻, 급수]` — 뜻은 한국어, 없으면 영어. 묶음은 `w` + ID 카운터 첫 자리(약 1,300단어씩). Worker는 요청에 나온 묶음만 처음 쓸 때 파싱합니다. `words` 해시가 `/v1/health`에 나와 배포된 데이터를 추적할 수 있습니다.
+- **단어 ID는 앱과 같은 안정 ID**(`w0k3`, 앱 `docs/plan/08-word-data.md` §7)입니다. 데이터 파일 각 행에 적혀 있고, 단어의 위치·급수와 무관하며 바뀌지 않습니다. 급수는 ID가 아니라 데이터에서 읽습니다. 옛 위치 ID(`5-1`)는 400으로 거절합니다(서버는 배포된 적이 없어 옮길 데이터가 없습니다).
 
 ## 9. 로컬 개발과 테스트
 
@@ -310,4 +310,4 @@ npx wrangler d1 migrations apply luma --local   # dev 전에 한 번
 5. **미리 만든 단어 설명 제공**(`/v1/explain` 또는 비공개 저장소): 다른 작업에서 정적 데이터로 만들고, 유료 콘텐츠를 공개 저장소에 두지 않는 방식은 그 작업에서 정합니다.
 6. **스테이징 환경 설정**(`env.staging` 블록이나 별도 Worker), 지출 50%·80% 알림 cron, 주간 D1 백업 export.
 7. **실측**: 이야기 1회 실제 토큰 수·응답 시간·Workers CPU 시간. 배포 후 로그의 `inputTokens`/`outputTokens`/`costMicros`로 보정합니다.
-8. **안정 단어 ID 이전**(8절).
+8. ~~안정 단어 ID 이전~~ — 끝남(8절, 앱 08 문서 §7).

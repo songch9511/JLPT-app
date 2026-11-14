@@ -114,7 +114,7 @@ RevenueCat iOS SDK(Capacitor용 `@revenuecat/purchases-capacitor`가 쓰는 네�
 | 발음은 기기 안 | `src/platform/native.ts` | `@capacitor-community/text-to-speech`(AVSpeechSynthesizer), 웹은 `speechSynthesis`. 웹 브라우저의 온라인 음성 가능성은 처리방침에 적음 |
 | 알림은 로컬 | `src/platform/native.ts`, `reminders.ts` | `@capacitor/local-notifications`만, 푸시 등록 코드 없음 |
 | 백업은 사용자 동작으로만 | `src/backup.ts`, `native.ts` | 내보내기 버튼 → 캐시 폴더에 파일 → 공유 시트, 공유 후 파일 삭제. 가져오기는 문서 선택기(JSON) |
-| 기기 저장 위치 | `src/store.ts`, `src/backup.ts`, `src/platform/durable.ts`, `widget.ts` | localStorage 키 `kasane.state.v2`, `kasane.state.prev`, `kasane.meta`; 앱 Library 폴더의 JSON 두 슬롯; App Group UserDefaults의 위젯 요약 |
+| 기기 저장 위치 | `src/store.ts`, `src/backup.ts`, `src/platform/durable.ts`, `widget.ts` | localStorage 키 `kasane.state.v4`(2026-11-14 안정 단어 ID부터), `kasane.state.v2`(그 전 버전의 상태, 이전 전 사본으로 남음), `kasane.state.prev`, `kasane.meta`; 앱 Library 폴더의 JSON 두 슬롯과 이전 전 사본 `state-v3-premigration.json`(docs/plan/08 §7); App Group UserDefaults의 위젯 요약 |
 | 초기화가 알림·위젯·파일까지 지움 | `docs/plan/10-ios-build.md` §3.2와 `native.ts`의 `clearDeviceData` | 예 |
 | API 키 입력 기능 제거 | `src/store.ts` `normalize`/`load` | 예전 `apiKey`를 저장소에서 지우는 코드만 남음. `src/content.ts`는 설명·이야기 기능을 "준비 중"으로만 둠 |
 | 서버(2부) 저장 항목 | `server/README.md` 5장 | 해시·권한·사용 횟수·지출·웹훅 ID만, 단어 목록·이야기·IP·원래 ID는 저장·기록 안 함(서버 테스트가 확인한다고 적혀 있음, 이 작업에서 테스트를 다시 돌리지는 않음) |

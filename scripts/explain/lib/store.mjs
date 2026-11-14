@@ -1,7 +1,8 @@
 // On-disk state. Everything is plain JSON under data/explain/work so an interrupted run can be resumed and
 // inspected by hand:
 //   state.json          batches submitted (ids, words in each, collected or not) + a pending-submit marker
-//   accepted/<lvl>.json outputs that passed validation, with the word/tag snapshot they were generated for
+//   accepted/<shard>.json outputs that passed validation, with the word/tag snapshot they were generated for
+//                       (grouped like the export: `w` + the id's first counter digit, e.g. accepted/w1.json)
 //   failed.json         retry list: id → reasons, attempts, last status/model/max_tokens
 //   raw/<batch>.jsonl   every raw result line as received (re-validating never needs a paid re-run)
 //   usage.json          token usage of every response (measured numbers for the cost estimate)
@@ -9,6 +10,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { paths } from './config.mjs'
+import { counterOf } from './export.mjs'
 
 const read = (f, dflt) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : dflt)
 function write(f, data) {
@@ -34,13 +36,13 @@ export class Store {
   saveFailed() { write(this.p.failed, this.failed) }
   saveUsage() { write(this.p.usage, this.usage) }
   saveAccepted() {
-    const byLevel = {}
-    for (const [id, v] of Object.entries(this.accepted)) (byLevel[id.split('-')[0]] ||= {})[id] = v
+    const byGroup = {}
+    for (const [id, v] of Object.entries(this.accepted)) (byGroup[id.slice(0, 2)] ||= {})[id] = v
     fs.mkdirSync(this.p.accepted, { recursive: true })
-    for (const f of fs.readdirSync(this.p.accepted)) if (!byLevel[f.replace('.json', '')]) fs.rmSync(path.join(this.p.accepted, f))
-    for (const [lvl, items] of Object.entries(byLevel)) {
-      const sorted = Object.fromEntries(Object.entries(items).sort(([a], [b]) => +a.split('-')[1] - +b.split('-')[1]))
-      write(path.join(this.p.accepted, `${lvl}.json`), sorted)
+    for (const f of fs.readdirSync(this.p.accepted)) if (!byGroup[f.replace('.json', '')]) fs.rmSync(path.join(this.p.accepted, f))
+    for (const [group, items] of Object.entries(byGroup)) {
+      const sorted = Object.fromEntries(Object.entries(items).sort(([a], [b]) => counterOf(a) - counterOf(b)))
+      write(path.join(this.p.accepted, `${group}.json`), sorted)
     }
   }
   saveAll() { this.saveState(); this.saveFailed(); this.saveUsage(); this.saveAccepted() }

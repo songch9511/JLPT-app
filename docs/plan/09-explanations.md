@@ -4,19 +4,19 @@
 
 ## 결론
 
-1. **8,130단어 설명을 한 번에 만드는 배치 파이프라인을 만들었다.** Message Batches API + 구조화 출력(JSON 스키마)으로 단어 ID(`n5-12`)를 `custom_id`로 보내고, 순서와 무관하게 ID로 받아 합친다. 거절·`max_tokens`·오류·만료는 이유별로 재시도 목록에 넣고 **실패한 ID만** 다시 보낸다. 중단돼도 같은 명령을 다시 실행하면 열린 배치를 먼저 수집하고 다시 제출하지 않는다.
+1. **8,130단어 설명을 한 번에 만드는 배치 파이프라인을 만들었다.** Message Batches API + 구조화 출력(JSON 스키마)으로 안정 단어 ID(`w0k3`, 08 문서 §7)를 `custom_id`로 보내고, 순서와 무관하게 ID로 받아 합친다. 거절·`max_tokens`·오류·만료는 이유별로 재시도 목록에 넣고 **실패한 ID만** 다시 보낸다. 중단돼도 같은 명령을 다시 실행하면 열린 배치를 먼저 수집하고 다시 제출하지 않는다.
 2. **API 키 없이 만들었고 실제 호출은 한 번도 하지 않았다.** 테스트 47개는 모두 가짜 클라이언트로 돌며 `npm test`로 통과한다(네트워크 없음). 모델 출력 품질은 아직 아무도 보지 못했다 → 첫 단계는 **200단어 샘플(약 $1.7)** 이다.
 3. **모델은 01 문서 결정대로 `claude-sonnet-5-5`** (설정값 `EXPLAIN_MODEL`). claude-api 스킬의 기본 모델은 `claude-opus-5-5`지만 이 작업은 01 문서의 비용·품질 판단을 따른다. 거절된 단어는 `claude-sonnet-5`로 다시 보낸다(배치는 서버 측 `fallbacks`를 받지 않음).
 4. **예상 비용 $40~56, 상한 $76 (재시도 5% 포함, 전부 추정).** 가격과 배치 50% 할인은 공식 가격표에서 확인했고(측정 아님, 문서 확인), 토큰 수는 글자 수 어림이다. 출력 토큰(800, 01 문서 가정)이 비용의 60~85%를 차지한다. 샘플을 돌리면 같은 명령이 실측값으로 다시 계산한다.
 5. **시간: 배치 5개(2,000건씩)를 동시에 내고, 공식 문서 기준 대부분 1시간 안·최대 24시간.** 재시도 한 번을 더해 반나절 안쪽을 예상하지만 측정하지 않았다. 사람 검수가 훨씬 오래 걸린다(§8).
-6. **앱 출력은 급수별 100단어 묶음 파일 84개 + `manifest.json`**, 합계 약 5~7MB(gzip 약 2~3MB, 추정). 단어 하나를 보려면 묶음 하나(약 70~90KB, gzip 30KB 안팎)만 받는다. 유료 콘텐츠라 `public/`이 아닌 `data/explain/dist/`에 두고 01 문서대로 R2 + Worker로 낸다.
+6. **앱 출력은 ID 카운터 기준 100단어 묶음 파일 82개 + `manifest.json`**, 합계 약 5~7MB(gzip 약 2~3MB, 추정). 단어 하나를 보려면 묶음 하나(약 70~90KB, gzip 30KB 안팎)만 받는다. 유료 콘텐츠라 `public/`이 아닌 `data/explain/dist/`에 두고 01 문서대로 R2 + Worker로 낸다.
 
 ---
 
 ## 1. 파이프라인이 하는 일
 
 ```
-public/data/n*.json ─┐                      ┌─ accepted/<급수>.json (검증 통과)
+public/data/words-n*.json ─┐                 ┌─ accepted/<w+첫 자리>.json (검증 통과)
 data/tags/*.json ────┼─ 요청 만들기 ─ 배치 ─┤
 data/hanja/kanji.tsv ┘   (단어 ID만 다름)    └─ failed.json (재시도 목록 + 이유)
                                                    │ retry (실패 ID만)
@@ -24,7 +24,7 @@ validate (현재 단어·태그로 재검사) ─ review (검수표) ─ export 
 ```
 
 - 단어 목록·태그·한자표는 **실행할 때마다 새로 읽는다.** 태그는 아직 수정 중이라 고정하지 않는다. 라벨이 없는 단어는 사전 작업 힌트를 "추정"으로 표시해 넘기고, 모델이 스스로 확인하게 한다.
-- 출력마다 생성 당시의 단어(표기·읽기)와 태그를 같이 저장한다. 나중에 `validate`가 **단어가 바뀌었거나(`word-changed`) 태그 유형이 바뀐(`tag-changed`)** 출력을 찾아 재시도 목록으로 돌린다. 단어 ID가 파일 순서에 묶여 있어서(07 문서) 이 확인이 꼭 필요하다.
+- 출력마다 생성 당시의 단어(표기·읽기)와 태그를 같이 저장한다. 나중에 `validate`가 **단어가 바뀌었거나(`word-changed`) 태그 유형이 바뀐(`tag-changed`)** 출력을 찾아 재시도 목록으로 돌린다. 단어 ID는 이제 안정 ID라(08 문서 §7) 다른 단어에 붙지는 않지만, 표기를 고치면 같은 ID의 단어 내용이 바뀌므로 이 확인은 그대로 필요하다.
 - 상태는 모두 `data/explain/work/`의 JSON이다: `state.json`(배치 ID와 단어), `accepted/`, `failed.json`, `usage.json`(응답마다 토큰·지연 실측), `raw/`(받은 결과 원문, git 제외).
 
 ## 2. 설명 스키마와 길이 제한
@@ -89,7 +89,7 @@ node cli.mjs validate                      # 현재 단어·태그·교차 중�
 node cli.mjs retry
 node cli.mjs review --levels n5,n4 --all               # N5·N4 전수 검수표
 node cli.mjs review --levels n3,n2,n1 --share 0.05     # N3~N1 5% 층화 표본 (+경고 있는 항목)
-node cli.mjs export                        # data/explain/dist/<급수>/<묶음>.json + manifest.json
+node cli.mjs export                        # data/explain/dist/<묶음>.json + manifest.json
 ```
 
 `--levels n5,n4`, `--limit N`, `--ids n5-1,n5-2`는 `run`·`retry`·`review`에 공통이다.
@@ -148,17 +148,17 @@ node cli.mjs export                        # data/explain/dist/<급수>/<묶음>
 2. regen이 10% 넘으면 프롬프트를 고치고 PROMPT_VERSION을 올려 샘플을 다시 만든다. 기준 통과 후 전체 실행.
 3. 전체 후 `review --levels n5,n4 --all`, `review --levels n3,n2,n1 --share 0.05`. 표본은 급수×유형 칸에 고르게 나누고(같은 명령은 같은 단어를 뽑음), **경고가 있는 항목을 최대 200개 추가**로 붙인다.
 4. N3~N1 표본의 regen 비율이 5%를 넘으면 그 급수는 표본을 10%로 늘린다(제안, 01 문서에 없음).
-5. regen 판정은 `regen --ids …`, fix는 `accepted/<급수>.json`의 `output`을 직접 고친 뒤 `validate`.
+5. regen 판정은 `regen --ids …`, fix는 `accepted/<w+첫 자리>.json`의 `output`을 직접 고친 뒤 `validate`.
 
 작업량(가정: 카드당 30~60초): 샘플 200 + 1,386 + 337 ≈ 1,900카드 ≈ 16~32시간. **미측정.**
 
 ## 9. 앱 출력 형식과 로더 계약
 
-**모양**: `data/explain/dist/<급수>/<묶음 3자리>.json`, 묶음 = `floor(idx / 100)`.
-`{"schemaVersion":1,"level":"n5","from":0,"items":{"<idx>":{examples, kanji, tip, trap?, related, origin?}}}` — `meaningFlag`는 빼고 빈 `trap`·`origin`은 생략.
+**모양**: `data/explain/dist/<묶음 3자리>.json`, 묶음 = `floor(카운터 / 100)`, 카운터 = ID의 `w` 뒤 36진수(`w0k3` → 723 → `007.json`). 급수가 바뀌어도 같은 파일이다.
+`{"schemaVersion":1,"from":700,"items":{"<id>":{examples, kanji, tip, trap?, related, origin?}}}` — `meaningFlag`는 빼고 빈 `trap`·`origin`은 생략.
 `manifest.json`: `schemaVersion`, `promptVersion`, `generated`(날짜), `models`(모델별 개수), `shardSize`, 급수별 `total/exported/missing(+ID)`, 묶음별 개수·바이트·gzip 바이트, 합계, `credit`.
 
-**왜 이 크기인가**: 급수 하나(N1 2,699단어 ≈ 2MB)를 통째로 받으면 첫 카드가 늦고, 단어마다 파일(8,130개)이면 업로드·캐시 관리가 번거롭다. 100단어 묶음은 84개 파일, 하나에 70~90KB(gzip 30KB 안팎)라 휴대폰에서 단어 하나 보려고 받기에 부담이 없고, 학습 큐는 대개 같은 급수 안에서 돌아 같은 묶음을 다시 쓴다. Worker의 `GET /explain/:wordId`(01 §5.4)는 묶음을 R2에서 읽어 항목 하나만 돌려주면 된다.
+**왜 이 크기인가**: 급수 하나(N1 2,699단어 ≈ 2MB)를 통째로 받으면 첫 카드가 늦고, 단어마다 파일(8,130개)이면 업로드·캐시 관리가 번거롭다. 100단어 묶음은 82개 파일, 하나에 70~90KB(gzip 30KB 안팎)라 휴대폰에서 단어 하나 보려고 받기에 부담이 없고, 학습 큐는 대개 같은 급수 안에서 돌아 같은 묶음을 다시 쓴다. Worker의 `GET /explain/:wordId`(01 §5.4)는 묶음을 R2에서 읽어 항목 하나만 돌려주면 된다.
 
 **크기 추정**: 손으로 쓴 정상 출력 8개의 앱 형식 평균 642B(측정), gzip 비율 0.39(측정, 표본 작음). 실제 출력은 이보다 길 수 있어 단어당 650~900B로 잡으면 **합계 5.3~7.3MB, gzip 2.1~2.9MB(추정)**. `export`가 실제 바이트를 manifest에 적는다.
 
@@ -167,10 +167,10 @@ node cli.mjs export                        # data/explain/dist/<급수>/<묶음>
 ```ts
 // explanations: ExplanationSource
 // available: manifest를 받았고 manifest.schemaVersion === 1 이며 (유료 권한이 있으면) true
-// explanationFor('n3-1234'):
-//   [level, idx] = id.split('-'); shard = `${level}/${String(Math.floor(+idx / 100)).padStart(3, '0')}.json`
+// explanationFor('w1bt'):
+//   shard = `${String(Math.floor(parseInt(id.slice(1), 36) / 100)).padStart(3, '0')}.json`
 //   묶음은 메모리(+IndexedDB, 07 문서)에 묶음 단위로 캐시. 받기 실패 → reject(화면은 재시도 버튼)
-//   item = shard.items[idx]; 없으면 null (manifest.counts의 missing — 아직 생성·검수 안 됨)
+//   item = shard.items[id]; 없으면 null (manifest.counts의 missing — 아직 생성·검수 안 됨)
 //   WordExplanation으로 변환:
 //     examples = item.examples                         // {ja, kana, ko} 그대로
 //     kanji    = item.kanji.map(k => `${k.char}(${k.reading || '—'}) ${k.hanja}`).join(' · ') || (item.origin ?? '')

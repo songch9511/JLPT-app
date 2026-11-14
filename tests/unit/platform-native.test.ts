@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { at, bootUser, card, KEY, MemoryStorage } from './helpers'
+import { readFileSync } from 'node:fs'
+import { at, bootUser, card, KEY, L, LEGACY_KEY, MemoryStorage } from './helpers'
 
 /** Fake Capacitor plugins: an in-memory Library directory, a share sheet, a picker, notifications, haptics… */
 function fakes(opts: { permission?: 'granted' | 'denied' | 'prompt'; shareCancels?: boolean; pickCancels?: boolean; pickData?: string } = {}) {
@@ -102,6 +103,60 @@ describe('native start: which copy of the study state the app opens with', () =>
   })
 })
 
+describe('native start after the update to stable word ids (docs/plan/08 §7.5)', () => {
+  const PRE = 'LIBRARY/ruma/state-v3-premigration.json'
+  const legacy = readFileSync(new URL('../fixtures/legacy/state-v3.json', import.meta.url), 'utf8')
+
+  it('the old version’s durable copy is kept once as a file before the slots get the migrated state', async () => {
+    // localStorage and both slots as the version before stable ids left them
+    const ls = new MemoryStorage()
+    ls.setItem(LEGACY_KEY, legacy)
+    vi.stubGlobal('localStorage', ls)
+    vi.resetModules()
+    const store = await import('../../src/store')
+    const f = fakes()
+    f.files.set(SLOT_A, legacy)
+    await start(f)
+    expect(f.files.get(PRE)).toBe(legacy)
+    // the store migrated at load; the durable copy now holds the migrated state (same counter, so no copy "wins" wrongly)
+    const s = store.getState()
+    expect(s.v).toBe(4)
+    expect(Object.keys(s.cards)).toHaveLength(Object.keys(JSON.parse(legacy).cards).length)
+    const slot = JSON.parse(f.files.get(SLOT_B) ?? f.files.get(SLOT_A)!)
+    expect(slot.v).toBe(4)
+    expect(slot.rev).toBe(JSON.parse(legacy).rev)
+    // a second launch does not overwrite the kept copy
+    f.files.set(PRE, 'kept')
+    ;(await import('../../src/platform/native'))._resetNativeForTests()
+    await start(f)
+    expect(f.files.get(PRE)).toBe('kept')
+  })
+
+  it('localStorage evicted, only an old-version durable copy left: it is migrated (hydrate) and kept as the file too', async () => {
+    vi.stubGlobal('localStorage', new MemoryStorage())
+    vi.resetModules()
+    const store = await import('../../src/store')
+    const f = fakes()
+    f.files.set(SLOT_A, legacy)
+    await start(f)
+    expect(store.getState().v).toBe(4)
+    expect(store.getState().cards).toEqual(store.migrate(JSON.parse(legacy)).cards)
+    expect(f.files.get(PRE)).toBe(legacy)
+  })
+
+  it('"모든 기록 초기화" and the recovery screen’s wipe remove the kept copy', async () => {
+    const b = await bootUser('2026-11-13T09:00:00')
+    const f = fakes()
+    f.files.set(PRE, legacy)
+    const { platform } = await start(f)
+    b.store.resetAll()
+    await vi.waitFor(() => expect(f.files.has(PRE)).toBe(false))
+    f.files.set(PRE, legacy)
+    await platform.clearDeviceData()
+    expect(f.files.has(PRE)).toBe(false)
+  })
+})
+
 describe('backup export and import go through the share sheet and the document picker', () => {
   it('export: writes the file, opens the share sheet, records the export only when shared', async () => {
     const b = await bootUser('2026-11-13T09:00:00', {}, { xp: 12 })
@@ -167,7 +222,7 @@ describe('backup export and import go through the share sheet and the document p
 })
 
 describe('reminders, haptics, speech, reset', () => {
-  const dueToday = () => ({ cards: { '5-0': card({ due: at('2026-11-13T08:00:00').getTime() }) } })
+  const dueToday = () => ({ cards: { [L('5-0')]: card({ due: at('2026-11-13T08:00:00').getTime() }) } })
 
   it('nothing is scheduled and no permission is asked at launch; enabling asks, then schedules', async () => {
     await bootUser('2026-11-13T09:00:00', {}, dueToday())

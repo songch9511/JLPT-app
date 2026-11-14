@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
-import { homeShown, KEY, NOW, open, READ_MS, saved, user } from './fixtures'
+import { homeShown, KEY, L, NOW, open, READ_MS, saved, user } from './fixtures'
 
 const DAY = 86400_000
 const review = (due: number) => ({ due, stability: 30, difficulty: 5, elapsed_days: 25, scheduled_days: 25, learning_steps: 0, reps: 5, lapses: 0, state: 2, last_review: due - 25 * DAY })
@@ -12,8 +12,9 @@ async function downloadJson(page: Page, click: () => Promise<void>) {
 }
 
 test.describe('error screen', () => {
-  // a card id outside every level makes the home screen throw while rendering
-  const broken = () => user({ apiKey: 'sk-ant-secret' }, { xp: 33, cards: { '9-0': review(NOW.getTime()) } })
+  // a card that is not a card makes the home screen throw while rendering (an id outside every level no longer
+  // does: since stable ids such a record is kept apart, see id-migration.spec.ts)
+  const broken = () => user({ apiKey: 'sk-ant-secret' }, { xp: 33, cards: { '5-0': null } })
 
   test('a render error shows the recovery screen, which can export what is stored', async ({ page }) => {
     await open(page, { state: broken() })
@@ -21,9 +22,9 @@ test.describe('error screen', () => {
     await expect(page.getByRole('button', { name: '다시 불러오기' })).toBeVisible()
     const { name, body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
     expect(name).toBe('jlpt-ruma-backup-2026-11-13.json')
-    // the stored state was saved again after loading, migrated to v3 (fast-track)
-    expect(body).toMatchObject({ format: 'jlpt-luma-backup', v: 3, xp: 33 })
-    expect(body.cards['9-0']).toBeTruthy() // exactly what is stored, broken part included
+    // the stored state was saved again after loading, migrated to v4 (fast-track, stable ids)
+    expect(body).toMatchObject({ format: 'jlpt-luma-backup', v: 4, xp: 33 })
+    expect(body.cards).toEqual({ [L('5-0')]: null }) // exactly what is stored, broken part included
     expect(body.settings).not.toHaveProperty('apiKey') // left by an older version: never exported
   })
 
@@ -42,7 +43,8 @@ test.describe('error screen', () => {
   test('reload brings the app back once the cause is gone', async ({ page }) => {
     await open(page, { state: broken() })
     await expect(page.getByRole('heading', { name: '화면을 여는 중에 문제가 생겼어요' })).toBeVisible()
-    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, JSON.stringify(user())])
+    // the stored (migrated) state is repaired
+    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, JSON.stringify({ ...user(), v: 4 })])
     await page.getByRole('button', { name: '다시 불러오기' }).click()
     await homeShown(page)
   })
@@ -111,11 +113,11 @@ test.describe('backups', () => {
     await open(page, { state: user({}, { xp: 77 }), hash: '/settings' })
     await expect(page.getByText('아직 백업한 적이 없어요.')).toBeVisible()
     const { body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
-    expect(body).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 2, v: 3, xp: 77 })
+    expect(body).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 3, v: 4, xp: 77 })
     expect(typeof body.app).toBe('string')
     await expect(page.getByText('마지막 백업: 2026년 11월 13일')).toBeVisible()
 
-    await page.locator('input[type=file]').setInputFiles({ name: 'n.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, formatVersion: 3, xp: 1 })) })
+    await page.locator('input[type=file]').setInputFiles({ name: 'n.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, formatVersion: 4, xp: 1 })) })
     const d = page.getByRole('dialog', { name: '가져오지 못했어요' })
     await expect(d).toContainText('더 새로운 버전')
     await d.getByRole('button', { name: '확인' }).click()

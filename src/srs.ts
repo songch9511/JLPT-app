@@ -1,7 +1,7 @@
 // Spaced repetition on top of FSRS (the open scheduler Anki uses): every answer moves a card's
 // next review further out when remembered and brings it back within minutes when forgotten.
 import { createEmptyCard, fsrs, generatorParameters, Rating, State as CardState, type Card, type Grade } from 'ts-fsrs'
-import { COUNTS, isReadingCard, LEVELS, levelInfo, levelOf, readingId, wordId, wordOfCard, type Level } from './data'
+import { COUNTS, fallbackOrder, isReadingCard, LEVELS, levelInfo, levelOf, readingId, wordOfCard, type Level } from './data'
 import { getState, MAX_DAILY_NEW, update, type DayLog, type SCard, type State } from './store'
 import { addDays, dayKey, daysBetween } from './util'
 
@@ -100,26 +100,22 @@ export const isSeen = (s: CardsView, word: string) => !!s.cards[word] || (fastOn
  * meaning card. Before the level's data has loaded nothing is known about the word, so it is a meaning card;
  * the study screen waits for the data before showing a new card.
  */
-export function introCard(s: { settings: Pick<State['settings'], 'fastTrack'> }, l: Level, idx: number): string {
-  const id = wordId(l, idx)
-  return fastOn(s) && levelInfo(l)?.fast.has(idx) ? readingId(id) : id
+export function introCard(s: { settings: Pick<State['settings'], 'fastTrack'> }, id: string): string {
+  const l = levelOf(id)
+  return fastOn(s) && l !== undefined && levelInfo(l)?.fast.has(id) ? readingId(id) : id
 }
 
 /**
  * The next words to introduce, as card ids: per level in the data's introduction order (frequency, 08 §2),
- * or idx order until the level's data has loaded. Words already introduced are skipped wherever they are in
+ * or id order (the data's row order) until the level's data has loaded. Words already introduced are skipped wherever they are in
  * the order, so a learner part-way through a level keeps every word seen and simply gets the next unseen
  * words of the new order.
  */
 function nextNewIds(s: State, limit: number): string[] {
   const out: string[] = []
   for (const l of studyLevels(s.settings)) {
-    const order = levelInfo(l)?.order
-    const n = order ? order.length : COUNTS[l]
-    for (let k = 0; k < n && out.length < limit; k++) {
-      const i = order ? order[k] : k
-      if (!isSeen(s, wordId(l, i))) out.push(introCard(s, l, i))
-    }
+    const order = levelInfo(l)?.order ?? fallbackOrder(l)
+    for (let k = 0; k < order.length && out.length < limit; k++) if (!isSeen(s, order[k])) out.push(introCard(s, order[k]))
   }
   return out
 }
@@ -504,9 +500,10 @@ export function breakdowns(s: CardsView): Record<Level, Breakdown> {
     if (prev === undefined || STAGE_RANK[st] < STAGE_RANK[prev]) per.set(w, st)
   }
   for (const [w, st] of per) {
-    const b = out[levelOf(w)]
-    b[st]++
-    b.new--
+    const l = levelOf(w)
+    if (l === undefined) continue
+    out[l][st]++
+    out[l].new--
   }
   return out
 }

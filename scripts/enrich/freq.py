@@ -1,11 +1,11 @@
-"""Frequency score + introduction order for every word, keyed by the existing index.
+"""Frequency score + introduction order for every word, keyed by its stable word id (docs/plan/08 §7).
 
 Run (after scripts/enrich/fetch-sources.sh):
     $CACHE/venv/bin/python -I scripts/enrich/freq.py
 Writes (all committed):
-    data/freq/n{l}.json        {"<idx>": f}   f = round(Zipf * 10), 10..80 (never 0, see fallback)
-    data/freq/n{l}.src.json    {"<idx>": "<method>"}   how f was obtained (below)
-    data/freq/order-n{l}.json  [idx, ...]     introduction order, a permutation of 0..n-1
+    data/freq/n{l}.json        {"<id>": f}   f = round(Zipf * 10), 10..80 (never 0, see fallback)
+    data/freq/n{l}.src.json    {"<id>": "<method>"}   how f was obtained (below)
+    data/freq/order-n{l}.json  [id, ...]     introduction order: every word id of the level once
     data/freq/coverage.json    per-level method counts
 
 Sources: wordfreq 3.1.1 'ja' (CC BY-SA 4.0) and JMdict priority tags / "usually kana" flag
@@ -28,7 +28,9 @@ Methods, tried in order:
   z  nothing at all: floor Zipf 1.0 (f = 10), i.e. "rarer than anything wordfreq lists"
 
 Order: f descending, then JMdict priority rank (news1/ichi1/spec1/spec2/gai1 < other tags < none),
-then idx ascending. idx is already a fixed seeded shuffle, so ties stay in a stable random order.
+then the word's place in id order (seq). For the 8,130 words that existed when ids were introduced this is
+the old positional index, itself a fixed seeded shuffle, so ties stay in the same stable random order; words
+added later come after them in their tie.
 """
 import json
 import math
@@ -332,11 +334,11 @@ def main():
         f, src, keys = {}, {}, []
         for w in ws:
             v, m, rank = score(w, jm, calib)
-            f[str(w['idx'])] = v
-            src[str(w['idx'])] = m
-            keys.append((-v, rank, w['idx']))
-        order = [k[2] for k in sorted(keys)]
-        assert sorted(order) == list(range(len(ws)))
+            f[w['id']] = v
+            src[w['id']] = m
+            keys.append((-v, rank, w['seq'], w['id']))
+        order = [k[3] for k in sorted(keys)]
+        assert sorted(order) == sorted(w['id'] for w in ws)
         dump(f'n{n}.json', f)
         dump(f'n{n}.src.json', src)
         with open(os.path.join(OUT, f'order-n{n}.json'), 'w', encoding='utf8') as fh:

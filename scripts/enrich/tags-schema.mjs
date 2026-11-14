@@ -1,5 +1,6 @@
 // Word-type tag schema (see data/tags/LABELLING.md and docs/plan/08-word-data.md).
-// One labelled file per chunk: data/tags/n<level>-<part>.json = { "<idx>": { k, sk?, ff?, rt? }, ... }
+// One labelled file per chunk: data/tags/n<level>-<part>.json = { "<word id>": { k, sk?, ff?, rt? }, ... }
+// (stable word ids, docs/plan/08 §7)
 
 /** k — word type relative to Korean. Decide S/F first (relation to an everyday Korean hanja word), then origin. */
 export const K = {

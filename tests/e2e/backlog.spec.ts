@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { answer, homeShown, NOW, open, saved, todayLog, user } from './fixtures'
+import { answer, homeShown, L, NOW, open, saved, todayLog, user } from './fixtures'
 
 const DAY = 86400_000
 const MIN = 60_000
@@ -56,7 +56,7 @@ test.describe('backlog on home', () => {
     await answer(page, '알아요')
     expect(await todayLog(page)).toMatchObject({ r: 226, xr: 50 })
     // oldest due first: the first card shown was the oldest
-    expect((await saved(page)).cards['5-0'].last_review).toBeGreaterThan(t - DAY)
+    expect((await saved(page)).cards[L('5-0')].last_review).toBeGreaterThan(t - DAY)
   })
 
   test('the study done screen offers more reviews rather than more new words while catching up', async ({ page }) => {

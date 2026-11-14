@@ -13,6 +13,8 @@
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { parseRow } from '../src/data.ts'
+// the study screen seeds a showing with the card's positional id of before stable ids (src/ids.ts)
+import { legacySeed } from '../src/ids.ts'
 
 const root = new URL('..', import.meta.url).pathname
 const arg = (name, dflt) => {
@@ -27,10 +29,11 @@ const { readingQuestion } = await import(pathToFileURL(genPath).href)
 const pool = []
 const altOf = new Map()
 for (const l of [5, 4, 3, 2, 1]) {
-  const rows = JSON.parse(readFileSync(`${root}public/data/n${l}.json`, 'utf8'))
+  const rows = JSON.parse(readFileSync(`${root}public/data/words-n${l}.json`, 'utf8'))
   rows.forEach((row, idx) => pool.push(parseRow(l, row, idx)))
+  // keyed by stable word id (docs/plan/08 §7), like the rows
   const alt = JSON.parse(readFileSync(`${root}data/readings/n${l}.json`, 'utf8'))
-  for (const [idx, rs] of Object.entries(alt)) altOf.set(`${l}-${idx}`, rs)
+  for (const [id, rs] of Object.entries(alt)) altOf.set(id, rs)
 }
 const cards = pool.filter((w) => w.k === 'S')
 // every reading in the data, for the "only real word" cue (not something the new generator aims at)
@@ -183,7 +186,7 @@ for (const w of cards) {
   for (const o of pool) if (coreOf(o.w) === coreOf(w.w) && o.r) for (const r of alternatives(o.r)) right.add(soundKey(r))
   for (let s = 0; s < SEEDS; s++) {
     const t = performance.now()
-    const q = readingQuestion(w, pool, `${w.id}:r|${s}`)
+    const q = readingQuestion(w, pool, `${legacySeed(w.id)}:r|${s}`)
     const dt = performance.now() - t
     if (dt > worst) (worst = dt), (worstWord = `${w.w} ${answer}`)
     if (s === 0) samples.push({ id: w.id, w: w.w, answer, level: w.level, mora, choices: q ? q.choices : null })

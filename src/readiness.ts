@@ -3,7 +3,7 @@
 // comes from the multi-step projection in ./projection.ts (ts-fsrs `next_state`/`next_interval`); nothing here
 // re-derives a formula.
 import { fsrs, generatorParameters, Rating, type Card } from 'ts-fsrs'
-import { COUNTS, wordOfCard, type Level } from './data'
+import { COUNTS, levelOf, wordOfCard, type Level } from './data'
 import { pNew } from './pnew'
 import { examRecall, recallAt as fastRecall } from './projection'
 import { endOfDay, isActive, newLeftToday, newPerDay, spreadReviews, studyLevels, toCard, type Spread } from './srs'
@@ -29,7 +29,7 @@ export const examTime = (examDate: string) => {
   return d.getTime()
 }
 
-/** Card ids are `<level>-<idx>` with an optional `:<type>` suffix for further card types of the same word (03 §3). */
+/** Card ids are the stable word id (`w0k3`) with an optional `:<type>` suffix for further card types of the same word (03 §3). */
 export { wordOfCard }
 
 const safe = (r: number) => (Number.isFinite(r) ? Math.min(1, Math.max(0, r)) : 0)
@@ -200,7 +200,8 @@ export function readiness(s: State, now: Date, opts: { dailyNew?: number } = {})
   /** today's reviews (day 0) only differ between the two scenarios: what they add, word by word */
   let reviewsToday = 0
   for (const id in s.cards) {
-    if (!inLevels.has(Number(id[0])) || !isActive(id, ft)) continue
+    const l = levelOf(id)
+    if (l === undefined || !inLevels.has(l) || !isActive(id, ft)) continue
     const c = s.cards[id]
     const kp = planned ? (plan$.day.get(id) ?? Infinity) : Infinity
     // skipping today: nothing is reviewed today, learning cards included

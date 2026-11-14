@@ -42,7 +42,7 @@
 | 1 | **높음** | API 키를 `localStorage`(`kasane.state.v2` 안의 `settings.apiKey`)에 평문 저장. 저장 출처는 `https://songch9511.github.io`로, **같은 계정의 모든 Pages 저장소가 같은 출처**. 다른 저장소 페이지의 스크립트, 악성 확장, 향후 XSS 하나로 키 유출. 키는 조직 전체 권한의 API 키. | `store.ts`, `ai-client.ts` (`dangerouslyAllowBrowser: true`) | 지금: ① 설정 문구에 "전용 workspace 키를 만들고 월 지출 한도를 걸어 쓰세요" 안내, ② "이 기기에 기억" 끄면 `sessionStorage`에만 두는 선택지, ③ 아래 #7의 CSP로 `connect-src`를 `api.anthropic.com`으로 묶기. 근본: 사용자 지정 도메인으로 이전(같은 출처 공유 해소) + **스토어 제품에서는 키 입력 기능 제거, 프록시로 대체**(B절). | 지금 + 백엔드 |
 | 2 | 중간 | 백업 가져오기 검증이 `v === 2`, `cards`, `settings` 존재 여부뿐. 예: `settings.target: 9` 또는 카드 ID `"9-0"` → `breakdowns()`에서 `undefined` 접근 → Home 렌더 중 TypeError. 상태는 렌더 전에 저장되므로 **다시 열어도 계속 흰 화면**. ErrorBoundary 없음. `marks`가 배열이 아니거나 `log: null`이어도 같음. | `Settings.tsx importData`, `store.ts replaceState`, `srs.ts breakdowns` | 이미 의존성에 있는 **zod로 백업 스키마 정의**(급수 1~5, `dailyNew` 1~100, 카드 ID 정규식 `^[1-5]-\d+$`와 범위, 숫자 필드 유한값, 알 수 없는 키 제거). 교체 전 현재 상태를 `kasane.state.prev`로 보관. 최상위 ErrorBoundary에 "직전 상태로 되돌리기 / 백업 내보내기 / 초기화" 버튼. `load()`에도 같은 스키마 적용. | 지금 |
 | 3 | 중간 | AI 설명 캐시(`kasane.ai.<id>`, 단어당 대략 1~2KB 추정)가 학습 상태와 **같은 localStorage 한도**를 씀. 한도 초과 시 `update()`의 `setItem` 실패를 `catch`로 삼키고 메모리에서만 계속 → **앱을 닫으면 그날 진도 소실, 사용자는 모름**. `resetAll`도 AI 캐시는 지우지 않음. | `ai.ts explainWord`, `store.ts update` | AI 캐시를 IndexedDB(또는 Cache API)로 이전하고 개수 상한(LRU). 상태 저장 실패 시 화면 상단에 "저장 공간이 부족해요 — 백업하세요" 표시. 캐시 읽기도 zod로 검증(`cachedExplain`은 지금 무검증). | 지금 |
-| 4 | 중간 | 단어 ID가 `"<급수>-<배열 순번>"`이고 순번은 원본 CSV를 중복 제거 후 시드 셔플한 결과. 원본 CSV가 한 줄만 바뀌어도 **기존 진도가 다른 단어로 옮겨 붙음**. | `scripts/build-data.mjs`, `data.ts wordId` | 지금 ID 매핑을 동결(현재 `public/data`를 기준 스냅샷으로 커밋 유지)하고, 데이터 재생성 스크립트가 기존 ID 순서를 깨면 실패하도록 검사 추가. 장기적으로 내용 기반 ID(예: `표기|읽기` 해시)와 이전 표를 둠. 계정 이전(8절) 전에 반드시 정리. | 지금 |
+| 4 | 중간 | **(2026-11-14 해결: 안정 단어 ID `w0k3`, 등록부 `data/ids.json`, 상태 v4 이전 — 08 문서 §7)** 단어 ID가 `"<급수>-<배열 순번>"`이고 순번은 원본 CSV를 중복 제거 후 시드 셔플한 결과. 원본 CSV가 한 줄만 바뀌어도 **기존 진도가 다른 단어로 옮겨 붙음**. | `scripts/build-data.mjs`, `data.ts wordId` | 지금 ID 매핑을 동결(현재 `public/data`를 기준 스냅샷으로 커밋 유지)하고, 데이터 재생성 스크립트가 기존 ID 순서를 깨면 실패하도록 검사 추가. 장기적으로 내용 기반 ID(예: `표기|읽기` 해시)와 이전 표를 둠. 계정 이전(8절) 전에 반드시 정리. | 지금 |
 | 5 | 중간 | 서비스 워커가 `skipWaiting` + `clientsClaim`(autoUpdate)로 즉시 교체. 열려 있던 탭은 옛 JS를 쓰는데, 지연 로딩 청크(`ai-client-*.js`, `sdk-*.js`)는 새 배포에서 사라짐 → **배포 직후 AI 버튼이 "알 수 없는 오류"**. | 빌드된 `sw.js`, `ai.ts`의 `import('./ai-client')` | 동적 import 실패를 잡아 "새 버전이 있어요, 새로고침" 안내 후 `location.reload()`. 또는 `registerType: 'prompt'`로 바꿔 사용자가 갱신 시점을 고르게. | 지금 |
 | 6 | 중간 | CI/CD: ① `permissions`가 워크플로 최상위라 **`npm ci`(서드파티 설치 스크립트 실행)가 도는 build 잡도 `pages: write`, `id-token: write`를 가짐**, ② 액션이 태그(`@v4`)로만 고정, ③ **main 브랜치 보호 없음·ruleset 없음**(GitHub API 확인: "Branch not protected", rulesets `[]`), ④ Dependabot 설정 없음. 트리거는 `push: main`과 수동뿐이라 **외부 PR이 이 워크플로를 실행하거나 배포할 수는 없음**(좋음). | `.github/workflows/deploy.yml` | 권한을 잡 단위로: build는 `contents: read`만, deploy만 `pages: write`+`id-token: write`. 액션을 커밋 SHA로 고정하고 Dependabot(`github-actions`, `npm` 주 1회)으로 갱신. main에 ruleset: PR 필수, 상태 검사(빌드·테스트) 통과 필수, force push·삭제 금지. 계정 2FA, secret scanning·push protection(공개 저장소 무료) 켜기. `github-pages` environment가 main만 배포하도록 되어 있는지 설정 화면에서 확인(이 세션에서는 API가 막혀 **미확인**). | 지금 |
 | 7 | 낮음 | CSP·Referrer 정책 없음. GitHub Pages는 응답 헤더를 바꿀 수 없음. | `index.html` | 빌드 때만 meta CSP 주입(Vite `transformIndexHtml`, 개발 서버는 인라인 스타일을 쓰므로 제외): `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.anthropic.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'` + `<meta name="referrer" content="no-referrer">`. React의 `style` prop은 CSSOM으로 들어가 `style-src`에 막히지 않지만 **배포 전 실제 브라우저로 확인** 필요. meta CSP는 `frame-ancestors`를 지원하지 않아 클릭재킹 방어는 불가 → 위험은 낮음(파괴적 동작은 `confirm()`을 거침). 헤더 기반 CSP는 호스팅 이전 후(7절). | 지금 |
@@ -166,7 +166,8 @@ Apple 연동 참고: [App Store Server API](https://developer.apple.com/document
 
 **릴리스 절차**
 - 버전: `package.json` semver를 빌드에 주입해 설정 화면 하단과 오류 보고에 표시, git 태그 `v0.x.y`.
-- 웹: PR → 미리보기 배포(Cloudflare Pages 이전 시 자동) → main 병합 → 프로덕션. 롤백은 직전 배포로 되돌리기(Pages는 클릭 한 번, GitHub Pages는 revert 커밋).
+- 웹: PR → 미리보기 배포(Cloudflare Pages 이전 시 자동) → main 병합 → 프로덕션. 롤백은 직전 배포로 되돌리기(Pages는 클릭 한 번, GitHub Pages는 revert 커밋). **저장 형식을 바꾸는 배포(학습 상태 버전 올림)는 코드만 되돌리면 안 된다** — 아래 "기기 데이터 이전" 참고.
+- **기기 데이터 이전(학습 상태·백업 형식을 바꿀 때의 규칙, 첫 사례는 08 문서 §7 단어 ID 이전).** ① 새 형식은 **새 키**에 쓰고 옛 키는 읽기만 해서 이전 전 사본으로 남긴다(iOS는 내구 파일로도 한 번 남김). ② 저장 상태·백업·iOS 사본·가져오기 되돌리기가 **같은 이전 함수**를 지나고, 이 함수는 멱등이다. ③ 모르는 기록은 지우지 않고 격리한다. ④ 업데이트 뒤 열려 있는 옛 탭이 새 형식을 덮어쓰지 못해야 한다(옛 탭은 옛 키·옛 데이터 파일만 보게 하고, 그 탭의 쓰기는 새 버전이 합친다). ⑤ 옛 JS가 읽는 정적 파일은 같은 URL·같은 바이트로 한동안 남긴다. ⑥ 실제 사용자 상태와 옛 형식 백업으로 만든 고정 자료로 "같은 단어·같은 FSRS 값" 테스트를 둔다. **되돌리기**: 이전이 틀렸으면 고친 버전을 앞으로 배포해 옛 사본에서 다시 옮기고 그 뒤 기록은 합친다. 코드를 이전 전 버전으로 되돌리면 그 버전은 옛 키만 읽으므로 이전 시점으로 돌아간다(그 뒤 학습은 새 키에 남아 다시 앞으로 배포하면 돌아온다) — 마지막 수단.
 - **PWA 서비스 워커 사고 복구**: 브라우저는 페이지를 열 때 `sw.js`를 따로 다시 확인하므로, 앱 JS가 망가져도 고친 버전을 배포하면 다음 실행 때 교체됩니다. 서비스 워커 자체가 망가졌다면 스스로 등록을 해제하고 캐시를 지우는 "kill switch" `sw.js`를 배포. 이 파일을 미리 `scripts/`에 준비해 두고, `sw.js` 파일명·경로는 절대 바꾸지 않습니다.
 - 스토어: TestFlight(스테이징 서버 연결) → 단계적 출시(7일에 걸쳐 확대, 문제 시 일시정지) → 바이너리는 되돌릴 수 없으므로 수정본은 신속 심사 요청. 서버 API는 구버전 앱이 쓰는 동안 하위 호환 유지, `/v1/status`의 최소 지원 버전으로 강제 업데이트 안내. 앱 안에 웹 자산을 넣는 경우 웹 수정이 스토어 앱에 바로 반영되지 않는 점은 06 문서 참조.
 - Worker: `wrangler deploy --env staging` → 스모크 테스트 → 프로덕션, 데이터베이스 마이그레이션은 앞뒤 호환되는 것만(열 추가 먼저, 삭제는 다음 릴리스).
@@ -200,7 +201,7 @@ AI가 비용의 대부분이므로 01 문서에서 이야기 기능의 모델·�
 1. **영구 저장 요청**: 첫 학습 완료 시 `navigator.storage.persist()` 호출. WebKit은 Safari 17부터 Storage API를 지원하고 홈 화면 웹앱 여부 등으로 허용을 판단한다고 밝혔습니다([WebKit 블로그](https://webkit.org/?p=14403)). Safari 탭에서 쓰면 사용자 상호작용 없는 기간이 지나면 스크립트 저장소가 지워질 수 있으므로(7일 정책, [관련 보도](https://www.itnews.com.au/news/apple-cops-flak-for-deleting-local-browser-storage-after-7-days-539833)) **홈 화면에 추가하라는 안내**를 온보딩에 넣습니다. iOS 실기기에서 `persist()` 결과 확인 필요(미확인).
 2. **백업 알림**: 마지막 백업 시각을 저장하고, 학습한 날 기준 7일 또는 답변 500장마다 홈에 "백업해 두세요" 카드(닫기 가능). 설정에 마지막 백업 날짜 표시.
 3. **내보내기 형식 버전**: `{ format: "jlpt-luma-backup", formatVersion: 1, appVersion, exportedAt, state, aiCache? }`. 가져오기는 형식 버전별 변환 함수를 거친 뒤 zod 검증(A-2 #2). 기존 v2 원본 파일도 계속 읽음.
-4. **저장 실패 표시와 저장소 분리**(A-2 #3), **단어 ID 동결**(A-2 #4).
+4. **저장 실패 표시와 저장소 분리**(A-2 #3), **단어 ID 동결**(A-2 #4 — 2026-11-14 안정 ID로 해결, 08 §7).
 5. **계정 이전 경로(3단계)**: 첫 로그인 때 서버가 비어 있으면 로컬 상태를 그대로 업로드. 양쪽에 데이터가 있으면 카드 수·마지막 학습일을 보여 주고 "이 기기 / 서버" 중 고르게 하며, 고르지 않은 쪽은 백업 파일로 자동 저장. 이후 동기화는 카드 단위 `updated_at` 최신값 우선, 일별 로그는 날짜별 최대값 병합. 장기적으로는 답변 이력을 추가 전용 로그로 남겨 FSRS 매개변수 최적화와 충돌 해결에 씀. 네이티브 앱으로 감쌀 때 저장 위치(WebView localStorage를 그대로 둘지)는 06 문서와 함께 결정.
 
 ### B-9. 순서대로 할 일
@@ -209,7 +210,7 @@ AI가 비용의 대부분이므로 01 문서에서 이야기 기능의 모델·�
 1. 백업 가져오기·`load()`에 zod 스키마 검증, 교체 전 이전 상태 보관, 최상위 ErrorBoundary와 복구 버튼.
 2. 상태 저장 실패 알림, AI 캐시를 IndexedDB로 이전·상한, `navigator.storage.persist()`, 홈 화면 추가 안내, 백업 알림 카드.
 3. GitHub: main ruleset, 잡별 권한, 액션 SHA 고정, Dependabot, secret scanning·push protection, 2FA 확인.
-4. 단어 ID 동결 검사를 `build-data.mjs`에 추가.
+4. ~~단어 ID 동결 검사를 `build-data.mjs`에 추가.~~ 끝남: 안정 ID 등록부와 빌드 검사(08 §7.2).
 5. 동적 import 실패 시 새로고침 안내(배포 직후 AI 오류).
 6. 빌드 전용 meta CSP + referrer, API 키 안내 문구(전용 workspace·지출 한도)와 "이 기기에 기억" 선택.
 7. 내보내기 형식에 `formatVersion`·`appVersion` 추가.

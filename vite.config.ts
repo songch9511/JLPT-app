@@ -1,9 +1,24 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, rmSync } from 'node:fs'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
+
+/**
+ * public/data/n{1..5}.json are the frozen word files of the version before stable word ids (docs/plan/08 §7.6):
+ * deployed on the web only so that a tab still running that version after an update can load its levels. This
+ * version never reads them, so the service worker does not precache them and the iOS app does not bundle them.
+ */
+const LEGACY_DATA = /^n[1-5]\.json$/
+const dropLegacyData = () => ({
+  name: 'drop-legacy-word-data',
+  apply: 'build' as const,
+  closeBundle() {
+    const dir = new URL('./dist-native/data/', import.meta.url)
+    for (const f of readdirSync(dir)) if (LEGACY_DATA.test(f)) rmSync(new URL(f, dir))
+  },
+})
 
 /**
  * Two builds from the same code (docs/plan/10-ios-build.md):
@@ -44,13 +59,14 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       ...(native
-        ? []
+        ? [dropLegacyData()]
         : [
             VitePWA({
               registerType: 'autoUpdate',
               includeAssets: ['icon.svg', 'apple-touch-icon.png'],
               workbox: {
                 globPatterns: ['**/*.{js,css,html,svg,png,json}'],
+                globIgnores: ['**/data/n[1-5].json'],
                 maximumFileSizeToCacheInBytes: 3_000_000,
               },
               manifest: {

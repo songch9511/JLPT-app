@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Word-explanation pipeline. See docs/plan/09-explanations.md for the full procedure.
 //
-//   node cli.mjs run --dry-run [--levels n5,n4] [--limit N] [--ids n5-1,n5-2]   build requests, print estimate, send nothing
+//   node cli.mjs run --dry-run [--levels n5,n4] [--limit N] [--ids w001,w0k3]   build requests, print estimate, send nothing
 //   node cli.mjs count-tokens [--n 20]            measure input tokens with the count_tokens endpoint (no generation)
 //   node cli.mjs run --sample 200                 send 200 stratified words synchronously, then review them
 //   node cli.mjs run [--levels …] [--no-wait]     submit the rest as batches, wait, collect (resumes open batches first)
@@ -10,7 +10,7 @@
 //   node cli.mjs validate [--stale-prompt]        re-check accepted outputs against current words/tags (and prompt version)
 //   node cli.mjs review [--levels …] [--per-cell 5 | --share 0.05 | --all]
 //   node cli.mjs export                           data/explain/dist/<level>/<shard>.json + manifest.json
-//   node cli.mjs regen --ids n5-12                regenerate single words now (synchronous)
+//   node cli.mjs regen --ids w00c                 regenerate single words now (synchronous)
 //   node cli.mjs adopt <batch_id> | --none        resolve an interrupted submission
 
 import fs from 'node:fs'

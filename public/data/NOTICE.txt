@@ -1,6 +1,8 @@
-JLPT 루마 — word data notice (public/data/n1.json … n5.json)
+JLPT 루마 — word data notice (public/data/words-n1.json … words-n5.json, and the frozen
+public/data/n1.json … n5.json of earlier versions)
 
-Each row is [w, r, ko, en, o, f, k, sk, ff, rt, a, x]. The first four columns (word, reading, Korean
+Each row of words-n{l}.json is [id, w, r, ko, en, o, f, k, sk, ff, rt, a, x] (the frozen files have the
+same row without id). id is this project's stable word id. The next four columns (word, reading, Korean
 meaning, English meaning) come from the word list and the app's own translation. The other columns
 are computed by this project from the sources below:
 

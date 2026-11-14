@@ -23,13 +23,12 @@ export function loadKanji(file) {
   return out
 }
 
-/** Final labels from data/tags/n<l>-<p>.json, keyed `<level>-<idx>`. Unparseable files are skipped with a warning. */
+/** Final labels from data/tags/n<l>-<p>.json, keyed by stable word id (`w0k3`, docs/plan/08 §7). Unparseable files are skipped with a warning. */
 export function loadLabels(dir, warn = console.warn) {
   const out = new Map()
   if (!fs.existsSync(dir)) return out
   for (const f of fs.readdirSync(dir).sort()) {
-    const m = /^(n[1-5])-\d+\.json$/.exec(f)
-    if (!m) continue
+    if (!/^n[1-5]-\d+\.json$/.test(f)) continue
     let data
     try {
       data = readJson(path.join(dir, f))
@@ -37,7 +36,7 @@ export function loadLabels(dir, warn = console.warn) {
       warn(`tags: ${f} 읽기 실패, 건너뜀 (${e.message})`)
       continue
     }
-    for (const [idx, t] of Object.entries(data)) if (t && t.k) out.set(`${m[1]}-${idx}`, t)
+    for (const [id, t] of Object.entries(data)) if (t && t.k) out.set(id, t)
   }
   return out
 }
@@ -47,18 +46,23 @@ export function loadPrepass(dir) {
   for (const l of LEVELS) {
     const f = path.join(dir, 'prepass', `${l}.json`)
     if (!fs.existsSync(f)) continue
-    for (const [idx, p] of Object.entries(readJson(f))) out.set(`${l}-${idx}`, p)
+    for (const [id, p] of Object.entries(readJson(f))) out.set(id, p)
   }
   return out
 }
 
 /**
+ * `id` is the word's stable id, as public/data/words-n<l>.json carries it in each row (docs/plan/08 §7); `idx` is
+ * only the row's position in that file.
  * @typedef {{ id: string, level: string, idx: number, w: string, r: string, ko: string, en: string,
  *   tag: { k: string, sk: string, ff: string, rt: string, src: 'label'|'hint'|'none' },
  *   kanji: { c: string, ko: string[], on: string[], kun: string[] }[] }} Word
  */
 
-/** @returns {Word[]} all words of the given levels, in id order */
+/** A stable word id (docs/plan/08 §7); also a valid Batch API custom_id. */
+export const WORD_ID = /^w(?:[0-9a-z]{3}|[1-9a-z][0-9a-z]{3,})$/
+
+/** @returns {Word[]} all words of the given levels, in the data's row order (= id order) */
 export function loadWords({ root, levels = LEVELS, warn } = {}) {
   const p = paths(root)
   const kanji = loadKanji(p.kanji)
@@ -66,12 +70,12 @@ export function loadWords({ root, levels = LEVELS, warn } = {}) {
   const prepass = loadPrepass(p.tags)
   const words = []
   for (const level of levels) {
-    const f = path.join(p.publicData, `${level}.json`)
+    const f = path.join(p.publicData, `words-${level}.json`)
     if (!fs.existsSync(f)) continue
     const rows = readJson(f)
     rows.forEach((row, idx) => {
-      const [w, r, ko, en] = row
-      const id = `${level}-${idx}`
+      const [id, w, r, ko, en] = row
+      if (!WORD_ID.test(id)) throw new Error(`${f} row ${idx}: no stable word id (rebuild with scripts/build-data.mjs)`)
       const lab = labels.get(id)
       const pre = prepass.get(id)
       const tag = lab
