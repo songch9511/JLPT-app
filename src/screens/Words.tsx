@@ -3,7 +3,7 @@ import { LevelList } from '../components/LevelList'
 import { Choice, Empty, SearchField } from '../components/ui'
 import { inGroup, TypeFilter, type TypeGroup } from '../components/TypeFilter'
 import { WordSheet } from '../components/WordSheet'
-import { meaning, useAllWords, type Word } from '../data'
+import { levelInfoVersion, meaning, useAllWords, type Word } from '../data'
 import { breakdowns, leechIds, wordLapses } from '../srs'
 import { useStore } from '../store'
 
@@ -32,7 +32,9 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
   const target = useStore((s) => s.settings.target)
   const fastTrack = useStore((s) => s.settings.fastTrack)
   const [type, setType] = useState<TypeGroup>('all')
-  const levels = useMemo(() => breakdowns({ cards, settings: { fastTrack } }), [cards, fastTrack])
+  // level data decides which reading cards still count (srs.ts isActive): recount once it has loaded
+  const iv = levelInfoVersion()
+  const levels = useMemo(() => breakdowns({ cards, settings: { fastTrack } }), [cards, fastTrack, iv])
 
   const byId = useMemo(() => new Map(all?.map((w) => [w.id, w])), [all])
   const pick = (ids: string[]) => ids.map((id) => byId.get(id)).filter((w): w is Word => !!w)
@@ -50,7 +52,7 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
     return out
   }, [all, q, type])
 
-  const weak = useMemo(() => leechIds(cards, 40, fastTrack), [cards, fastTrack])
+  const weak = useMemo(() => leechIds(cards, 40, fastTrack), [cards, fastTrack, iv])
   const weakWords = pick(weak).filter((w) => inGroup(w.k, type))
   const markWords = pick(marks).filter((w) => inGroup(w.k, type))
 

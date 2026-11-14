@@ -36,6 +36,10 @@ export const asksReadingOnly = (t) => t?.k === 'S'
 
 // ── consistency rules (data/tags/LABELLING.md §2.1, docs/plan/08 §3.4) ──
 // Only what can be checked mechanically lives here; validate-tags.mjs reports a breach as an ERROR.
+// Not checked (needs a Korean speaker): R2, R6, R7, R8, and R6's supplement — a bridge word (sk) that Korean
+// readers take first for a more common homophone with other hanja (점점 漸漸, 향수 香水, 공원 公園, 수학 數學) is
+// J, not S, because the reading card shows the bridge in Hangul only. A decision taken on such a word belongs
+// in FIXED below when it must not drift.
 
 /**
  * R1: one on-read kanji + する/じる/ずる/す. S exactly when Korean has the same-hanja '-하다' verb in everyday
@@ -59,14 +63,19 @@ export const FIXED = {
   // …J/M when it is not (선월·선주·거년·작일·금만·금야·금회·선일 are not current Korean words)
   '先月|せんげつ': ['J'], '先週|せんしゅう': ['J'], '去年|きょねん': ['J'], '今晩|こんばん': ['J'], '今夜|こんや': ['J'],
   '今回|こんかい': ['J'], '先日|せんじつ': ['J'], '昨日|きのう': ['M'], '今朝|けさ': ['M'], '昨夜|ゆうべ': ['M'],
-  // R4 kinship: the Sino term decides; お～/～さん do not change the type
+  // R4 kinship: the Sino term decides; お～/～さん do not change the type…
   '祖父|そふ': ['S', '조부'], '祖母|そぼ': ['S', '조모'], '伯父|おじ': ['S', '백부'], '叔父|おじ': ['S', '숙부'],
-  '伯母|おば': ['S', '백모'], '叔母|おば': ['S', '숙모'], '伯父さん|おじさん': ['S', '백부'], '叔父さん|おじさん': ['S', '숙부'],
+  '伯母|おば': ['S', '백모'], '叔母|おば': ['S', '숙모'],
+  // …except おじさん/おばさん, whose first sense is '아저씨/아주머니' whatever the kanji (小父さん): M like N5 w09f/w0dr
+  // (native review of the tag audit, docs/plan/12)
+  '伯父さん|おじさん': ['M'], '叔父さん|おじさん': ['M'],
   'お兄さん|おにいさん': ['S', '형'], 'お姉さん|おねえさん': ['M'], '両親|りょうしん': ['S', '양친'], '親父|おやじ': ['M'],
   // R5 Korean writes another character: S only if reading the Japanese characters gives the Korean word
   '総合|そうごう': ['J', '총합'], '膨張|ぼうちょう': ['J', '팽장'], '衣装|いしょう': ['J', '의장'], '探検|たんけん': ['J', '탐검'],
   '適確|てきかく': ['S', '적확'], '的確|てきかく': ['S', '적확'], '交差点|こうさてん': ['S', '교차점'], '障害|しょうがい': ['S', '장해'],
   '数字|すうじ': ['S', '숫자'], '回数|かいすう': ['S', '횟수'],
+  // 激 reads 격, but Korean writes 刺戟 자극 and the meaning is the same: S 자극 (tag audit, docs/plan/12)
+  '刺激|しげき': ['S', '자극'],
 }
 
 /** Same headword (core + reading + affix position) labelled differently on purpose. None so far. */

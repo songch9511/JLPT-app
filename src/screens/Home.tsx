@@ -4,7 +4,7 @@ import { Button, Card, IconButton, ProgressBar, RowLink, Sheet } from '../compon
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
 import { BackupNudge } from '../components/Notices'
-import { LEVELS, type Level } from '../data'
+import { LEVELS, levelInfoVersion, type Level } from '../data'
 import { paceToGoal, readiness, type Readiness } from '../readiness'
 import {
   breakdowns,
@@ -215,9 +215,11 @@ export function Home() {
     return () => clearTimeout(t)
   }, [added])
   // recomputed per hour, like readiness itself
-  const pace = useMemo(() => paceToGoal(s, today), [s, hour])
+  // …and again once level data loads (it decides which reading cards still count, srs.ts isActive)
+  const iv = levelInfoVersion()
+  const pace = useMemo(() => paceToGoal(s, today), [s, hour, iv])
   const nextExam = upcomingExams(today, 2).find((d) => d > s.settings.examDate)
-  const weak = useMemo(() => leechIds(s.cards, 40, s.settings.fastTrack).length, [s.cards, s.settings.fastTrack])
+  const weak = useMemo(() => leechIds(s.cards, 40, s.settings.fastTrack).length, [s.cards, s.settings.fastTrack, iv])
   const quest = quests(s, today)[0]
   const week = weekDays(s.log, today)
 

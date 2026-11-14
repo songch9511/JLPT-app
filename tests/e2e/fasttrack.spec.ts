@@ -134,3 +134,31 @@ test('turning the fast-track off in settings: the S word comes as a meaning card
   await page.goto('./#/study')
   await expect(page.locator('.flash.reading-card')).toBeVisible()
 })
+
+test('a reading card left from when a word was tagged S (元気, corrected to J): it rests, the word comes as a meaning card, no bridge', async ({ page }) => {
+  // 元気 (w0ed) was S 원기 until the tag audit's corrections (docs/plan/12); the frozen positional file still says S
+  const live = JSON.parse(readFileSync(new URL('../../public/data/words-n5.json', import.meta.url), 'utf8')) as (string | number)[][]
+  const idx = live.findIndex((r) => r[0] === 'w0ed')
+  expect(live[idx].slice(1, 3)).toEqual(['元気', 'げんき'])
+  expect(live[idx][7]).toBe('J')
+  const pos = ORDER.indexOf(idx)
+  const reading = { due: T - DAY, stability: 30, difficulty: 5, elapsed_days: 31, scheduled_days: 30, learning_steps: 0, reps: 4, lapses: 0, state: 2, last_review: T - 31 * DAY }
+  const cards = { ...Object.fromEntries(Object.entries(seen(pos)).map(([k, c]) => [L(k), c])), 'w0ed:r': reading }
+  await open(page, { state: user({ fastTrack: true, dailyNew: 1 }, { v: 4, cards }), hash: '/study' })
+
+  await expect(page.locator('.flash-word')).toHaveText('元気')
+  await expect(page.locator('.flash.reading-card')).toHaveCount(0)
+  await expect(page.locator('.flash-head').getByText('새 단어', { exact: true })).toBeVisible()
+  await page.waitForTimeout(READ_MS)
+  await page.getByRole('button', { name: '정답 보기' }).click()
+  await expect(page.locator('.flash-meaning')).toHaveText(live[idx][3] as string)
+  await expect(page.locator('.bridge')).toHaveCount(0)
+  await page.waitForTimeout(READ_MS)
+  await page.getByRole('button', { name: /^알아요/ }).click()
+
+  await expect.poll(async () => (await saved(page)).cards.w0ed?.state).toBe(1)
+  const s = await saved(page)
+  // the reading card is kept exactly as it was (a later re-tag to S would bring it back)
+  expect(s.cards['w0ed:r']).toEqual(reading)
+  expect(s.log['2026-11-13']).toMatchObject({ c: 1, n: 1, r: 0 })
+})

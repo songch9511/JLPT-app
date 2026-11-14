@@ -1,7 +1,7 @@
 // Spaced repetition on top of FSRS (the open scheduler Anki uses): every answer moves a card's
 // next review further out when remembered and brings it back within minutes when forgotten.
 import { createEmptyCard, fsrs, generatorParameters, Rating, State as CardState, type Card, type Grade } from 'ts-fsrs'
-import { COUNTS, fallbackOrder, isReadingCard, LEVELS, levelInfo, levelOf, readingId, wordOfCard, type Level } from './data'
+import { COUNTS, fallbackOrder, isReadingCard, LEVELS, levelInfo, levelInfoVersion, levelOf, readingId, readingRetired, wordOfCard, type Level } from './data'
 import { getState, MAX_DAILY_NEW, update, type DayLog, type SCard, type State } from './store'
 import { addDays, dayKey, daysBetween } from './util'
 
@@ -80,20 +80,24 @@ export type CardsView = { cards: State['cards']; settings: Pick<State['settings'
 
 const fastOn = (s: { settings: Pick<State['settings'], 'fastTrack'> }) => s.settings?.fastTrack !== false
 
-/** Whether a card takes part in study. Reading cards rest (kept, not shown, not counted) while the fast-track is off. */
-export const isActive = (id: string, fastTrack: boolean) => fastTrack || !isReadingCard(id)
+/**
+ * Whether a card takes part in study. Reading cards rest (kept, not shown, not counted) while the fast-track is off,
+ * and once the loaded data no longer tags their word S (`readingRetired`): the word then counts as new until its
+ * meaning card is introduced, and the reading card comes back as it was if the word is tagged S again.
+ */
+export const isActive = (id: string, fastTrack: boolean) => !isReadingCard(id) || (fastTrack && !readingRetired(wordOfCard(id)))
 
 /** The active cards of a word (meaning first). */
 export function wordCards(s: CardsView, word: string): { id: string; card: SCard }[] {
   const out: { id: string; card: SCard }[] = []
   if (s.cards[word]) out.push({ id: word, card: s.cards[word] })
   const r = readingId(word)
-  if (s.cards[r] && fastOn(s)) out.push({ id: r, card: s.cards[r] })
+  if (s.cards[r] && isActive(r, fastOn(s))) out.push({ id: r, card: s.cards[r] })
   return out
 }
 
 /** A word counts as introduced once it has an active card; words without one are still new. */
-export const isSeen = (s: CardsView, word: string) => !!s.cards[word] || (fastOn(s) && !!s.cards[readingId(word)])
+export const isSeen = (s: CardsView, word: string) => !!s.cards[word] || (!!s.cards[readingId(word)] && isActive(readingId(word), fastOn(s)))
 
 /**
  * The card that introduces a word: the reading card for a word tagged S while the fast-track is on, else the
@@ -144,13 +148,14 @@ export const newPerDay = (dailyNew: number, behind: boolean) => Math.min(MAX_DAI
  * today, or a second review card of the same word, waits for another day (`buried`; learning cards are mid-step
  * and always come back).
  */
-let scanMemo: { cards: State['cards']; ft: boolean; day: string; value: ReturnType<typeof scan> } | null = null
+let scanMemo: { cards: State['cards']; ft: boolean; day: string; iv: number; value: ReturnType<typeof scan> } | null = null
 function scanToday(s: State, now: Date) {
   const ft = fastOn(s)
   const day = dayKey(now)
-  if (scanMemo && scanMemo.cards === s.cards && scanMemo.ft === ft && scanMemo.day === day) return scanMemo.value
+  const iv = levelInfoVersion()
+  if (scanMemo && scanMemo.cards === s.cards && scanMemo.ft === ft && scanMemo.day === day && scanMemo.iv === iv) return scanMemo.value
   const value = scan(s, now)
-  scanMemo = { cards: s.cards, ft, day, value }
+  scanMemo = { cards: s.cards, ft, day, iv, value }
   return value
 }
 
@@ -291,7 +296,7 @@ let spreadMemo: { args: unknown[]; value: Spread }[] = []
  * that follow it and those of new words are assumed to fit in the days (stated in 03 §4.3).
  */
 export function spreadReviews(s: State, now: Date, todayRoom = reviewQuota(s, now).left): Spread {
-  const args = [s.cards, s.log, s.settings.fastTrack, dayKey(now), todayRoom]
+  const args = [s.cards, s.log, s.settings.fastTrack, dayKey(now), todayRoom, levelInfoVersion()]
   const hit = spreadMemo.find((m) => m.args.every((a, i) => a === args[i]))
   if (hit) return hit.value
   const cap = reviewCap(s, now)
@@ -339,14 +344,15 @@ export function spreadReviews(s: State, now: Date, todayRoom = reviewQuota(s, no
   return value
 }
 
-let orderMemo: { cards: State['cards']; ft: boolean; day: string; value: ReturnType<typeof makeOrder> } | null = null
+let orderMemo: { cards: State['cards']; ft: boolean; day: string; iv: number; value: ReturnType<typeof makeOrder> } | null = null
 /** Review cards in priority order with the day each is released (0 = today), and learning cards' days. */
 function spreadOrder(s: State, now: Date) {
   const ft = fastOn(s)
   const day = dayKey(now)
-  if (orderMemo && orderMemo.cards === s.cards && orderMemo.ft === ft && orderMemo.day === day) return orderMemo.value
+  const iv = levelInfoVersion()
+  if (orderMemo && orderMemo.cards === s.cards && orderMemo.ft === ft && orderMemo.day === day && orderMemo.iv === iv) return orderMemo.value
   const value = makeOrder(s, now)
-  orderMemo = { cards: s.cards, ft, day, value }
+  orderMemo = { cards: s.cards, ft, day, iv, value }
   return value
 }
 
