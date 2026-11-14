@@ -1,10 +1,12 @@
 // Exam readiness (03 §4): how many words of the study list the learner is expected to recall on the exam
-// morning. Recall comes from ts-fsrs's own forgetting curve (`get_retrievability`) and scheduler (`next`);
-// nothing here re-derives the formula.
+// morning. Recall comes from ts-fsrs's own forgetting curve (`get_retrievability`); what the planned reviews add
+// comes from the multi-step projection in ./projection.ts (ts-fsrs `next_state`/`next_interval`); nothing here
+// re-derives a formula.
 import { fsrs, generatorParameters, Rating, type Card } from 'ts-fsrs'
 import { COUNTS, wordOfCard, type Level } from './data'
 import { pNew } from './pnew'
-import { endOfDay, isActive, newLeftToday, studyLevels, toCard } from './srs'
+import { examRecall, recallAt as fastRecall } from './projection'
+import { endOfDay, isActive, newLeftToday, newPerDay, spreadReviews, studyLevels, toCard, type Spread } from './srs'
 import { MAX_DAILY_NEW, type SCard, type State } from './store'
 import { addDays, dayKey, daysBetween, parseDay } from './util'
 
@@ -18,6 +20,8 @@ const CALIBRATION_GAP = 0.05
 
 // Same parameters as the app's scheduler but without fuzz, so the projection is deterministic.
 const model = fsrs(generatorParameters({ request_retention: 0.9, enable_fuzz: false }))
+
+const DAY = 86_400_000
 
 export const examTime = (examDate: string) => {
   const d = parseDay(examDate)
@@ -37,8 +41,10 @@ export function recallAt(c: SCard | Card, at: number): number {
 }
 
 /**
- * Recall on the exam if the card is reviewed once more at `at` (03 §4.1 lookahead): remembered with the
- * card's recall at that moment, then the exam-day recall of the "알아요" or "모르겠어요" outcome.
+ * Recall on the exam if the card is reviewed once more at `at` and never again (the one-step lookahead the first
+ * version of 03 §4.1 used): remembered with the card's recall at that moment, then the exam-day recall of the
+ * "알아요" or "모르겠어요" outcome. `examRecall` is the multi-step model the app uses now; when no further review
+ * falls before the exam the two agree.
  */
 export function recallAfterReview(c: SCard, at: number, exam: number): number {
   const card = toCard(c)
@@ -50,32 +56,31 @@ export function recallAfterReview(c: SCard, at: number, exam: number): number {
 }
 
 interface CardTerms {
-  key: string
   /** exam-day recall if nothing more is studied */
   stop: number
-  /** …if the plan is followed: reviewed once more when due before the exam */
+  /** …if the plan is followed */
   plan: number
   /** …if today is skipped and the plan resumes tomorrow */
   skip: number
 }
-const termCache = new WeakMap<SCard, CardTerms>()
 
-function cardTerms(c: SCard, exam: number, nowQ: number, eod: number, examDay: boolean): CardTerms {
-  // only what the result depends on: the review time moves with the clock for overdue cards alone
-  const key = `${exam}|${c.due < nowQ ? nowQ : 0}|${c.due < eod ? eod : 0}|${examDay ? 1 : 0}`
-  const hit = termCache.get(c)
-  if (hit && hit.key === key) return hit
-  const stop = recallAt(c, exam)
-  let plan = stop
-  let skip = stop
-  if (!examDay && c.due < exam) {
-    plan = recallAfterReview(c, Math.max(c.due, nowQ), exam)
-    // skipping today moves today's reviews to tomorrow, or past the exam if tomorrow is the exam day
-    skip = c.due >= eod ? plan : eod < exam ? recallAfterReview(c, Math.max(c.due, eod), exam) : stop
+/** Per card: the stop value and the last few (review time → value) results, keyed by the exam. */
+const valueCache = new WeakMap<SCard, { exam: number; stop: number; at: Map<number, number> }>()
+
+function cardValue(c: SCard, at: number | null, exam: number): { stop: number; value: number } {
+  let hit = valueCache.get(c)
+  if (!hit || hit.exam !== exam) {
+    hit = { exam, stop: fastRecall(c, exam), at: new Map() }
+    valueCache.set(c, hit)
   }
-  const t = { key, stop, plan, skip }
-  termCache.set(c, t)
-  return t
+  if (at === null) return { stop: hit.stop, value: hit.stop }
+  let v = hit.at.get(at)
+  if (v === undefined) {
+    v = examRecall(c, at, exam)
+    if (hit.at.size >= 4) hit.at.delete(hit.at.keys().next().value!)
+    hit.at.set(at, v)
+  }
+  return { stop: hit.stop, value: v }
 }
 
 export type ReadinessStatus = 'ontrack' | 'tight' | 'risk' | 'early'
@@ -93,14 +98,19 @@ export interface Readiness {
   goalWords: number
   /** E_now: expected words recalled on the exam if studying stopped now */
   stop: number
-  /** E_plan: …if the plan is followed (one more review of every card due before the exam, plus new words) */
+  /** E_plan: …if the plan is followed (every review before the exam on its planned day, plus new words) */
   plan: number
-  /** E_plan minus E_plan with today skipped: what today's session adds */
+  /** E_plan minus E_plan with today skipped and the plan resumed tomorrow: what today's session adds (≥ 0) */
   todayGain: number
+  /** …of which from today's reviews (the rest is today's new words) */
+  todayGainReviews: number
   /** words the plan still introduces before the exam (today's included) */
   plannedNew: number
   /** words not yet introduced */
   unseen: number
+  /** reviews due and waiting beyond today's quota, and the days (today included) the plan takes to clear them */
+  held: number
+  catchUp: number
   status: ReadinessStatus
   /** recall over the last 30 days was lower than predicted and every figure was scaled down (03 §4.1) */
   calibrated: boolean
@@ -132,12 +142,15 @@ function reviewAnswers(s: State): number {
   return n
 }
 
-/** Introductions per day until the exam: today `today` words, then `daily` a day, until `left` runs out. */
-function newWordsTerm(left: number, today: number, daily: number, daysLeft: number, skipToday: boolean) {
+/**
+ * Introductions until the exam: `today` words today (none when skipped), then `daily` a day — NEW_WHILE_BEHIND on
+ * days the schedule still holds reviews (`held`) — until `left` runs out; each counts its P_NEW share.
+ */
+function newWordsTerm(left: number, today: number, daily: number, daysLeft: number, held: number[]) {
   let sum = 0
   let introduced = 0
-  for (let k = skipToday ? 1 : 0; k < daysLeft && left > 0; k++) {
-    const n = Math.min(left, k === 0 ? today : daily)
+  for (let k = 0; k < daysLeft && left > 0; k++) {
+    const n = Math.min(left, k === 0 ? today : newPerDay(daily, (held[k] ?? 0) > 0))
     sum += n * pNew(daysLeft - k)
     introduced += n
     left -= n
@@ -145,16 +158,24 @@ function newWordsTerm(left: number, today: number, daily: number, daysLeft: numb
   return { sum, introduced }
 }
 
+/** When a card scheduled for day `k` of the spread is reviewed: today at the earliest now, later days from midnight. */
+const reviewAt = (due: number, k: number, nowQ: number, eod: number) => Math.max(due, k === 0 ? nowQ : eod + (k - 1) * DAY)
+
 let memo: { args: unknown[]; value: Readiness } | null = null
+const memoArgs = (s: State, now: Date, dailyNew?: number) => [s.cards, s.log, s.settings, Math.floor(now.getTime() / HOUR) * HOUR, dayKey(now), dailyNew]
 
 /**
  * Readiness for the exam in `s.settings.examDate`. `dailyNew` replaces the daily new-word setting, to ask
  * what a different pace would give. Results are memoised on the state's parts and the hour, and each card's
- * terms are cached on the card object, so re-rendering or answering one card stays cheap.
+ * values are cached on the card object, so re-rendering or answering one card stays cheap.
+ *
+ * The plan (03 §4.3, §5.3): reviews are done on the day the backlog policy gives them (`spreadReviews`: today's
+ * quota, then the daily cap, oldest due first); every later review on its due day; each review remembered with
+ * the card's recall at that moment. "Skipping today" is the same plan with no room today.
  */
 export function readiness(s: State, now: Date, opts: { dailyNew?: number } = {}): Readiness {
   const nowQ = Math.floor(now.getTime() / HOUR) * HOUR
-  const args = [s.cards, s.log, s.settings, nowQ, dayKey(now), opts.dailyNew]
+  const args = memoArgs(s, now, opts.dailyNew)
   if (memo && memo.args.every((a, i) => a === args[i])) return memo.value
 
   const { examDate, goal } = s.settings
@@ -167,18 +188,29 @@ export function readiness(s: State, now: Date, opts: { dailyNew?: number } = {})
   const past = daysLeft < 0
   const examDay = daysLeft === 0
   const eod = endOfDay(now)
+  const planned = !past && !examDay
+  const plan$: Spread = spreadReviews(s, now)
+  const skip$: Spread = planned ? spreadReviews(s, now, 0) : plan$
 
   // a word's probability is that of its weakest card (03 §4.1); words without a card count 0. A word with a
   // meaning and a reading card counts once; resting reading cards (fast-track off) do not count.
   const inLevels = new Set<number>(levels)
   const words = new Map<string, CardTerms>()
   const ft = s.settings.fastTrack !== false
+  /** today's reviews (day 0) only differ between the two scenarios: what they add, word by word */
+  let reviewsToday = 0
   for (const id in s.cards) {
     if (!inLevels.has(Number(id[0])) || !isActive(id, ft)) continue
-    const t = cardTerms(s.cards[id], exam, nowQ, eod, examDay)
+    const c = s.cards[id]
+    const kp = planned ? (plan$.day.get(id) ?? Infinity) : Infinity
+    // skipping today: nothing is reviewed today, learning cards included
+    const ks = planned ? Math.max(1, skip$.day.get(id) ?? Infinity) : Infinity
+    const p = cardValue(c, kp < daysLeft ? reviewAt(c.due, kp, nowQ, eod) : null, exam)
+    const k = ks === kp ? p : cardValue(c, ks < daysLeft ? reviewAt(c.due, ks, nowQ, eod) : null, exam)
+    const t = { stop: p.stop, plan: p.value, skip: k.value }
     const w = wordOfCard(id)
     const prev = words.get(w)
-    words.set(w, prev ? { key: '', stop: Math.min(prev.stop, t.stop), plan: Math.min(prev.plan, t.plan), skip: Math.min(prev.skip, t.skip) } : t)
+    words.set(w, prev ? { stop: Math.min(prev.stop, t.stop), plan: Math.min(prev.plan, t.plan), skip: Math.min(prev.skip, t.skip) } : t)
   }
   let stop = 0
   let plan = 0
@@ -188,12 +220,14 @@ export function readiness(s: State, now: Date, opts: { dailyNew?: number } = {})
     plan += t.plan
     skip += t.skip
   }
+  reviewsToday = plan - skip
 
   const unseen = Math.max(0, total - words.size)
-  const daily = Math.min(MAX_DAILY_NEW, opts.dailyNew ?? s.settings.dailyNew)
-  const today = newLeftToday(s, now, daily)
-  const fresh = past || examDay ? { sum: 0, introduced: 0 } : newWordsTerm(unseen, today, daily, daysLeft, false)
-  const freshSkip = past || examDay ? { sum: 0, introduced: 0 } : newWordsTerm(unseen, today, daily, daysLeft, true)
+  const daily = opts.dailyNew ?? s.settings.dailyNew
+  const today = newLeftToday(s, now, daily, (plan$.held[0] ?? 0) > 0)
+  const none = { sum: 0, introduced: 0 }
+  const fresh = planned ? newWordsTerm(unseen, today, daily, daysLeft, plan$.held) : none
+  const freshSkip = planned ? newWordsTerm(unseen, 0, daily, daysLeft, skip$.held) : none
   plan += fresh.sum
   skip += freshSkip.sum
 
@@ -215,9 +249,12 @@ export function readiness(s: State, now: Date, opts: { dailyNew?: number } = {})
     goalWords,
     stop,
     plan,
-    todayGain: Math.max(0, plan - skip),
+    todayGain: planned ? Math.max(0, plan - skip) : 0,
+    todayGainReviews: planned ? Math.max(0, reviewsToday * factor) : 0,
     plannedNew: fresh.introduced,
     unseen,
+    held: plan$.held[0] ?? 0,
+    catchUp: plan$.catchUp,
     status,
     calibrated: factor < 1,
     factor,

@@ -44,6 +44,8 @@ export interface Word {
   rt: string
   /** for on-read Sino words: the reading cut per kanji ("さん|ぎょう"), '' when not known for sure */
   a: string
+  /** for reading-card words: other readings the dictionary gives the written form, space-separated ('' if none) */
+  x?: string
 }
 
 export const meaning = (w: Word) => w.ko || w.en
@@ -79,12 +81,12 @@ export function setLevelInfo(l: Level, words: Pick<Word, 'idx' | 'o' | 'k'>[]) {
   infos.set(l, { order, fast: new Set(words.filter((w) => w.k === 'S').map((w) => w.idx)) })
 }
 
-type Row = [string, string, string, string, number?, number?, string?, string?, string?, string?, string?]
+type Row = [string, string, string, string, number?, number?, string?, string?, string?, string?, string?, string?]
 const TYPES = new Set<string>(WORD_TYPES)
 
 /** One data row as a Word. Rows from before the extra columns (or a cached old file) get idx order and no type. */
 export function parseRow(l: Level, row: Row, idx: number): Word {
-  const [w, r, ko, en, o, f, k = '', sk = '', ff = '', rt = '', a = ''] = row
+  const [w, r, ko, en, o, f, k = '', sk = '', ff = '', rt = '', a = '', x = ''] = row
   return {
     id: wordId(l, idx),
     level: l,
@@ -100,6 +102,7 @@ export function parseRow(l: Level, row: Row, idx: number): Word {
     ff,
     rt,
     a,
+    x,
   }
 }
 

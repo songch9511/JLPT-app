@@ -3,7 +3,7 @@
 // Word order is a fixed seeded shuffle so that word ids (`<level>-<idx>`) stay stable.
 //
 //   node scripts/build-data.mjs                   rows [w, r, ko, en]                         (the original four)
-//   node scripts/build-data.mjs --extras          rows [w, r, ko, en, o, f, k, sk, ff, rt, a]  (what the app ships)
+//   node scripts/build-data.mjs --extras          rows [w, r, ko, en, o, f, k, sk, ff, rt, a, x]  (what the app ships)
 //   node scripts/build-data.mjs --extras --out <dir>   write somewhere other than public/data
 // --extras appends columns after the existing four (which never change) from data/freq/ and data/tags/;
 // see docs/plan/08-word-data.md for the row format.
@@ -63,7 +63,9 @@ export function loadLevel(n) {
 // k, sk, ff, rt  word-type tags from labelled data/tags/n{l}-*.json; '' when not labelled yet
 // a  for k=S/F/J words read entirely on'yomi: the reading cut per kanji ("さん|ぎょう"), when KANJIDIC2
 //    on-readings allow exactly one cut; used by the app's sound-correspondence hint. '' otherwise.
-// Trailing empty columns are dropped, so a row is 6 long until it is labelled (at most 11).
+// x  for k=S words (reading cards): the other readings JMdict gives the written form, space-separated, from
+//    data/readings/n{l}.json (scripts/enrich/alt-readings.py); never offered as a wrong choice. '' otherwise.
+// Trailing empty columns are dropped, so a row is 6 long until it is labelled (at most 12).
 const TAG_FIELDS = ['k', 'sk', 'ff', 'rt']
 
 let kanjiTable
@@ -80,6 +82,8 @@ export function extraColumns(n, count, words = loadLevel(n)) {
   if (existsSync(dir))
     for (const f of readdirSync(dir).filter((f) => new RegExp(`^n${n}-\\d+\\.json$`).test(f)))
       Object.assign(tags, JSON.parse(readFileSync(`${dir}/${f}`, 'utf8')))
+  const altFile = `${root}data/readings/n${n}.json`
+  const alt = existsSync(altFile) ? JSON.parse(readFileSync(altFile, 'utf8')) : {}
   let tagged = 0
   let aligned = 0
   const cols = Array.from({ length: count }, (_, i) => {
@@ -91,7 +95,8 @@ export function extraColumns(n, count, words = loadLevel(n)) {
       a = alignOn(core, coreReading, kanjiTable)?.join('|') ?? ''
       if (a) aligned++
     }
-    const row = [o[i], freq[i] ?? 0, ...TAG_FIELDS.map((k) => t[k] ?? ''), a]
+    const x = t.k === 'S' ? (alt[i] ?? []).join(' ') : ''
+    const row = [o[i], freq[i] ?? 0, ...TAG_FIELDS.map((k) => t[k] ?? ''), a, x]
     while (row.length > 2 && row[row.length - 1] === '') row.pop()
     return row
   })

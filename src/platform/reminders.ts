@@ -8,12 +8,12 @@
 // - at most one a day, at the chosen time, for the next HORIZON_DAYS days (iOS keeps at most 64 pending
 //   local notifications per app; a week of dailies stays far below that and is re-planned on every open).
 // - only on days with reviews due by the end of that day, assuming the learner does nothing before then
-//   (re-planning after each session corrects it). New words alone do not trigger a reminder: they are not due.
+//   (re-planning after each session corrects it); at most the day's review cap, as the queue would show them. New words alone do not trigger a reminder: they are not due.
 // - never on a day already completed: today once something was answered and nothing is left or waiting.
 // - never on the learner's quiet weekdays, never in the past.
 // - the message states the real counts.
-import { buildQueue, isActive, newWordsLeft } from '../srs'
-import { MAX_DAILY_NEW, type State } from '../store'
+import { buildQueue, isActive, newPerDay, newWordsLeft, reviewCap } from '../srs'
+import type { State } from '../store'
 import { addDays, dayKey } from '../util'
 import { wordOfCard } from '../data'
 
@@ -62,8 +62,10 @@ export function workOn(s: State, day: Date, now: Date): { reviews: number; fresh
   const ft = s.settings.fastTrack !== false
   const words = new Set<string>()
   for (const id in s.cards) if (isActive(id, ft) && s.cards[id].due < eod) words.add(wordOfCard(id))
-  const fresh = Math.min(Math.min(MAX_DAILY_NEW, s.settings.dailyNew), newWordsLeft(s))
-  return { reviews: words.size, fresh, done: false }
+  // as the queue would show that day: reviews up to the day's cap (the rest wait, 03 §5.3), fewer new words then
+  const cap = reviewCap(s, now)
+  const fresh = Math.min(newPerDay(s.settings.dailyNew, words.size > cap), newWordsLeft(s))
+  return { reviews: Math.min(words.size, cap), fresh, done: false }
 }
 
 export function reminderText(reviews: number, fresh: number): { title: string; body: string } {

@@ -50,7 +50,10 @@ const emptyLog = (): DayLog => ({ c: 0, n: 0, r: 0, p: 0 })
 export type Kind = 'new' | 'learning' | 'review'
 export interface Queue {
   learning: number
+  /** today's reviews still to do (at most the day's review quota) */
   review: number
+  /** reviews due by tonight but beyond today's quota: kept for the coming days (03 §5.3) */
+  held: number
   fresh: number
   /** …of the new words, those introduced with a reading card (fast-track) */
   freshReading: number
@@ -127,19 +130,35 @@ export function newWordsLeft(s: State): number {
   return studyLevels(s.settings).reduce((n, l) => n + b[l].new, 0)
 }
 
-/** New words still allowed today: the daily setting (never above MAX_DAILY_NEW) plus extras unlocked today. */
-export function newLeftToday(s: State, now: Date, dailyNew = s.settings.dailyNew): number {
+/**
+ * New words still allowed today: the daily setting (never above MAX_DAILY_NEW; at most NEW_WHILE_BEHIND while
+ * reviews are `behind`, i.e. held for later days) plus extras unlocked today.
+ */
+export function newLeftToday(s: State, now: Date, dailyNew = s.settings.dailyNew, behind = false): number {
   const log = s.log[dayKey(now)]
-  return Math.max(0, Math.min(MAX_DAILY_NEW, dailyNew) + (log?.x ?? 0) - (log?.n ?? 0))
+  return Math.max(0, newPerDay(dailyNew, behind) + (log?.x ?? 0) - (log?.n ?? 0))
 }
 
+/** The plan's new words for a day: the setting, held to MAX_DAILY_NEW, and to NEW_WHILE_BEHIND while catching up. */
+export const newPerDay = (dailyNew: number, behind: boolean) => Math.min(MAX_DAILY_NEW, dailyNew, behind ? NEW_WHILE_BEHIND : Infinity)
+
 /**
- * `avoid` keeps the card just answered from reappearing immediately when something else is available.
- * `finishNow` shows learning cards that come back later today right away, so a session never has to wait
- * for them (03 §5.2 P7).
+ * Today's cards: learning cards due before midnight, and the reviews due before midnight in the order they are
+ * shown — oldest due first (ties by card id). Only one card of a word a day: a review whose sibling was answered
+ * today, or a second review card of the same word, waits for another day (`buried`; learning cards are mid-step
+ * and always come back).
  */
-export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNow?: boolean } = {}): Queue {
-  const t = now.getTime()
+let scanMemo: { cards: State['cards']; ft: boolean; day: string; value: ReturnType<typeof scan> } | null = null
+function scanToday(s: State, now: Date) {
+  const ft = fastOn(s)
+  const day = dayKey(now)
+  if (scanMemo && scanMemo.cards === s.cards && scanMemo.ft === ft && scanMemo.day === day) return scanMemo.value
+  const value = scan(s, now)
+  scanMemo = { cards: s.cards, ft, day, value }
+  return value
+}
+
+function scan(s: State, now: Date) {
   const eod = endOfDay(now)
   const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
   const ft = fastOn(s)
@@ -156,18 +175,38 @@ export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNo
     } else if (c.due < eod) review.push([id, c.due])
   }
   learning.sort((a, b) => a[1] - b[1])
-  review.sort((a, b) => a[1] - b[1])
-  // only one card of a word a day: a review whose sibling was answered today, or a second review card of the
-  // same word, waits (learning cards are mid-step and always come back)
+  review.sort(byDue)
   const queued = new Set(learning.map(([id]) => wordOfCard(id)))
+  const buried: string[] = []
   review = review.filter(([id]) => {
     const w = wordOfCard(id)
     const other = answeredToday.get(w)
-    if ((other !== undefined && other !== id) || queued.has(w)) return false
+    if ((other !== undefined && other !== id) || queued.has(w)) {
+      buried.push(id)
+      return false
+    }
     queued.add(w)
     return true
   })
-  const fresh = nextNewIds(s, newLeftToday(s, now))
+  return { learning, review, buried }
+}
+
+const byDue = (a: [string, number], b: [string, number]) => a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)
+
+/**
+ * `avoid` keeps the card just answered from reappearing immediately when something else is available.
+ * `finishNow` shows learning cards that come back later today right away, so a session never has to wait
+ * for them (03 §5.2 P7). When more reviews are due than today's review quota (`reviewQuota`), only the
+ * oldest-due ones up to the quota are today's; the rest are `held` for the coming days (03 §5.3) and new
+ * words are cut to NEW_WHILE_BEHIND.
+ */
+export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNow?: boolean } = {}): Queue {
+  const t = now.getTime()
+  const { learning, review: due } = scanToday(s, now)
+  const quota = reviewQuota(s, now)
+  const review = due.slice(0, quota.left)
+  const held = due.length - review.length
+  const fresh = nextNewIds(s, newLeftToday(s, now, s.settings.dailyNew, held > 0))
 
   const ready = opts.finishNow ? learning : learning.filter(([, due]) => due <= t + LEARN_AHEAD_MS)
   const dueNow = ready.filter(([, due]) => due <= t)
@@ -186,7 +225,154 @@ export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNo
 
   const waiting = learning.length - ready.length
   const nextDue = waiting > 0 ? learning[ready.length][1] : null
-  return { learning: learning.length, review: review.length, fresh: fresh.length, freshReading: fresh.filter(isReadingCard).length, next, waiting, nextDue }
+  return {
+    learning: learning.length,
+    review: review.length,
+    held,
+    fresh: fresh.length,
+    freshReading: fresh.filter(isReadingCard).length,
+    next,
+    waiting,
+    nextDue,
+  }
+}
+
+// ── backlog (03 §5.3): more reviews due than a day holds are spread over the coming days ──
+
+/** A day's reviews are capped at what fits in this many minutes at the learner's measured pace. */
+export const REVIEW_MINUTES = 30
+/** …but never fewer than this many reviews (a very slow measured pace must not make the day trivial). */
+export const MIN_REVIEW_CAP = 50
+/** New words a day while reviews are held for later days (03 §5.1: 밀림이면 새 단어 ≤ 5). */
+export const NEW_WHILE_BEHIND = 5
+/** Reviews added by one "더 하기". */
+export const MORE_REVIEWS = 50
+
+/**
+ * Reviews a day can hold: REVIEW_MINUTES at the seconds per answer measured before today (so it does not move
+ * while the learner studies), at least MIN_REVIEW_CAP. 225 at the default 8 s.
+ */
+export function reviewCap(s: State, now: Date): number {
+  return Math.max(MIN_REVIEW_CAP, Math.floor((REVIEW_MINUTES * 60) / secondsPerAnswer(s, addDays(now, -1))))
+}
+
+/** Today's review quota: the cap plus reviews unlocked with "더 하기", minus review answers already given today. */
+export function reviewQuota(s: State, now: Date) {
+  const log = s.log[dayKey(now)]
+  const cap = reviewCap(s, now)
+  const extra = log?.xr ?? 0
+  const done = log?.r ?? 0
+  return { cap, extra, done, left: Math.max(0, cap + extra - done) }
+}
+
+/** Let `n` more reviews into today's quota ("더 하기"). */
+export function unlockMoreReviews(n: number, now = new Date()) {
+  update((d) => {
+    const key = dayKey(now)
+    const log = { ...(d.log[key] ?? emptyLog()) }
+    log.xr = (log.xr ?? 0) + n
+    d.log = { ...d.log, [key]: log }
+  })
+}
+
+export interface Spread {
+  /** the day each active card is (first) reviewed on under the plan, 0 = today; learning cards on their due day */
+  day: Map<string, number>
+  /** reviews already due and still waiting at the end of each day (index 0 = today) */
+  held: number[]
+  /** days, today included, until nothing due waits any more; 0 when nothing is held today */
+  catchUp: number
+}
+
+const DAY_MS = 86_400_000
+let spreadMemo: { args: unknown[]; value: Spread }[] = []
+
+/**
+ * The backlog policy as a schedule: every review card in due order (the order `buildQueue` shows them; see
+ * backlog-sim.ts for why) goes to the first day, from its due day on, that still has room — `todayRoom` today
+ * (the quota left, or 0 to model skipping today) and the cap on every later day. This is a selection policy
+ * derived from the cards: due dates are never rewritten. It counts only the next review of each card; the reviews
+ * that follow it and those of new words are assumed to fit in the days (stated in 03 §4.3).
+ */
+export function spreadReviews(s: State, now: Date, todayRoom = reviewQuota(s, now).left): Spread {
+  const args = [s.cards, s.log, s.settings.fastTrack, dayKey(now), todayRoom]
+  const hit = spreadMemo.find((m) => m.args.every((a, i) => a === args[i]))
+  if (hit) return hit.value
+  const cap = reviewCap(s, now)
+  const { order, learning } = spreadOrder(s, now)
+  const day = new Map<string, number>(learning)
+  // first day >= release with room, via "next free day" links (days fill up in order)
+  const room: number[] = []
+  const nextFree: number[] = []
+  const roomOf = (d: number) => (room[d] ??= d === 0 ? todayRoom : cap)
+  const find = (d: number): number => {
+    let x = d
+    while (nextFree[x] !== undefined) x = nextFree[x]
+    // path compression
+    while (d !== x) {
+      const n = nextFree[d]
+      nextFree[d] = x
+      d = n
+    }
+    return x
+  }
+  const released: number[] = []
+  const assigned: number[] = []
+  for (const [id, rel] of order) {
+    let d = find(rel)
+    while (roomOf(d) === 0) {
+      nextFree[d] = d + 1
+      d = find(d + 1)
+    }
+    room[d]--
+    day.set(id, d)
+    released[rel] = (released[rel] ?? 0) + 1
+    assigned[d] = (assigned[d] ?? 0) + 1
+  }
+  const held: number[] = []
+  let waiting = 0
+  let catchUp = 0
+  for (let d = 0; d < Math.max(released.length, assigned.length); d++) {
+    waiting += (released[d] ?? 0) - (assigned[d] ?? 0)
+    held.push(waiting)
+    // the backlog of today: cleared on the first day that ends with nothing waiting
+    if (held[0] > 0 && catchUp === 0 && waiting === 0) catchUp = d + 1
+  }
+  const value = { day, held, catchUp }
+  spreadMemo = [{ args, value }, ...spreadMemo.slice(0, 1)]
+  return value
+}
+
+let orderMemo: { cards: State['cards']; ft: boolean; day: string; value: ReturnType<typeof makeOrder> } | null = null
+/** Review cards in priority order with the day each is released (0 = today), and learning cards' days. */
+function spreadOrder(s: State, now: Date) {
+  const ft = fastOn(s)
+  const day = dayKey(now)
+  if (orderMemo && orderMemo.cards === s.cards && orderMemo.ft === ft && orderMemo.day === day) return orderMemo.value
+  const value = makeOrder(s, now)
+  orderMemo = { cards: s.cards, ft, day, value }
+  return value
+}
+
+function makeOrder(s: State, now: Date) {
+  const eod = endOfDay(now)
+  const dayOf = (due: number) => (due < eod ? 0 : 1 + Math.floor((due - eod) / DAY_MS))
+  const ft = fastOn(s)
+  const { review: dueToday, buried } = scanToday(s, now)
+  const buriedSet = new Set(buried)
+  const learning: [string, number][] = []
+  // release day of each review card, in priority order: today's (already in due order), then later ones by due
+  const order: [string, number][] = dueToday.map(([id]) => [id, 0])
+  const later: [string, number][] = []
+  for (const id in s.cards) {
+    if (!isActive(id, ft)) continue
+    const c = s.cards[id]
+    if (isLearning(c)) learning.push([id, dayOf(c.due)])
+    else if (buriedSet.has(id) || c.due >= eod) later.push([id, c.due])
+  }
+  later.sort(byDue)
+  for (const [id, due] of later) order.push([id, Math.max(1, dayOf(due))])
+  return { order, learning }
 }
 
 // ── answering ───────────────────────────────────────────────────────────────
@@ -338,7 +524,7 @@ export function forecast(s: State, now: Date, days = 7): number[] {
 }
 
 /**
- * Seconds per answer measured over the last 14 days (03 §5.1); 8 s until 50 answers have been timed.
+ * Seconds per answer measured over the 14 days ending `now` (03 §5.1); 8 s until 50 answers have been timed.
  * Answers logged before time was recorded do not count.
  */
 export function secondsPerAnswer(s: State, now: Date): number {

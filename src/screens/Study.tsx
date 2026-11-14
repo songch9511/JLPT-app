@@ -16,9 +16,11 @@ import {
   Rating,
   restore,
   snapshot,
+  MORE_REVIEWS,
   streak,
   studyLevels,
   unlockMoreNew,
+  unlockMoreReviews,
   type Grade,
   type Queue,
   type Snapshot,
@@ -148,7 +150,9 @@ export function Study() {
   const error = levelError ?? levels.error
   const reps = id ? (s.cards[id]?.reps ?? 0) : 0
   const question = useMemo(() => (reading && word && all ? readingQuestion(word, all, `${id}|${reps}`) : null), [reading, word, all, id, reps])
-  const ready = !!word && (!reading || !!question)
+  // a word without enough good wrong choices (readingQuestion → null) is asked like a meaning card: recall, then reveal
+  const quiz = reading && !!question
+  const ready = !!word && (!reading || !!all)
   const intervals = useMemo(() => (id ? previewIntervals(s, id, now) : null), [s, id, now])
   const cardKey = `${id}:${answered}`
   const activeMs = useActiveTime(cardKey)
@@ -257,8 +261,8 @@ export function Study() {
       if ((e.key === ' ' || e.key === 'Enter') && e.target instanceof Element && e.target.matches(':focus-visible')) return
       const k = e.key
       // reading card: 1–4 pick a choice, 0 or ← is "모르겠어요"; once answered Space/Enter goes on
-      if (reading) {
-        if (picked === null && /^[1-4]$/.test(k)) choose(Number(k) - 1)
+      if (quiz) {
+        if (picked === null && /^[1-4]$/.test(k) && Number(k) <= (question?.choices.length ?? 0)) choose(Number(k) - 1)
         else if (picked === null && (k === '0' || k === 'ArrowLeft')) choose(-1)
         else if (picked !== null && (k === ' ' || k === 'Enter')) {
           e.preventDefault()
@@ -276,7 +280,7 @@ export function Study() {
     }
     addEventListener('keydown', on)
     return () => removeEventListener('keydown', on)
-  }, [ready, word, reading, picked, choose, revealed, missed, submit, onAgain, reveal])
+  }, [ready, word, quiz, question, picked, choose, revealed, missed, submit, onAgain, reveal])
 
   if (levels.ready && !q.next) {
     const moreNew = breakdowns(s)[s.settings.target].new > 0
@@ -296,7 +300,9 @@ export function Study() {
         <h1>{cleared ? '오늘 목표 달성!' : '잠깐 쉬어 가요'}</h1>
         <p className="done-text">
           {cleared
-            ? '루마가 두 눈을 다 떴어요. 기억이 흐려질 때쯤 다시 가져올게요.'
+            ? q.held > 0
+              ? `루마가 두 눈을 다 떴어요. 남은 밀린 복습 ${q.held}장은 내일부터 나눠서 해요.`
+              : '루마가 두 눈을 다 떴어요. 기억이 흐려질 때쯤 다시 가져올게요.'
             : `${inMin}분 뒤에 익히는 중인 ${q.waiting}장이 돌아와요.`}
         </p>
         <dl className="result-tiles">
@@ -325,7 +331,17 @@ export function Study() {
         <div className="done-actions">
           {!cleared && <Button label={`남은 ${q.waiting}장 지금 마무리`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
           <Button label="홈으로" variant={cleared ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
-          {cleared && moreNew && <Button label="새 단어 10개 더 하기" size="lg" width="100%" onClick={() => unlockMoreNew(10)} />}
+          {/* while reviews are held for later days, more reviews rather than more new words (03 §5.1, §5.3) */}
+          {cleared && q.held > 0 ? (
+            <Button
+              label={`복습 ${Math.min(MORE_REVIEWS, q.held)}장 더 하기`}
+              size="lg"
+              width="100%"
+              onClick={() => unlockMoreReviews(Math.min(MORE_REVIEWS, q.held))}
+            />
+          ) : (
+            cleared && moreNew && <Button label="새 단어 10개 더 하기" size="lg" width="100%" onClick={() => unlockMoreNew(10)} />
+          )}
         </div>
         {ReminderOffer && platform.native && cleared && (
           <Suspense fallback={null}>
@@ -378,7 +394,7 @@ export function Study() {
           <div
             className={`flash ${revealed ? 'open' : ''} ${missed ? 'missed' : ''} ${reading ? 'reading-card' : ''}`}
             key={cardKey}
-            onClick={() => !reading && reveal()}
+            onClick={() => !quiz && reveal()}
           >
             <div className="flash-head">
               {missed ? (
@@ -489,7 +505,7 @@ export function Study() {
           <Button label="되돌리기" variant="ghost" className="undo-chip" icon={<Icon name="undo" size={16} />} onClick={onUndo} />
         </div>
       )}
-      {reading ? (
+      {quiz ? (
         <footer className="answer-bar">
           {picked === null ? (
             <Grade className="wide" label="모르겠어요" onClick={() => choose(-1)} isDisabled={!ready} />
