@@ -27,7 +27,12 @@ Methods, tried in order:
   j  neither found; JMdict priority tag -> median Zipf of JMdict words carrying the same tag
   z  nothing at all: floor Zipf 1.0 (f = 10), i.e. "rarer than anything wordfreq lists"
 
-Order: f descending, then JMdict priority rank (news1/ichi1/spec1/spec2/gai1 < other tags < none),
+Order pins (data/freq/order-pins.json, {"<id>": {"order_f": n, "why": "<date>: <reason>"}}): the word is
+ordered as if its f were order_f, while its shipped f stays the measured one. Used when a corrected headword
+changes a word's f after learners started: the word keeps its place, and no other word's position moves
+(docs/plan/08 §2.4, §7.2). Every pin must name a live word.
+
+Order: f descending (or the pinned order_f), then JMdict priority rank (news1/ichi1/spec1/spec2/gai1 < other tags < none),
 then the word's place in id order (seq). For the 8,130 words that existed when ids were introduced this is
 the old positional index, itself a fixed seeded shuffle, so ties stay in the same stable random order; words
 added later come after them in their tie.
@@ -328,6 +333,7 @@ def main():
     jm = JMdict(db)
     calib = calibrate(jm)
     os.makedirs(OUT, exist_ok=True)
+    pins = load_pins({w['id'] for n in LEVELS for w in words[str(n)]})
     coverage = {}
     for n in LEVELS:
         ws = words[str(n)]
@@ -336,7 +342,7 @@ def main():
             v, m, rank = score(w, jm, calib)
             f[w['id']] = v
             src[w['id']] = m
-            keys.append((-v, rank, w['seq'], w['id']))
+            keys.append((-pins.get(w['id'], v), rank, w['seq'], w['id']))
         order = [k[3] for k in sorted(keys)]
         assert sorted(order) == sorted(w['id'] for w in ws)
         dump(f'n{n}.json', f)
@@ -347,6 +353,22 @@ def main():
         coverage[f'n{n}'] = {'words': len(ws), **{m: c.get(m, 0) for m in 'whckrjz'}}
         print(f"N{n}: {len(ws)} words  " + '  '.join(f'{m}={c.get(m, 0)}' for m in 'whckrjz'))
     dump('coverage.json', coverage)
+
+
+def load_pins(live):
+    path = os.path.join(OUT, 'order-pins.json')
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding='utf8') as fh:
+        raw = json.load(fh)
+    pins = {}
+    for k, v in raw.get('pins', {}).items():
+        if k not in live:
+            sys.exit(f'{path}: "{k}" is not a live word id')
+        if not isinstance(v.get('order_f'), int) or not 10 <= v['order_f'] <= 80 or not str(v.get('why', '')).strip():
+            sys.exit(f'{path}: "{k}" needs an integer order_f (10..80) and a why')
+        pins[k] = v['order_f']
+    return pins
 
 
 def dump(name, obj):

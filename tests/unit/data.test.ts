@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 // @ts-expect-error plain JS build helpers
 import * as ids from '../../scripts/word-ids.mjs'
 // @ts-expect-error plain JS build helpers
-import { idModule, loadInputs, loadWords } from '../../scripts/build-data.mjs'
+import { applyCorrections, checkKoCorrections, idModule, loadInputs, loadWords } from '../../scripts/build-data.mjs'
 
 const LEVELS = [5, 4, 3, 2, 1] as const
 const COUNTS: Record<number, number> = { 5: 718, 4: 668, 3: 2140, 2: 1905, 1: 2699 }
@@ -35,8 +35,49 @@ const FROZEN: Record<number, string> = {
  * sha256 over every registry entry (id, level, headword, reading, positional id, tombstone) in file order. It may
  * only change together with an intended registry edit (new ids, a correction, a retirement) — and the tests below
  * then still prove no existing id moved to another word.
+ * 2026-11-14: w4db's headword corrected 副 → とりわけ (source error, docs/plan/12 §6, 08 §7.2).
+ * 2026-11-14: w3nu's reading corrected ふす → むす, w4ta's headword 摩する → 摩る (data/tags/audit/source-errors.csv).
  */
-const REGISTRY_SHA = '147ec7049bb768993710948a90771398d7ce8dcad69009fa5a3a4cff9305ef5f'
+const REGISTRY_SHA = '043ae4c79176f82455a64b39c01ccab5a2c341f36ed60ac1bd7ea069a320fe3b'
+
+/**
+ * Source errors corrected after the positional files froze (docs/plan/12 §6, 08 §7.2), by id: each column that may
+ * now differ from the frozen file, with the value the frozen file has and the value shipped now. Headword/reading
+ * fixes are registry edits (the id stays); `en` comes from data/corrections.json; `f` is re-measured for the new
+ * headword (the introduction order `o` is pinned by data/freq/order-pins.json, so no other word's place moves); `ko` is
+ * corrected in data/ko and recorded in data/corrections.json. The rows 2026-11-14 below w41j are the verified rows of
+ * data/tags/audit/source-errors.csv (each with its JMdict evidence in data/corrections.json or data/freq/order-pins.json).
+ * Columns are those of the frozen row [w, r, ko, en, o, f, …tags]; tags are covered by TAGS_CORRECTED.
+ */
+const SOURCE_CORRECTED: Record<string, { level: number; cols: Record<number, [unknown, unknown]> }> = {
+  // 副 とりわけ → とりわけ (kana headword, reading column '' as for every kana word), f 46 (副's) → 42
+  w4db: { level: 1, cols: { 0: ['副', 'とりわけ'], 1: ['とりわけ', ''], 5: [46, 42] } },
+  // 目下 めした had もっか's gloss
+  w41j: { level: 2, cols: { 3: ['at present, now', 'subordinate, junior, inferior'] } },
+  // reading/headword typos (registry edits), f re-measured, o pinned
+  w3nu: { level: 2, cols: { 1: ['ふす', 'むす'], 5: [27, 34] } }, // 蒸す: ふす is no reading of 蒸す; the gloss is むす's
+  w4ta: { level: 1, cols: { 0: ['摩する', '摩る'], 5: [10, 32] } }, // さする is 摩る (摩する is まする)
+  // a gloss (and where it followed, the Korean meaning) copied from another reading of the same headword
+  w2sa: { level: 2, cols: { 2: ['머물다, 멈추다', '고정되다, 멈추다'], 3: ['to be fixed; to abide, to stay (in the one place)', 'to be fixed (in place); to stop, to come to a halt'] } },
+  w1gz: { level: 3, cols: { 2: ['대, 쌍, 대(對)', '대(對), 맞섬, ~ 대 ~'], 3: ['pair, couple, set', 'opposite, versus, against; equal footing'] } },
+  w1ks: { level: 3, cols: { 3: ['under, below, beneath', 'lower part, bottom; lower reaches (of a river)'] } },
+  w1n2: { level: 3, cols: { 2: ['아래, 하(下)', '하(下), 하등, 하권'], 3: ['under, below, beneath', 'lowness, inferiority; second volume (of two)'] } },
+  w5c6: { level: 1, cols: { 2: ['스치다, 문지르다', '스치다, 살짝 닿다'], 3: ['to rub, to chafe', 'to graze, to touch lightly; to take a cut (of profits)'] } },
+  w2ku: { level: 3, cols: { 2: ['휘다, 젖혀지다', '되돌아오다, 뒤집히다'], 3: ['to warp, to be warped, to curve', 'to return, to come back; to turn over'] } },
+  w1ji: { level: 3, cols: { 2: ['위, 상권, 윗사람, 정부(관)', '위, 상류, 윗사람, 정부(관)'], 3: ['first volume; superior quality; governmental', 'upper part, top; upper reaches (of a river); person of high rank; government'] } },
+  w2oz: { level: 3, cols: { 2: ['없음, 무(無)', '무(無), 없음(부정 접두어)'], 3: ['nothing, naught, nil, zero', 'un-, non- (negative prefix)'] } },
+  w5mh: { level: 1, cols: { 2: ['말기, 임종', '말기'], 3: ['deathbed, hour of death', 'closing years, last stage, terminal (e.g. cancer)'] } },
+  w1i6: { level: 3, cols: { 2: ['씨(성씨), 가문', '씨(존칭), 그분, 가문'], 3: ['family name, lineage', 'Mr., Ms. (after a name); he, him; clan'] } },
+  w218: { level: 3, cols: { 2: ['기미, ~한 기색, ~한 경향', '기분, 느낌, 경향'], 3: ['-like, -looking, -looked', 'feeling, sensation; tendency'] } },
+  w2hz: { level: 3, cols: { 2: ['안, 가운데, ~중', '중(중간), 가운데, ~중'], 3: ['inside, middle, among', 'medium, average, middle; during (~)'] } },
+  w5oa: { level: 1, cols: { 3: ['meager, modest', 'tender, warm, caring; meticulous, detailed'] } },
+  w15g: { level: 3, cols: { 2: ['한창, 전성기, 담은 양', '한창, 전성기'], 3: ['helping, serving', "height, peak (e.g. of summer); prime (of one's life); heat (of animals)"] } },
+  w17u: { level: 3, cols: { 3: ['even number, couple, friend', 'occasional, infrequent, rare'] } },
+  w191: { level: 3, cols: { 3: ['to retreat, to recede, to withdraw', 'to step aside, to get out of the way, to make way'] } },
+  w0g8: { level: 5, cols: { 3: ['during, while', 'throughout, all through (~)'] } },
+  w1bv: { level: 3, cols: { 2: ['금, 돈', '돈, 금속'], 3: ['gold, metal; money', 'money; metal'] } },
+  w08o: { level: 5, cols: { 3: ['counter for people', '-ian, -ese (nationality); person (of a group or trade)'] } },
+}
 
 function rng(seed: number) {
   let a = seed
@@ -88,9 +129,15 @@ describe('the id registry (data/ids.json)', () => {
         const e = byLegacy.get(`${l}-${idx}`)!
         expect(e, `${l}-${idx}`).toBeDefined()
         expect(e.l).toBe(l)
-        expect(e.w).toBe(w)
+        const fix = SOURCE_CORRECTED[e.id]?.cols[0]
+        // a corrected headword: the frozen file has the old one, the registry the new one (same id)
+        if (fix) expect([w, e.w]).toEqual(fix)
+        else expect(e.w).toBe(w)
+        // a corrected reading likewise (w4db's kana headword ships its reading as '', see SOURCE_CORRECTED)
+        const rfix = SOURCE_CORRECTED[e.id]?.cols[1]
+        if (rfix) expect([r, rfix[1] === '' ? '' : e.r]).toEqual(rfix)
         // the positional files wrote '' for a reading equal to the headword
-        expect(r === '' ? [e.w, ''] : [r]).toContain(e.r)
+        else expect(r === '' ? [e.w, ''] : [r]).toContain(e.r)
       })
     }
   })
@@ -101,8 +148,10 @@ describe('the id registry (data/ids.json)', () => {
     for (const [id, e] of Object.entries(reg.ids)) byKey.set(`${e.w}\t${e.r}`, [...(byKey.get(`${e.w}\t${e.r}`) ?? []), id])
     const shared = [...byKey.values()].filter((v) => v.length > 1)
     // 96 headword+reading pairs are in two levels (四季 しき in N3 and N2, …): each level's entry is its own word,
-    // with its own cards, as it always was; the one repeat within a level (やかん in N2) was always merged
-    expect(shared).toHaveLength(96)
+    // with its own cards, as it always was; the one repeat within a level (やかん in N2) was always merged.
+    // 97 since 2026-11-14: correcting N2 w3nu 蒸す ふす → むす made it the pair of N3 w14d 蒸す むす (source-errors.csv)
+    expect(shared).toHaveLength(97)
+    expect(byKey.get('蒸す\tむす')).toEqual(['w14d', 'w3nu'])
     for (const v of shared) expect(new Set(v.map((id) => reg.ids[id].l)).size).toBe(v.length)
     expect(ids.readSource(2).dropped).toEqual([{ w: 'やかん', r: 'やかん' }])
   })
@@ -127,9 +176,73 @@ const TAGS_CORRECTED: Record<number, string[]> = {
   5: ['w08t', 'w0ed', 'w0g8'],
   4: ['w0xf'],
   3: ['w1i9', 'w1m9', 'w2gy', 'w2ll', 'w2om'],
-  2: ['w326', 'w36f', 'w3hc', 'w3qa', 'w3qu', 'w3ry', 'w3sz', 'w40u'],
-  1: ['w4x3', 'w4xx', 'w5at', 'w5fw', 'w5q2', 'w5sv'],
+  // w3nu: its corrected reading 蒸す むす is N, rt kun (as N3 w14d 蒸す むす, R10); was M, rt irr from the wrong reading
+  2: ['w326', 'w36f', 'w3hc', 'w3nu', 'w3qa', 'w3qu', 'w3ry', 'w3sz', 'w40u'],
+  // w4db: its corrected kana headword とりわけ makes it K (was M, rt irr, derived from the wrong headword 副)
+  // w4ta: its corrected headword 摩る さする is N, rt kun (was M, rt irr from the wrong headword 摩する)
+  1: ['w4db', 'w4ta', 'w4x3', 'w4xx', 'w5at', 'w5fw', 'w5q2', 'w5sv'],
 }
+
+describe('data/corrections.json (source columns the registry does not cover)', () => {
+  const resolved = () => ids.resolve(sources(), registry()).levels as Record<number, { id: string; w: string; r: string; en: string }[]>
+  const find = (levels: ReturnType<typeof resolved>, id: string) => LEVELS.flatMap((l) => levels[l]).find((x) => x.id === id)!
+
+  const file = JSON.parse(read('data/corrections.json')) as { words: Record<string, { en?: string; ko?: string; was: { en?: string; ko?: string } }> }
+
+  it('the build applies it: w41j (目下 めした) gets its own gloss, every listed word its corrected one, nothing else changes', () => {
+    const raw = resolved()
+    const built = loadWords()
+    expect(find(raw, 'w41j').en).toBe('at present, now')
+    expect(find(built, 'w41j').en).toBe('subordinate, junior, inferior')
+    const listed = Object.entries(file.words).filter(([, c]) => c.en)
+    expect(listed).toHaveLength(20)
+    for (const [id, c] of listed) {
+      expect(find(raw, id).en, id).toBe(c.was.en)
+      expect(find(built, id).en, id).toBe(c.en)
+    }
+    for (const l of LEVELS)
+      built[l].forEach((x: { id: string; en: string }, i: number) => file.words[x.id]?.en || expect(x.en).toBe(raw[l][i].en))
+  })
+
+  it('records the Korean meanings corrected in data/ko, and stops the build when data/ko drifts from the record', () => {
+    const levels = loadWords()
+    const { ko } = loadInputs(levels)
+    const recorded = Object.entries(file.words).filter(([, c]) => 'ko' in c)
+    expect(recorded.map(([id]) => id).sort()).toEqual(
+      ['w15g', 'w1bv', 'w1gz', 'w1i6', 'w1ji', 'w1n2', 'w218', 'w2hz', 'w2ku', 'w2oz', 'w2sa', 'w5c6', 'w5mh'],
+    )
+    for (const [id, c] of recorded) expect(ko[id], id).toBe(c.ko)
+    expect(checkKoCorrections(ko)).toEqual([])
+    expect(checkKoCorrections({ ...ko, w5mh: '말기, 임종' }).join('\n')).toMatch(/w5mh: data\/ko has "말기, 임종", not the recorded correction "말기"/)
+    const one = (c: object) => checkKoCorrections(ko, { format: 1, words: { w5mh: { why: 'x', ...c } } }).join('\n')
+    expect(one({ ko: '말기', was: { ko: '말기, 임종' } })).toBe('')
+    expect(one({ ko: '말기' })).toMatch(/needs the old value/)
+    expect(one({ ko: '말기', was: { ko: '말기' } })).toMatch(/needs the old value/)
+    expect(one({ ko: ' 말기', was: { ko: '말기, 임종' } })).toMatch(/trimmed/)
+    // a ko record is not applied to the source columns, and is no "cannot be corrected" error there
+    expect(applyCorrections(resolved(), { format: 1, words: { w5mh: { ko: '말기', was: { ko: '말기, 임종' }, why: 'x' } } })).toEqual([])
+  })
+
+  it('refuses a stale, unknown, empty or out-of-scope correction and then applies none', () => {
+    const fix = (words: object) => {
+      const levels = resolved()
+      return { problems: applyCorrections(levels, { format: 1, words }) as string[], en: find(levels, 'w41j').en }
+    }
+    const ok = { en: 'subordinate', was: { en: 'at present, now' }, why: 'test' }
+    expect(fix({ w41j: ok })).toEqual({ problems: [], en: 'subordinate' })
+    const bad = (words: object, re: RegExp) => {
+      const { problems, en } = fix({ w41j: ok, ...words })
+      expect(problems.join('\n')).toMatch(re)
+      expect(en).toBe('at present, now')
+    }
+    bad({ w41j: { ...ok, was: { en: 'now' } } }, /source changed/)
+    bad({ wzzz: ok }, /not a live word id/)
+    bad({ w4db: { w: '取り分け', was: { w: 'とりわけ' }, why: 'x' } }, /"w" cannot be corrected here/)
+    bad({ w4db: { en: 'especially, above all', was: { en: 'especially, above all' }, why: 'x' } }, /already/)
+    bad({ w4db: { why: 'x' } }, /corrects nothing/)
+    bad({ w4db: { en: 'x', was: { en: 'especially, above all' } } }, /needs "why"/)
+  })
+})
 
 describe('public/data', () => {
   for (const l of LEVELS)
@@ -139,13 +252,28 @@ describe('public/data', () => {
       expect(r).toHaveLength(COUNTS[l])
       const reg = registry()
       const corrected: string[] = []
+      const sourceFixed: string[] = []
       r.forEach((row, i) => {
-        // id, w, r, ko, en, o, f never change; the tag columns only for the listed corrections
-        expect(row.slice(1, 7)).toEqual(old[i].slice(0, 6))
-        if (JSON.stringify(row.slice(1)) !== JSON.stringify(old[i])) corrected.push(row[0] as string)
+        // id, w, r, ko, en, o, f never change, except the listed columns of the source corrections; the tag columns
+        // only for the listed tag corrections
+        const fix = SOURCE_CORRECTED[row[0] as string]
+        const was = old[i].slice()
+        const now = row.slice(1)
+        if (fix) {
+          expect(fix.level).toBe(l)
+          sourceFixed.push(row[0] as string)
+          for (const [c, [before, after]] of Object.entries(fix.cols)) {
+            expect(was[+c], `${row[0]} column ${c} in the frozen file`).toEqual(before)
+            expect(now[+c], `${row[0]} column ${c} now`).toEqual(after)
+            was[+c] = now[+c]
+          }
+        }
+        expect(now.slice(0, 6)).toEqual(was.slice(0, 6))
+        if (JSON.stringify(now) !== JSON.stringify(was)) corrected.push(row[0] as string)
         expect(reg.ids[row[0] as string].legacy).toBe(`${l}-${i}`)
       })
       expect(corrected.sort()).toEqual(TAGS_CORRECTED[l])
+      expect(sourceFixed.sort()).toEqual(Object.keys(SOURCE_CORRECTED).filter((id) => SOURCE_CORRECTED[id].level === l).sort())
       const o = r.map((row) => row[5] as number)
       expect([...o].sort((a, b) => a - b)).toEqual(o.map((_, i) => i))
       for (const row of r) {

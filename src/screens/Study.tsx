@@ -252,15 +252,37 @@ export function Study() {
     setUndoChip(0)
   }
 
+  // The control the learner last pressed with a finger or the mouse. It keeps focus, and React reuses the same
+  // button for the next card (the first answer button becomes the next card's "모르겠어요"); the browser then counts
+  // it as keyboard-focused from the first key pressed, so it is told apart here. A Tab hands focus to the keyboard.
+  const pointerFocus = useRef<Element | null>(null)
+  useEffect(() => {
+    const down = (e: PointerEvent) => (pointerFocus.current = e.target instanceof Element ? e.target.closest('button, a') : null)
+    const tab = (e: KeyboardEvent) => e.key === 'Tab' && (pointerFocus.current = null)
+    addEventListener('pointerdown', down, true)
+    addEventListener('keydown', tab, true)
+    return () => {
+      removeEventListener('pointerdown', down, true)
+      removeEventListener('keydown', tab, true)
+    }
+  }, [])
+
   // Keys follow the two steps: Space/Enter shows the answer; 1/2/3 (or ←/→/↑) grade once it is shown.
   // 1 / ← on the front is "모르겠어요", the only other choice there. Registered before paint, so a key pressed
   // as soon as a card shows is never handled by the previous card's handler.
   useLayoutEffect(() => {
     const on = (e: KeyboardEvent) => {
       if (!ready || !word || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
-      // a control the user moved to with the keyboard gets its own Enter/Space
-      if ((e.key === ' ' || e.key === 'Enter') && e.target instanceof Element && e.target.matches(':focus-visible')) return
       const k = e.key
+      if ((k === ' ' || k === 'Enter') && e.target instanceof HTMLElement && e.target.closest('button, a')) {
+        // a control the user moved to with the keyboard gets its own Enter/Space (unless it is switched off, like the
+        // undo button right after an undo: then the key is the card's)
+        const control = e.target.closest('button, a')!
+        if (control !== pointerFocus.current && e.target.matches(':focus-visible') && control.getAttribute('aria-disabled') !== 'true') return
+        // otherwise the key is the card's shortcut, and the focused button must not be pressed by it as well: the
+        // browser presses it on Space's keyup whatever the keydown did, which graded the next card "모르겠어요" unseen
+        e.target.blur()
+      }
       // reading card: 1–4 pick a choice, 0 or ← is "모르겠어요"; once answered Space/Enter goes on
       if (quiz) {
         if (picked === null && /^[1-4]$/.test(k) && Number(k) <= (question?.choices.length ?? 0)) choose(Number(k) - 1)
@@ -289,7 +311,7 @@ export function Study() {
     const cleared = q.waiting === 0
     const inMin = q.nextDue === null ? 0 : Math.max(1, Math.ceil((q.nextDue - now.getTime()) / 60_000))
     return (
-      <div className="study done-screen">
+      <main className="study done-screen">
         <div className="done-mascot">
           <Ruma progress={cleared ? 1 : (log?.c ?? 0) / ((log?.c ?? 0) + q.waiting)} mood={cleared ? 'cheer' : 'idle'} size={132} />
           {cleared && (
@@ -349,7 +371,7 @@ export function Study() {
             <ReminderOffer />
           </Suspense>
         )}
-      </div>
+      </main>
     )
   }
 
@@ -361,7 +383,8 @@ export function Study() {
   const lower = !!next && levelOf(next.id) !== s.settings.target
 
   return (
-    <div className="study">
+    <main className="study">
+      <h1 className="sr-only">학습</h1>
       <header className="study-top">
         <IconButton label="나가기 (진행 상황은 저장돼요)" icon={<Icon name="close" />} onClick={() => go('/')} />
         <ProgressBar className="study-bar grow" label="오늘 학습" value={todayCount} max={dayTotal} valueText={`오늘 ${todayCount}장 봤어요, 남은 ${left}장`} />
@@ -547,7 +570,6 @@ export function Study() {
           )}
         </footer>
       )}
-    </div>
+    </main>
   )
 }
-

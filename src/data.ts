@@ -142,10 +142,18 @@ export function loadLevel(l: Level): Promise<Word[]> {
   if (!p) {
     // words-n{l}.json carries the stable ids; data/n{l}.json is the frozen positional file kept for tabs still
     // running the version before stable ids (docs/plan/08 §7.6) and is never read by this version
+    // one message in the learner's language whatever failed: the network (the browser's own "Failed to fetch" was
+    // shown before), the server, or the file
+    const failed = () => new Error(`단어 데이터를 불러오지 못했어요 (N${l})`)
     p = fetch(`${import.meta.env.BASE_URL}data/words-n${l}.json`)
+      .catch(() => {
+        throw failed()
+      })
       .then((r) => {
-        if (!r.ok) throw new Error(`단어 데이터를 불러오지 못했어요 (N${l})`)
-        return r.json() as Promise<Row[]>
+        if (!r.ok) throw failed()
+        return (r.json() as Promise<Row[]>).catch(() => {
+          throw failed()
+        })
       })
       .then((rows) => {
         // a row whose id this version does not place in this level (data from another deploy) is left out

@@ -1,5 +1,7 @@
 // Builds the app's word data from data/raw/*.csv (open-anki-jlpt-decks, MIT), the stable word ids of
 // data/ids.json and the enrichment inputs keyed by those ids (data/ko, data/freq, data/tags, data/readings).
+// data/corrections.json overrides source columns the registry does not cover (the English gloss `en`), by id, and
+// records the Korean meanings `ko` corrected in data/ko (checked, not applied).
 //
 //   node scripts/build-data.mjs                 public/data/words-n{l}.json rows [id, w, r, ko, en]
 //   node scripts/build-data.mjs --extras        rows [id, w, r, ko, en, o, f, k, sk, ff, rt, a, x]  (what the app ships)
@@ -36,7 +38,65 @@ export function loadWords(reg = loadRegistry()) {
     throw e
   }
   for (const l of LEVELS) levels[l].forEach((w) => (w.l = l))
+  const problems = applyCorrections(levels)
+  if (problems.length) {
+    const e = new Error(`${CORRECTIONS_FILE} does not apply (${problems.length} problem${problems.length > 1 ? 's' : ''}):\n  ${problems.join('\n  ')}`)
+    e.problems = problems
+    throw e
+  }
   return levels
+}
+
+// ---- corrections to source columns the registry does not cover (docs/plan/08 §7.2) ----
+// data/corrections.json: { format: 1, words: { "<id>": { en: "<corrected>", ko?: "<corrected>", was: { en: "<source value>", ko?: "<old value>" }, why: "<date>: <reason>" } } }
+// `en` (the English gloss, from the upstream CSV) is corrected here, over the source; a headword/reading typo is fixed
+// in the CSV and the registry entry together. `was` must still be what the source says, so an upstream change that
+// fixes (or alters) the row stops the build instead of being silently overwritten. Every entry must name a live word
+// and change something.
+// `ko` (this project's own model translation, read by several scripts straight from data/ko) is corrected in data/ko
+// itself; the entry only records it (was/why), and checkKoCorrections stops the build if data/ko no longer holds the
+// corrected value (e.g. a re-translation from the old gloss), so the record and the data cannot drift apart.
+const CORRECTIONS_FILE = 'data/corrections.json'
+const CORRECTABLE = ['en']
+const RECORDED = ['ko']
+const readCorrections = () => (existsSync(`${root}${CORRECTIONS_FILE}`) ? JSON.parse(readFileSync(`${root}${CORRECTIONS_FILE}`, 'utf8')) : { format: 1, words: {} })
+
+/** Checks the recorded `ko` corrections against data/ko ({ "<id>": ko }); returns the problems found. */
+export function checkKoCorrections(ko, corr = readCorrections()) {
+  const problems = []
+  for (const [id, c] of Object.entries(corr?.words ?? {})) {
+    if (!('ko' in (c ?? {}))) continue
+    if (typeof c.ko !== 'string' || !c.ko.trim() || c.ko !== c.ko.trim()) problems.push(`${id}: ko must be a non-empty trimmed string`)
+    else if (typeof c.was?.ko !== 'string' || c.was.ko === c.ko) problems.push(`${id}: ko needs the old value in was.ko, different from the corrected one`)
+    else if ((ko[id] ?? '').trim() !== c.ko) problems.push(`${id}: data/ko has ${JSON.stringify(ko[id] ?? '')}, not the recorded correction ${JSON.stringify(c.ko)}: restore it, or update the correction`)
+  }
+  return problems
+}
+
+/** Applies data/corrections.json to the resolved words in place; returns the problems found (none applied if any). */
+export function applyCorrections(levels, corr = readCorrections()) {
+  const problems = []
+  if (corr?.format !== 1 || typeof corr.words !== 'object' || !corr.words) return [`${CORRECTIONS_FILE}: not a format-1 corrections file`]
+  const byId = new Map(LEVELS.flatMap((l) => levels[l].map((w) => [w.id, w])))
+  const todo = []
+  for (const [id, c] of Object.entries(corr.words)) {
+    const w = byId.get(id)
+    if (!w) { problems.push(`${id}: not a live word id`); continue }
+    if (typeof c?.why !== 'string' || !c.why.trim()) problems.push(`${id}: needs "why" (<date>: <reason>)`)
+    const fields = Object.keys(c ?? {}).filter((f) => f !== 'was' && f !== 'why')
+    if (!fields.length) problems.push(`${id}: corrects nothing`)
+    for (const f of fields) {
+      if (RECORDED.includes(f)) continue // checked against data/ko by checkKoCorrections
+      if (!CORRECTABLE.includes(f)) { problems.push(`${id}: "${f}" cannot be corrected here (only ${[...CORRECTABLE, ...RECORDED].join(', ')}; headword/reading → CSV + data/ids.json, §7.2)`); continue }
+      if (typeof c[f] !== 'string' || !c[f].trim() || c[f] !== c[f].trim()) { problems.push(`${id}: ${f} must be a non-empty trimmed string`); continue }
+      if (c.was?.[f] !== w[f]) { problems.push(`${id}: was.${f} ${JSON.stringify(c.was?.[f])} is not what the source says (${JSON.stringify(w[f])}): the source changed — check the row, then update or drop the correction`); continue }
+      if (c[f] === w[f]) { problems.push(`${id}: ${f} is already ${JSON.stringify(c[f])} in the source: drop the correction`); continue }
+      todo.push([w, f, c[f]])
+    }
+    for (const f of Object.keys(c?.was ?? {})) if (!fields.includes(f)) problems.push(`${id}: was.${f} given but ${f} is not corrected`)
+  }
+  if (!problems.length) for (const [w, f, v] of todo) w[f] = v
+  return problems
 }
 
 /** One level's words with ids, in id order: [{ id, l, w, r, en }]. */
@@ -65,6 +125,7 @@ export function loadInputs(levels) {
   const tags = readKeyed(`${root}data/tags`, /^n[1-5]-\d+\.json$/, 'data/tags', known, problems)
   const freq = readKeyed(`${root}data/freq`, /^n[1-5]\.json$/, 'data/freq', known, problems)
   const alt = readKeyed(`${root}data/readings`, /^n[1-5]\.json$/, 'data/readings', known, problems)
+  problems.push(...checkKoCorrections(ko).map((p) => `${CORRECTIONS_FILE} ${p}`))
   const order = {}
   for (const l of LEVELS) {
     const o = JSON.parse(readFileSync(`${root}data/freq/order-n${l}.json`, 'utf8'))
