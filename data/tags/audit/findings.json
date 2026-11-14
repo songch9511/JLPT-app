@@ -1,0 +1,5649 @@
+{
+ "about": "S/F tag audit, docs/plan/12-tag-audit.md. Regenerate: node scripts/audit/check-tags.mjs && node scripts/audit/report.mjs",
+ "sample": {
+  "seed": 20261114,
+  "nS": 600,
+  "nF": 75,
+  "cells": {
+   "5/1": {
+    "N": 45,
+    "n": 22
+   },
+   "5/2": {
+    "N": 92,
+    "n": 43
+   },
+   "5/3+": {
+    "N": 22,
+    "n": 11
+   },
+   "5/kana": {
+    "N": 4,
+    "n": 4
+   },
+   "4/1": {
+    "N": 18,
+    "n": 8
+   },
+   "4/2": {
+    "N": 154,
+    "n": 61
+   },
+   "4/3+": {
+    "N": 15,
+    "n": 8
+   },
+   "4/kana": {
+    "N": 3,
+    "n": 3
+   },
+   "3/1": {
+    "N": 109,
+    "n": 15
+   },
+   "3/2": {
+    "N": 832,
+    "n": 105
+   },
+   "3/3+": {
+    "N": 11,
+    "n": 8
+   },
+   "3/kana": {
+    "N": 15,
+    "n": 8
+   },
+   "2/1": {
+    "N": 121,
+    "n": 17
+   },
+   "2/2": {
+    "N": 648,
+    "n": 85
+   },
+   "2/3+": {
+    "N": 48,
+    "n": 8
+   },
+   "2/kana": {
+    "N": 22,
+    "n": 8
+   },
+   "1/1": {
+    "N": 36,
+    "n": 8
+   },
+   "1/2": {
+    "N": 1244,
+    "n": 162
+   },
+   "1/3+": {
+    "N": 34,
+    "n": 8
+   },
+   "1/kana": {
+    "N": 16,
+    "n": 8
+   }
+  }
+ },
+ "estimates": {
+  "S": {
+   "전체": {
+    "lenient": {
+     "n": 600,
+     "N": 3489,
+     "neff": 502,
+     "p": 0.9994137418900961,
+     "lo": 0.991275750769288,
+     "hi": 0.9999609036213253,
+     "bad": 1
+    },
+    "strict": {
+     "n": 600,
+     "N": 3489,
+     "neff": 502,
+     "p": 0.9884571602828983,
+     "lo": 0.9747205399769268,
+     "hi": 0.9947694855468612,
+     "bad": 6
+    }
+   },
+   "N5": {
+    "lenient": {
+     "n": 80,
+     "N": 163,
+     "neff": 79,
+     "p": 0.9874511991076407,
+     "lo": 0.9318233183843792,
+     "hi": 0.9977975132386507,
+     "bad": 1
+    },
+    "strict": {
+     "n": 80,
+     "N": 163,
+     "neff": 79,
+     "p": 0.9874511991076407,
+     "lo": 0.9318233183843792,
+     "hi": 0.9977975132386507,
+     "bad": 1
+    }
+   },
+   "N4": {
+    "lenient": {
+     "n": 80,
+     "N": 190,
+     "neff": 78,
+     "p": 1,
+     "lo": 0.9532934205899113,
+     "hi": 1,
+     "bad": 0
+    },
+    "strict": {
+     "n": 80,
+     "N": 190,
+     "neff": 78,
+     "p": 1,
+     "lo": 0.9532934205899113,
+     "hi": 1,
+     "bad": 0
+    }
+   },
+   "N3": {
+    "lenient": {
+     "n": 136,
+     "N": 967,
+     "neff": 126,
+     "p": 1,
+     "lo": 0.9703877055129966,
+     "hi": 1,
+     "bad": 0
+    },
+    "strict": {
+     "n": 136,
+     "N": 967,
+     "neff": 126,
+     "p": 0.9842911311370464,
+     "lo": 0.9441910498207753,
+     "hi": 0.995709269267969,
+     "bad": 2
+    }
+   },
+   "N2": {
+    "lenient": {
+     "n": 118,
+     "N": 839,
+     "neff": 114,
+     "p": 1,
+     "lo": 0.9675278212500138,
+     "hi": 1,
+     "bad": 0
+    },
+    "strict": {
+     "n": 118,
+     "N": 839,
+     "neff": 114,
+     "p": 1,
+     "lo": 0.9675278212500138,
+     "hi": 1,
+     "bad": 0
+    }
+   },
+   "N1": {
+    "lenient": {
+     "n": 186,
+     "N": 1330,
+     "neff": 179,
+     "p": 1,
+     "lo": 0.97897058898409,
+     "hi": 1,
+     "bad": 0
+    },
+    "strict": {
+     "n": 186,
+     "N": 1330,
+     "neff": 179,
+     "p": 0.9826789195210248,
+     "lo": 0.95105814745176,
+     "hi": 0.9939987848156436,
+     "bad": 3
+    }
+   },
+   "한 글자": {
+    "lenient": {
+     "n": 70,
+     "N": 329,
+     "neff": 56,
+     "p": 0.9937828129317491,
+     "lo": 0.9241852561489383,
+     "hi": 0.9995231265783864,
+     "bad": 1
+    },
+    "strict": {
+     "n": 70,
+     "N": 329,
+     "neff": 56,
+     "p": 0.9716956802063185,
+     "lo": 0.8891503793473617,
+     "hi": 0.9932401018358458,
+     "bad": 2
+    }
+   },
+   "두 글자": {
+    "lenient": {
+     "n": 456,
+     "N": 2970,
+     "neff": 407,
+     "p": 1,
+     "lo": 0.9906502928529834,
+     "hi": 1,
+     "bad": 0
+    },
+    "strict": {
+     "n": 456,
+     "N": 2970,
+     "neff": 407,
+     "p": 0.9895754725384354,
+     "lo": 0.9741628319724424,
+     "hi": 0.995833338515235,
+     "bad": 4
+    }
+   },
+   "세 글자 이상": {
+    "lenient": {
+     "n": 43,
+     "N": 130,
+     "neff": 33,
+     "p": 1,
+     "lo": 0.8943373921997988,
+     "hi": 1,
+     "bad": 0
+    },
+    "strict": {
+     "n": 43,
+     "N": 130,
+     "neff": 33,
+     "p": 1,
+     "lo": 0.8943373921997988,
+     "hi": 1,
+     "bad": 0
+    }
+   },
+   "가나 포함": {
+    "lenient": {
+     "n": 31,
+     "N": 60,
+     "neff": 28,
+     "p": 1,
+     "lo": 0.8801344415138684,
+     "hi": 1,
+     "bad": 0
+    },
+    "strict": {
+     "n": 31,
+     "N": 60,
+     "neff": 28,
+     "p": 1,
+     "lo": 0.8801344415138684,
+     "hi": 1,
+     "bad": 0
+    }
+   }
+  },
+  "misleadingReadingCards": {
+   "lenient": [
+    2,
+    0,
+    30
+   ],
+   "strict": [
+    40,
+    18,
+    88
+   ]
+  },
+  "totalS": 3489,
+  "F": {
+   "F": 71,
+   "unsure": 2,
+   "ff": 1,
+   "notF": 1
+  }
+ },
+ "findings": [
+  {
+   "id": "w3hc",
+   "level": 2,
+   "chunk": "n2-8",
+   "word": "点々",
+   "expr": "点々",
+   "reading": "てんてん",
+   "k": "S",
+   "sk": "점점",
+   "ko": "여기저기, 점점이",
+   "en": "here and there, little by little",
+   "src": "scan",
+   "verdict": "notS",
+   "finding": "S 아님(한국어 단어가 드물거나 다른 말로 읽힘)",
+   "conf": "high",
+   "harm": "high",
+   "suggest": {
+    "k": "J",
+    "sk": "점점"
+   },
+   "why": "다리 단어 '점점'은 漸漸(차츰)으로 읽혀 '여기저기·점점이'라는 뜻을 놓치게 함. 點點은 '점점이'로만 씀",
+   "priority": 9.5
+  },
+  {
+   "id": "w0g8",
+   "level": 5,
+   "chunk": "n5-2",
+   "word": "中",
+   "expr": "～中",
+   "reading": "～じゅう",
+   "k": "S",
+   "sk": "중",
+   "ko": "~중, ~내내",
+   "en": "during, while",
+   "src": "sample",
+   "verdict": "toF",
+   "finding": "F여야 함(뜻이 다름)",
+   "conf": "med",
+   "harm": "high",
+   "suggest": {
+    "k": "F",
+    "sk": "중",
+    "ff": "한국어 '~중'(~하는 도중)과 달리 주로 '~내내·온~'이라는 뜻"
+   },
+   "why": "～じゅう는 一日中(하루 종일)·世界中(온 세계)처럼 '내내·전체'인데 한국어 '~중'은 '도중·가운데'라 一日中을 '하루 중'으로 오해함",
+   "priority": 6.5
+  },
+  {
+   "id": "w1i9",
+   "level": 3,
+   "chunk": "n3-9",
+   "word": "享受",
+   "expr": "享受",
+   "reading": "きょうじゅ",
+   "k": "S",
+   "sk": "향수",
+   "ko": "향수, 누림",
+   "en": "enjoyment, being given",
+   "src": "scan",
+   "verdict": "notS",
+   "finding": "S 아님(한국어 단어가 드물거나 다른 말로 읽힘)",
+   "conf": "med",
+   "harm": "high",
+   "suggest": {
+    "k": "J",
+    "sk": "향수"
+   },
+   "why": "'향수'는 香水·鄕愁로 읽히고 享受(누림)는 '문화 향수권' 정도의 문어. 보통 성인이 알아보지 못함",
+   "priority": 6.5
+  },
+  {
+   "id": "w3ry",
+   "level": 2,
+   "chunk": "n2-4",
+   "word": "相違",
+   "expr": "相違",
+   "reading": "そうい",
+   "k": "S",
+   "sk": "상위",
+   "ko": "차이, 상위",
+   "en": "difference, discrepancy, variation",
+   "src": "scan",
+   "verdict": "notS",
+   "finding": "S 아님(한국어 단어가 드물거나 다른 말로 읽힘)",
+   "conf": "med",
+   "harm": "high",
+   "suggest": {
+    "k": "J",
+    "sk": "상위"
+   },
+   "why": "'상위'는 上位로 읽힘. 相違(차이)는 '의견 상위' 같은 문어에만 남음",
+   "priority": 6.5
+  },
+  {
+   "id": "w08t",
+   "level": 5,
+   "chunk": "n5-2",
+   "word": "前",
+   "expr": "前",
+   "reading": "まえ",
+   "k": "S",
+   "sk": "전",
+   "ko": "앞, 전",
+   "en": "before, in front",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "med",
+   "harm": "high",
+   "suggest": {
+    "k": "N"
+   },
+   "why": "前(まえ)의 첫 뜻은 '앞'(駅の前 = 역 앞)인데 한국어 '전'은 시간의 '전'만 있고 공간의 '앞' 뜻이 없음. 읽기 카드만 보면 '역 전'으로 오해",
+   "priority": 6
+  },
+  {
+   "id": "w3sz",
+   "level": 2,
+   "chunk": "n2-8",
+   "word": "工員",
+   "expr": "工員",
+   "reading": "こういん",
+   "k": "S",
+   "sk": "공원",
+   "ko": "공장 노동자, 공원",
+   "en": "factory worker",
+   "src": "scan",
+   "verdict": "notS",
+   "finding": "S 아님(한국어 단어가 드물거나 다른 말로 읽힘)",
+   "conf": "med",
+   "harm": "med",
+   "suggest": {
+    "k": "J",
+    "sk": "공원"
+   },
+   "why": "'공원'은 公園으로 읽힘. 工員(공장 노동자)은 옛말",
+   "priority": 4.5
+  },
+  {
+   "id": "w5fw",
+   "level": 1,
+   "chunk": "n1-3",
+   "word": "風俗",
+   "expr": "風俗",
+   "reading": "ふうぞく",
+   "k": "F",
+   "sk": "풍속",
+   "ko": "풍속",
+   "en": "manners, customs; sex industry",
+   "src": "sample",
+   "verdict": "ff",
+   "finding": "F 경고 문구·판정 재검토",
+   "conf": "med",
+   "harm": "med",
+   "suggest": {
+    "k": "J",
+    "sk": "풍속"
+   },
+   "why": "JLPT 뜻(ko 열도 '풍속')은 한국어와 같은 '풍속·풍습'인데 ff는 '주로 유흥업소'라고 가르침. R9 형식은 '~도 있다'를 쓸 수 없으니 J로 내리고 뜻 카드에 두 뜻을 싣는 편이 안전",
+   "priority": 4.5
+  },
+  {
+   "id": "w3qa",
+   "level": 2,
+   "chunk": "n2-1",
+   "word": "伯父さん",
+   "expr": "伯父さん",
+   "reading": "おじさん",
+   "k": "S",
+   "sk": "백부",
+   "ko": "아저씨, 큰아버지, 백부",
+   "en": "(hon.) middle-aged gentleman, uncle",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "med",
+   "harm": "med",
+   "suggest": {
+    "k": "M"
+   },
+   "why": "ko 첫 뜻이 '아저씨'. 같은 말 おじさん(w09f '伯父; 叔父さん')은 M이라 앞뒤가 다름. R4대로 S면 ko에서 '아저씨'를 뒤로",
+   "priority": 4
+  },
+  {
+   "id": "w40u",
+   "level": 2,
+   "chunk": "n2-1",
+   "word": "叔父さん",
+   "expr": "叔父さん",
+   "reading": "おじさん",
+   "k": "S",
+   "sk": "숙부",
+   "ko": "아저씨, 삼촌",
+   "en": "(hon.) middle-aged gentleman, uncle",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "med",
+   "harm": "med",
+   "suggest": {
+    "k": "M"
+   },
+   "why": "w3qa와 같음: ko 첫 뜻 '아저씨', N5 おじさん(w09f)은 M",
+   "priority": 4
+  },
+  {
+   "id": "w5q2",
+   "level": 1,
+   "chunk": "n1-6",
+   "word": "相対",
+   "expr": "相対",
+   "reading": "そうたい",
+   "k": "F",
+   "sk": "상대",
+   "ko": "상대, 상대적",
+   "en": "relative",
+   "src": "sample",
+   "verdict": "notF",
+   "finding": "F 아님(J 권장)",
+   "conf": "med",
+   "harm": "low",
+   "suggest": {
+    "k": "J",
+    "sk": "상대"
+   },
+   "why": "한국어에도 '상대적·상대성 이론·상대 평가'로 '상대'가 '상대적'의 뜻을 가짐. 다른 뜻이 일본어와 같으면 F가 아니라는 규칙에 해당",
+   "priority": 2.5
+  },
+  {
+   "id": "w0ed",
+   "level": 5,
+   "chunk": "n5-2",
+   "word": "元気",
+   "expr": "元気",
+   "reading": "げんき",
+   "k": "S",
+   "sk": "원기",
+   "ko": "건강함, 기운참",
+   "en": "health(y), energetic",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "med",
+   "suggest": {
+    "k": "J",
+    "sk": "원기"
+   },
+   "why": "'원기'는 '원기 회복'의 기운·활력. 元気의 첫 쓰임 '건강함·잘 지냄(お元気ですか)'은 한국어 '원기'로 바로 떠올리기 어려움",
+   "priority": 2
+  },
+  {
+   "id": "w0xf",
+   "level": 4,
+   "chunk": "n4-2",
+   "word": "大体",
+   "expr": "大体",
+   "reading": "だいたい",
+   "k": "S",
+   "sk": "대체",
+   "ko": "대체로, 대략, 대개",
+   "en": "approximately; in most cases; in general; to begin with (same as もともと)",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "med",
+   "suggest": {
+    "k": "J",
+    "sk": "대체"
+   },
+   "why": "한국어 '대체'는 혼자 쓰면 '도대체'(大體), 대개의 뜻은 '대체로'. 一体가 F인 것과 짝으로 판단 필요",
+   "priority": 2
+  },
+  {
+   "id": "w2gy",
+   "level": 3,
+   "chunk": "n3-9",
+   "word": "字体",
+   "expr": "字体",
+   "reading": "じたい",
+   "k": "S",
+   "sk": "자체",
+   "ko": "자체, 글자체",
+   "en": "font, lettering",
+   "src": "sample",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "med",
+   "suggest": {
+    "k": "J",
+    "sk": "자체"
+   },
+   "why": "'자체'는 보통 自體(그 자체)로 읽힘. 글꼴 뜻으로는 '글자체·서체'를 씀",
+   "priority": 2
+  },
+  {
+   "id": "w3qu",
+   "level": 2,
+   "chunk": "n2-3",
+   "word": "汁",
+   "expr": "汁",
+   "reading": "しる",
+   "k": "S",
+   "sk": "즙",
+   "ko": "즙, 국물",
+   "en": "juice, soup",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "med",
+   "suggest": {
+    "k": "N"
+   },
+   "why": "汁(しる)의 주된 뜻은 국물·국(味噌汁)인데 한국어 '즙'은 짜낸 액체(과일즙). 겹치지만 첫 뜻이 다름",
+   "priority": 2
+  },
+  {
+   "id": "w5sv",
+   "level": 1,
+   "chunk": "n1-11",
+   "word": "修学",
+   "expr": "修学",
+   "reading": "しゅうがく",
+   "k": "S",
+   "sk": "수학",
+   "ko": "수학, 학문을 닦음",
+   "en": "learning",
+   "src": "sample",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "med",
+   "suggest": {
+    "k": "J",
+    "sk": "수학"
+   },
+   "why": "다리 단어 '수학'은 거의 늘 數學(수학 과목)으로 읽힘. 修學은 '수학여행'에만 남아 있음",
+   "priority": 2
+  },
+  {
+   "id": "w1jb",
+   "level": 3,
+   "chunk": "n3-5",
+   "word": "刺激",
+   "expr": "刺激",
+   "reading": "しげき",
+   "k": "S",
+   "sk": "자극",
+   "ko": "자극",
+   "en": "stimulus, impetus, incentive",
+   "src": "scan",
+   "verdict": "sk",
+   "finding": "sk 다리 단어 재검토",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "S",
+    "sk": "자극"
+   },
+   "why": "激의 한국 음은 '격'. 한국어 자극은 刺戟으로 씀(R5 경계). 뜻은 같으니 S 유지하고 FIXED나 reviewed.json에 이유를 적는 것이 맞음",
+   "priority": 1.5
+  },
+  {
+   "id": "w4xx",
+   "level": 1,
+   "chunk": "n1-1",
+   "word": "一切",
+   "expr": "一切",
+   "reading": "いっさい",
+   "k": "S",
+   "sk": "일체",
+   "ko": "일체, 전혀, 모두",
+   "en": "without exception, the whole",
+   "src": "scan",
+   "verdict": "sk",
+   "finding": "sk 다리 단어 재검토",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "S",
+    "sk": "일절"
+   },
+   "why": "一切는 주로 부정문(一切ない = 일절 없다)에 쓰여 다리 단어로는 '일절'이 더 맞음. '일체'(모두)도 맞는 독음",
+   "priority": 1.5
+  },
+  {
+   "id": "w1d6",
+   "level": 3,
+   "chunk": "n3-4",
+   "word": "出場",
+   "expr": "出場",
+   "reading": "しゅつじょう",
+   "k": "S",
+   "sk": "출장",
+   "ko": "출장, 출전",
+   "en": "participation",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "S",
+    "sk": "출장"
+   },
+   "why": "'출장'은 대개 出張(업무 출장)으로 읽힘. 스포츠 '선발 출장'으로는 같은 뜻이라 S 유지도 가능",
+   "priority": 1
+  },
+  {
+   "id": "w1m9",
+   "level": 3,
+   "chunk": "n3-3",
+   "word": "得意",
+   "expr": "得意",
+   "reading": "とくい",
+   "k": "F",
+   "sk": "득의",
+   "ko": "자랑으로 여김, 특기, 단골손님",
+   "en": "pride, triumph, prosperity",
+   "src": "sample",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "J",
+    "sk": "득의"
+   },
+   "why": "'득의'는 '득의양양'에만 남아 대부분은 모르는 말 → 규칙상 J 쪽. F여도 해는 경고 한 줄",
+   "priority": 1
+  },
+  {
+   "id": "w2ll",
+   "level": 3,
+   "chunk": "n3-6",
+   "word": "計",
+   "expr": "計",
+   "reading": "けい",
+   "k": "S",
+   "sk": "계",
+   "ko": "계, 합계",
+   "en": "plan; sum, total",
+   "src": "sample",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "J",
+    "sk": "계"
+   },
+   "why": "'계'가 혼자 쓰이는 건 표의 합계 칸 정도. 일본어 計는 '계획(一年の計)' 뜻도 있어 R2(혼자 쓰는 명사) 경계",
+   "priority": 1
+  },
+  {
+   "id": "w2om",
+   "level": 3,
+   "chunk": "n3-8",
+   "word": "上等",
+   "expr": "上等",
+   "reading": "じょうとう",
+   "k": "S",
+   "sk": "상등",
+   "ko": "상등, 고급",
+   "en": "first class, very good",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "J",
+    "sk": "상등"
+   },
+   "why": "'상등'은 '상등품·상등병' 정도에만 남은 말",
+   "priority": 1
+  },
+  {
+   "id": "w30o",
+   "level": 2,
+   "chunk": "n2-2",
+   "word": "早速",
+   "expr": "早速",
+   "reading": "さっそく",
+   "k": "S",
+   "sk": "조속",
+   "ko": "즉시, 곧바로",
+   "en": "at once, immediately, promptly",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "S",
+    "sk": "조속"
+   },
+   "why": "'조속히'(되도록 빨리)는 공문 말투이고 早速의 '곧바로·당장'과 결이 조금 다름. 뜻은 가까움",
+   "priority": 1
+  },
+  {
+   "id": "w326",
+   "level": 2,
+   "chunk": "n2-2",
+   "word": "交替",
+   "expr": "交替",
+   "reading": "こうたい",
+   "k": "F",
+   "sk": "교체",
+   "ko": "교대",
+   "en": "change, relief, alteration",
+   "src": "sample",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "J",
+    "sk": "교체"
+   },
+   "why": "選手交替는 한국어 '선수 교체'와 같음. '교대'뜻은 일부라 F 경고가 과할 수 있음",
+   "priority": 1
+  },
+  {
+   "id": "w36f",
+   "level": 2,
+   "chunk": "n2-2",
+   "word": "作者",
+   "expr": "作者",
+   "reading": "さくしゃ",
+   "k": "S",
+   "sk": "작자",
+   "ko": "작자, 저자",
+   "en": "author, artist",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "J",
+    "sk": "작자"
+   },
+   "why": "현대 한국어 '작자'는 주로 '그 작자'(낮춤말). 지은이 뜻은 '작가·저자'가 보통",
+   "priority": 1
+  },
+  {
+   "id": "w36n",
+   "level": 2,
+   "chunk": "n2-3",
+   "word": "自衛",
+   "expr": "自衛",
+   "reading": "じえい",
+   "k": "S",
+   "sk": "자위",
+   "ko": "자위",
+   "en": "self-defense",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "S",
+    "sk": "자위"
+   },
+   "why": "뜻은 같지만(자위권·자위대) 단독 '자위'는 다른 말(自慰)로 먼저 읽혀 다리 단어로 어색함",
+   "priority": 1
+  },
+  {
+   "id": "w4x3",
+   "level": 1,
+   "chunk": "n1-11",
+   "word": "吹奏",
+   "expr": "吹奏",
+   "reading": "すいそう",
+   "k": "S",
+   "sk": "취주",
+   "ko": "취주, 관악기 연주",
+   "en": "playing wind instruments",
+   "src": "sample",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "J",
+    "sk": "취주"
+   },
+   "why": "'취주'는 '취주악' 정도로만 남은 말이라 보통 성인이 바로 알아보는지 확신 없음",
+   "priority": 1
+  },
+  {
+   "id": "w5ae",
+   "level": 1,
+   "chunk": "n1-8",
+   "word": "不意",
+   "expr": "不意",
+   "reading": "ふい",
+   "k": "S",
+   "sk": "불의",
+   "ko": "갑작스러움, 불시",
+   "en": "sudden, abrupt, unexpected",
+   "src": "scan",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "S",
+    "sk": "불의"
+   },
+   "why": "'불의의 사고'로 알지만 단독 '불의'는 不義(정의롭지 않음)로 먼저 읽힘",
+   "priority": 1
+  },
+  {
+   "id": "w5at",
+   "level": 1,
+   "chunk": "n1-10",
+   "word": "群集",
+   "expr": "群集",
+   "reading": "ぐんしゅう",
+   "k": "S",
+   "sk": "군집",
+   "ko": "군중",
+   "en": "(social) group, crowd, mob",
+   "src": "sample",
+   "verdict": "unsure",
+   "finding": "확신 없음(원어민 확인)",
+   "conf": "low",
+   "harm": "low",
+   "suggest": {
+    "k": "J",
+    "sk": "군집"
+   },
+   "why": "한국어 '군집'은 주로 생물학 용어. 사람 무리는 '군중'(群衆)이라 함. 뜻은 가까워 해는 작음",
+   "priority": 1
+  }
+ ],
+ "sampleVerdicts": {
+  "S": [
+   {
+    "id": "w0ao",
+    "cell": "5/1",
+    "word": "零",
+    "sk": "영",
+    "verdict": "S"
+   },
+   {
+    "id": "w037",
+    "cell": "5/1",
+    "word": "九",
+    "sk": "구",
+    "verdict": "S"
+   },
+   {
+    "id": "w070",
+    "cell": "5/1",
+    "word": "人",
+    "sk": "인",
+    "verdict": "S"
+   },
+   {
+    "id": "w09z",
+    "cell": "5/1",
+    "word": "歳",
+    "sk": "세",
+    "verdict": "S"
+   },
+   {
+    "id": "w0im",
+    "cell": "5/1",
+    "word": "回",
+    "sk": "회",
+    "verdict": "S"
+   },
+   {
+    "id": "w0b2",
+    "cell": "5/1",
+    "word": "千",
+    "sk": "천",
+    "verdict": "S"
+   },
+   {
+    "id": "w0gt",
+    "cell": "5/1",
+    "word": "車",
+    "sk": "차",
+    "verdict": "S"
+   },
+   {
+    "id": "w055",
+    "cell": "5/1",
+    "word": "半",
+    "sk": "반",
+    "verdict": "S"
+   },
+   {
+    "id": "w095",
+    "cell": "5/1",
+    "word": "十",
+    "sk": "십",
+    "verdict": "S"
+   },
+   {
+    "id": "w0id",
+    "cell": "5/1",
+    "word": "色",
+    "sk": "색",
+    "verdict": "S"
+   },
+   {
+    "id": "w0dh",
+    "cell": "5/1",
+    "word": "万",
+    "sk": "만",
+    "verdict": "S"
+   },
+   {
+    "id": "w0fq",
+    "cell": "5/1",
+    "word": "一",
+    "sk": "일",
+    "verdict": "S"
+   },
+   {
+    "id": "w0jo",
+    "cell": "5/1",
+    "word": "側",
+    "sk": "측",
+    "verdict": "S"
+   },
+   {
+    "id": "w0g8",
+    "cell": "5/1",
+    "word": "中",
+    "sk": "중",
+    "verdict": "toF"
+   },
+   {
+    "id": "w0dz",
+    "cell": "5/1",
+    "word": "時",
+    "sk": "시",
+    "verdict": "S"
+   },
+   {
+    "id": "w0bw",
+    "cell": "5/1",
+    "word": "窓",
+    "sk": "창",
+    "verdict": "S"
+   },
+   {
+    "id": "w07i",
+    "cell": "5/1",
+    "word": "月",
+    "sk": "월",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ew",
+    "cell": "5/1",
+    "word": "番",
+    "sk": "번",
+    "verdict": "S"
+   },
+   {
+    "id": "w01y",
+    "cell": "5/1",
+    "word": "五",
+    "sk": "오",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ii",
+    "cell": "5/1",
+    "word": "前",
+    "sk": "전",
+    "verdict": "S"
+   },
+   {
+    "id": "w052",
+    "cell": "5/1",
+    "word": "後",
+    "sk": "후",
+    "verdict": "S"
+   },
+   {
+    "id": "w073",
+    "cell": "5/1",
+    "word": "兄",
+    "sk": "형",
+    "verdict": "S"
+   },
+   {
+    "id": "w0de",
+    "cell": "5/2",
+    "word": "午前",
+    "sk": "오전",
+    "verdict": "S"
+   },
+   {
+    "id": "w0i3",
+    "cell": "5/2",
+    "word": "先生",
+    "sk": "선생",
+    "verdict": "S"
+   },
+   {
+    "id": "w0bb",
+    "cell": "5/2",
+    "word": "練習",
+    "sk": "연습",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ex",
+    "cell": "5/2",
+    "word": "一人",
+    "sk": "일인",
+    "verdict": "S"
+   },
+   {
+    "id": "w01j",
+    "cell": "5/2",
+    "word": "新聞",
+    "sk": "신문",
+    "verdict": "S"
+   },
+   {
+    "id": "w04l",
+    "cell": "5/2",
+    "word": "葉書",
+    "sk": "엽서",
+    "verdict": "S"
+   },
+   {
+    "id": "w02e",
+    "cell": "5/2",
+    "word": "今週",
+    "sk": "금주",
+    "verdict": "S"
+   },
+   {
+    "id": "w01s",
+    "cell": "5/2",
+    "word": "週間",
+    "sk": "주간",
+    "verdict": "S"
+   },
+   {
+    "id": "w02h",
+    "cell": "5/2",
+    "word": "八日",
+    "sk": "팔일",
+    "verdict": "S"
+   },
+   {
+    "id": "w03b",
+    "cell": "5/2",
+    "word": "漢字",
+    "sk": "한자",
+    "verdict": "S"
+   },
+   {
+    "id": "w038",
+    "cell": "5/2",
+    "word": "動物",
+    "sk": "동물",
+    "verdict": "S"
+   },
+   {
+    "id": "w0f5",
+    "cell": "5/2",
+    "word": "教室",
+    "sk": "교실",
+    "verdict": "S"
+   },
+   {
+    "id": "w0iu",
+    "cell": "5/2",
+    "word": "来週",
+    "sk": "내주",
+    "verdict": "S"
+   },
+   {
+    "id": "w04r",
+    "cell": "5/2",
+    "word": "花瓶",
+    "sk": "화병",
+    "verdict": "S"
+   },
+   {
+    "id": "w07v",
+    "cell": "5/2",
+    "word": "会社",
+    "sk": "회사",
+    "verdict": "S"
+   },
+   {
+    "id": "w0jj",
+    "cell": "5/2",
+    "word": "問題",
+    "sk": "문제",
+    "verdict": "S"
+   },
+   {
+    "id": "w0fd",
+    "cell": "5/2",
+    "word": "午後",
+    "sk": "오후",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ai",
+    "cell": "5/2",
+    "word": "階段",
+    "sk": "계단",
+    "verdict": "S"
+   },
+   {
+    "id": "w0h1",
+    "cell": "5/2",
+    "word": "文章",
+    "sk": "문장",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ip",
+    "cell": "5/2",
+    "word": "両親",
+    "sk": "양친",
+    "verdict": "S"
+   },
+   {
+    "id": "w0cn",
+    "cell": "5/2",
+    "word": "公園",
+    "sk": "공원",
+    "verdict": "S"
+   },
+   {
+    "id": "w0d6",
+    "cell": "5/2",
+    "word": "紅茶",
+    "sk": "홍차",
+    "verdict": "S"
+   },
+   {
+    "id": "w01o",
+    "cell": "5/2",
+    "word": "今日",
+    "sk": "금일",
+    "verdict": "S"
+   },
+   {
+    "id": "w02j",
+    "cell": "5/2",
+    "word": "眼鏡",
+    "sk": "안경",
+    "verdict": "S"
+   },
+   {
+    "id": "w0g6",
+    "cell": "5/2",
+    "word": "食堂",
+    "sk": "식당",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ep",
+    "cell": "5/2",
+    "word": "鉛筆",
+    "sk": "연필",
+    "verdict": "S"
+   },
+   {
+    "id": "w0cq",
+    "cell": "5/2",
+    "word": "今年",
+    "sk": "금년",
+    "verdict": "S"
+   },
+   {
+    "id": "w08s",
+    "cell": "5/2",
+    "word": "時計",
+    "sk": "시계",
+    "verdict": "S"
+   },
+   {
+    "id": "w01w",
+    "cell": "5/2",
+    "word": "九日",
+    "sk": "구일",
+    "verdict": "S"
+   },
+   {
+    "id": "w0d8",
+    "cell": "5/2",
+    "word": "七日",
+    "sk": "칠일",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ey",
+    "cell": "5/2",
+    "word": "毎週",
+    "sk": "매주",
+    "verdict": "S"
+   },
+   {
+    "id": "w0jg",
+    "cell": "5/2",
+    "word": "全部",
+    "sk": "전부",
+    "verdict": "S"
+   },
+   {
+    "id": "w08i",
+    "cell": "5/2",
+    "word": "毎年",
+    "sk": "매년",
+    "verdict": "S"
+   },
+   {
+    "id": "w0fw",
+    "cell": "5/2",
+    "word": "椅子",
+    "sk": "의자",
+    "verdict": "S"
+   },
+   {
+    "id": "w03j",
+    "cell": "5/2",
+    "word": "英語",
+    "sk": "영어",
+    "verdict": "S"
+   },
+   {
+    "id": "w093",
+    "cell": "5/2",
+    "word": "番号",
+    "sk": "번호",
+    "verdict": "S"
+   },
+   {
+    "id": "w0fa",
+    "cell": "5/2",
+    "word": "病院",
+    "sk": "병원",
+    "verdict": "S"
+   },
+   {
+    "id": "w04m",
+    "cell": "5/2",
+    "word": "外国",
+    "sk": "외국",
+    "verdict": "S"
+   },
+   {
+    "id": "w0gv",
+    "cell": "5/2",
+    "word": "牛乳",
+    "sk": "우유",
+    "verdict": "S"
+   },
+   {
+    "id": "w0gk",
+    "cell": "5/2",
+    "word": "毎月",
+    "sk": "매월",
+    "verdict": "S"
+   },
+   {
+    "id": "w0c6",
+    "cell": "5/2",
+    "word": "出口",
+    "sk": "출구",
+    "verdict": "S"
+   },
+   {
+    "id": "w0g3",
+    "cell": "5/2",
+    "word": "野菜",
+    "sk": "야채",
+    "verdict": "S"
+   },
+   {
+    "id": "w02w",
+    "cell": "5/2",
+    "word": "大学",
+    "sk": "대학",
+    "verdict": "S"
+   },
+   {
+    "id": "w0d0",
+    "cell": "5/3+",
+    "word": "映画館",
+    "sk": "영화관",
+    "verdict": "S"
+   },
+   {
+    "id": "w056",
+    "cell": "5/3+",
+    "word": "二十歳",
+    "sk": "이십세",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ef",
+    "cell": "5/3+",
+    "word": "万年筆",
+    "sk": "만년필",
+    "verdict": "S"
+   },
+   {
+    "id": "w07o",
+    "cell": "5/3+",
+    "word": "飛行機",
+    "sk": "비행기",
+    "verdict": "S"
+   },
+   {
+    "id": "w05k",
+    "cell": "5/3+",
+    "word": "自転車",
+    "sk": "자전거",
+    "verdict": "S"
+   },
+   {
+    "id": "w0h9",
+    "cell": "5/3+",
+    "word": "金曜日",
+    "sk": "금요일",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ff",
+    "cell": "5/3+",
+    "word": "外国人",
+    "sk": "외국인",
+    "verdict": "S"
+   },
+   {
+    "id": "w0hn",
+    "cell": "5/3+",
+    "word": "地下鉄",
+    "sk": "지하철",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ez",
+    "cell": "5/3+",
+    "word": "水曜日",
+    "sk": "수요일",
+    "verdict": "S"
+   },
+   {
+    "id": "w09p",
+    "cell": "5/3+",
+    "word": "木曜日",
+    "sk": "목요일",
+    "verdict": "S"
+   },
+   {
+    "id": "w0cl",
+    "cell": "5/3+",
+    "word": "留学生",
+    "sk": "유학생",
+    "verdict": "S"
+   },
+   {
+    "id": "w03x",
+    "cell": "5/kana",
+    "word": "お茶",
+    "sk": "차",
+    "verdict": "S"
+   },
+   {
+    "id": "w0bl",
+    "cell": "5/kana",
+    "word": "黄色い",
+    "sk": "황색",
+    "verdict": "S"
+   },
+   {
+    "id": "w0bq",
+    "cell": "5/kana",
+    "word": "お菓子",
+    "sk": "과자",
+    "verdict": "S"
+   },
+   {
+    "id": "w089",
+    "cell": "5/kana",
+    "word": "お兄さん",
+    "sk": "형",
+    "verdict": "S"
+   },
+   {
+    "id": "w0oa",
+    "cell": "4/1",
+    "word": "答",
+    "sk": "답",
+    "verdict": "S"
+   },
+   {
+    "id": "w125",
+    "cell": "4/1",
+    "word": "区",
+    "sk": "구",
+    "verdict": "S"
+   },
+   {
+    "id": "w0zc",
+    "cell": "4/1",
+    "word": "倍",
+    "sk": "배",
+    "verdict": "S"
+   },
+   {
+    "id": "w0u5",
+    "cell": "4/1",
+    "word": "熱",
+    "sk": "열",
+    "verdict": "S"
+   },
+   {
+    "id": "w0lz",
+    "cell": "4/1",
+    "word": "線",
+    "sk": "선",
+    "verdict": "S"
+   },
+   {
+    "id": "w0w4",
+    "cell": "4/1",
+    "word": "員",
+    "sk": "원",
+    "verdict": "S"
+   },
+   {
+    "id": "w0yw",
+    "cell": "4/1",
+    "word": "君",
+    "sk": "군",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ww",
+    "cell": "4/1",
+    "word": "市",
+    "sk": "시",
+    "verdict": "S"
+   },
+   {
+    "id": "w0p4",
+    "cell": "4/2",
+    "word": "女性",
+    "sk": "여성",
+    "verdict": "S"
+   },
+   {
+    "id": "w100",
+    "cell": "4/2",
+    "word": "社会",
+    "sk": "사회",
+    "verdict": "S"
+   },
+   {
+    "id": "w0s1",
+    "cell": "4/2",
+    "word": "科学",
+    "sk": "과학",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ye",
+    "cell": "4/2",
+    "word": "日記",
+    "sk": "일기",
+    "verdict": "S"
+   },
+   {
+    "id": "w0xv",
+    "cell": "4/2",
+    "word": "屋上",
+    "sk": "옥상",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ml",
+    "cell": "4/2",
+    "word": "技術",
+    "sk": "기술",
+    "verdict": "S"
+   },
+   {
+    "id": "w0tv",
+    "cell": "4/2",
+    "word": "水泳",
+    "sk": "수영",
+    "verdict": "S"
+   },
+   {
+    "id": "w0v3",
+    "cell": "4/2",
+    "word": "学部",
+    "sk": "학부",
+    "verdict": "S"
+   },
+   {
+    "id": "w0l9",
+    "cell": "4/2",
+    "word": "計画",
+    "sk": "계획",
+    "verdict": "S"
+   },
+   {
+    "id": "w0u7",
+    "cell": "4/2",
+    "word": "以外",
+    "sk": "이외",
+    "verdict": "S"
+   },
+   {
+    "id": "w0os",
+    "cell": "4/2",
+    "word": "将来",
+    "sk": "장래",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ld",
+    "cell": "4/2",
+    "word": "旅館",
+    "sk": "여관",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ou",
+    "cell": "4/2",
+    "word": "運動",
+    "sk": "운동",
+    "verdict": "S"
+   },
+   {
+    "id": "w0zf",
+    "cell": "4/2",
+    "word": "店員",
+    "sk": "점원",
+    "verdict": "S"
+   },
+   {
+    "id": "w0po",
+    "cell": "4/2",
+    "word": "試合",
+    "sk": "시합",
+    "verdict": "S"
+   },
+   {
+    "id": "w0uk",
+    "cell": "4/2",
+    "word": "漫画",
+    "sk": "만화",
+    "verdict": "S"
+   },
+   {
+    "id": "w10w",
+    "cell": "4/2",
+    "word": "台風",
+    "sk": "태풍",
+    "verdict": "S"
+   },
+   {
+    "id": "w0qr",
+    "cell": "4/2",
+    "word": "経済",
+    "sk": "경제",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ux",
+    "cell": "4/2",
+    "word": "競争",
+    "sk": "경쟁",
+    "verdict": "S"
+   },
+   {
+    "id": "w0o7",
+    "cell": "4/2",
+    "word": "正月",
+    "sk": "정월",
+    "verdict": "S"
+   },
+   {
+    "id": "w0m4",
+    "cell": "4/2",
+    "word": "以内",
+    "sk": "이내",
+    "verdict": "S"
+   },
+   {
+    "id": "w0wi",
+    "cell": "4/2",
+    "word": "季節",
+    "sk": "계절",
+    "verdict": "S"
+   },
+   {
+    "id": "w0rv",
+    "cell": "4/2",
+    "word": "下宿",
+    "sk": "하숙",
+    "verdict": "S"
+   },
+   {
+    "id": "w0mg",
+    "cell": "4/2",
+    "word": "連絡",
+    "sk": "연락",
+    "verdict": "S"
+   },
+   {
+    "id": "w0wo",
+    "cell": "4/2",
+    "word": "医学",
+    "sk": "의학",
+    "verdict": "S"
+   },
+   {
+    "id": "w0zx",
+    "cell": "4/2",
+    "word": "柔道",
+    "sk": "유도",
+    "verdict": "S"
+   },
+   {
+    "id": "w0p6",
+    "cell": "4/2",
+    "word": "祖父",
+    "sk": "조부",
+    "verdict": "S"
+   },
+   {
+    "id": "w120",
+    "cell": "4/2",
+    "word": "興味",
+    "sk": "흥미",
+    "verdict": "S"
+   },
+   {
+    "id": "w0sj",
+    "cell": "4/2",
+    "word": "規則",
+    "sk": "규칙",
+    "verdict": "S"
+   },
+   {
+    "id": "w0sf",
+    "cell": "4/2",
+    "word": "失礼",
+    "sk": "실례",
+    "verdict": "S"
+   },
+   {
+    "id": "w0pj",
+    "cell": "4/2",
+    "word": "講堂",
+    "sk": "강당",
+    "verdict": "S"
+   },
+   {
+    "id": "w0sq",
+    "cell": "4/2",
+    "word": "以上",
+    "sk": "이상",
+    "verdict": "S"
+   },
+   {
+    "id": "w0vj",
+    "cell": "4/2",
+    "word": "入学",
+    "sk": "입학",
+    "verdict": "S"
+   },
+   {
+    "id": "w0p1",
+    "cell": "4/2",
+    "word": "最初",
+    "sk": "최초",
+    "verdict": "S"
+   },
+   {
+    "id": "w0uj",
+    "cell": "4/2",
+    "word": "約束",
+    "sk": "약속",
+    "verdict": "S"
+   },
+   {
+    "id": "w0sn",
+    "cell": "4/2",
+    "word": "注射",
+    "sk": "주사",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ti",
+    "cell": "4/2",
+    "word": "危険",
+    "sk": "위험",
+    "verdict": "S"
+   },
+   {
+    "id": "w11h",
+    "cell": "4/2",
+    "word": "利用",
+    "sk": "이용",
+    "verdict": "S"
+   },
+   {
+    "id": "w0lf",
+    "cell": "4/2",
+    "word": "会話",
+    "sk": "회화",
+    "verdict": "S"
+   },
+   {
+    "id": "w0um",
+    "cell": "4/2",
+    "word": "男性",
+    "sk": "남성",
+    "verdict": "S"
+   },
+   {
+    "id": "w0t1",
+    "cell": "4/2",
+    "word": "試験",
+    "sk": "시험",
+    "verdict": "S"
+   },
+   {
+    "id": "w0wt",
+    "cell": "4/2",
+    "word": "不便",
+    "sk": "불편",
+    "verdict": "S"
+   },
+   {
+    "id": "w0z1",
+    "cell": "4/2",
+    "word": "簡単",
+    "sk": "간단",
+    "verdict": "S"
+   },
+   {
+    "id": "w0x3",
+    "cell": "4/2",
+    "word": "空気",
+    "sk": "공기",
+    "verdict": "S"
+   },
+   {
+    "id": "w10p",
+    "cell": "4/2",
+    "word": "警察",
+    "sk": "경찰",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ty",
+    "cell": "4/2",
+    "word": "説明",
+    "sk": "설명",
+    "verdict": "S"
+   },
+   {
+    "id": "w121",
+    "cell": "4/2",
+    "word": "社長",
+    "sk": "사장",
+    "verdict": "S"
+   },
+   {
+    "id": "w0lp",
+    "cell": "4/2",
+    "word": "趣味",
+    "sk": "취미",
+    "verdict": "S"
+   },
+   {
+    "id": "w0xj",
+    "cell": "4/2",
+    "word": "汽車",
+    "sk": "기차",
+    "verdict": "S"
+   },
+   {
+    "id": "w10v",
+    "cell": "4/2",
+    "word": "最近",
+    "sk": "최근",
+    "verdict": "S"
+   },
+   {
+    "id": "w0pu",
+    "cell": "4/2",
+    "word": "気分",
+    "sk": "기분",
+    "verdict": "S"
+   },
+   {
+    "id": "w11a",
+    "cell": "4/2",
+    "word": "法律",
+    "sk": "법률",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ks",
+    "cell": "4/2",
+    "word": "会場",
+    "sk": "회장",
+    "verdict": "S"
+   },
+   {
+    "id": "w0wr",
+    "cell": "4/2",
+    "word": "急行",
+    "sk": "급행",
+    "verdict": "S"
+   },
+   {
+    "id": "w0oh",
+    "cell": "4/2",
+    "word": "適当",
+    "sk": "적당",
+    "verdict": "S"
+   },
+   {
+    "id": "w0t3",
+    "cell": "4/2",
+    "word": "招待",
+    "sk": "초대",
+    "verdict": "S"
+   },
+   {
+    "id": "w0l7",
+    "cell": "4/2",
+    "word": "無理",
+    "sk": "무리",
+    "verdict": "S"
+   },
+   {
+    "id": "w0r9",
+    "cell": "4/2",
+    "word": "習慣",
+    "sk": "습관",
+    "verdict": "S"
+   },
+   {
+    "id": "w10y",
+    "cell": "4/2",
+    "word": "辞典",
+    "sk": "사전",
+    "verdict": "S"
+   },
+   {
+    "id": "w0vv",
+    "cell": "4/2",
+    "word": "冷房",
+    "sk": "냉방",
+    "verdict": "S"
+   },
+   {
+    "id": "w0xt",
+    "cell": "4/2",
+    "word": "出席",
+    "sk": "출석",
+    "verdict": "S"
+   },
+   {
+    "id": "w0nf",
+    "cell": "4/3+",
+    "word": "食料品",
+    "sk": "식료품",
+    "verdict": "S"
+   },
+   {
+    "id": "w0me",
+    "cell": "4/3+",
+    "word": "中学校",
+    "sk": "중학교",
+    "verdict": "S"
+   },
+   {
+    "id": "w0on",
+    "cell": "4/3+",
+    "word": "高校生",
+    "sk": "고교생",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ul",
+    "cell": "4/3+",
+    "word": "運転手",
+    "sk": "운전수",
+    "verdict": "S"
+   },
+   {
+    "id": "w0uv",
+    "cell": "4/3+",
+    "word": "飛行場",
+    "sk": "비행장",
+    "verdict": "S"
+   },
+   {
+    "id": "w11z",
+    "cell": "4/3+",
+    "word": "公務員",
+    "sk": "공무원",
+    "verdict": "S"
+   },
+   {
+    "id": "w0xo",
+    "cell": "4/3+",
+    "word": "動物園",
+    "sk": "동물원",
+    "verdict": "S"
+   },
+   {
+    "id": "w0rb",
+    "cell": "4/3+",
+    "word": "事務所",
+    "sk": "사무소",
+    "verdict": "S"
+   },
+   {
+    "id": "w0u0",
+    "cell": "4/kana",
+    "word": "特に",
+    "sk": "특",
+    "verdict": "S"
+   },
+   {
+    "id": "w0ln",
+    "cell": "4/kana",
+    "word": "売り場",
+    "sk": "매장",
+    "verdict": "S"
+   },
+   {
+    "id": "w0qg",
+    "cell": "4/kana",
+    "word": "お宅",
+    "sk": "댁",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ll",
+    "cell": "3/1",
+    "word": "計",
+    "sk": "계",
+    "verdict": "unsure"
+   },
+   {
+    "id": "w1v5",
+    "cell": "3/1",
+    "word": "角",
+    "sk": "각",
+    "verdict": "S"
+   },
+   {
+    "id": "w2c2",
+    "cell": "3/1",
+    "word": "棟",
+    "sk": "동",
+    "verdict": "S"
+   },
+   {
+    "id": "w28f",
+    "cell": "3/1",
+    "word": "罪",
+    "sk": "죄",
+    "verdict": "S"
+   },
+   {
+    "id": "w2nr",
+    "cell": "3/1",
+    "word": "秒",
+    "sk": "초",
+    "verdict": "S"
+   },
+   {
+    "id": "w1pv",
+    "cell": "3/1",
+    "word": "脳",
+    "sk": "뇌",
+    "verdict": "S"
+   },
+   {
+    "id": "w2j4",
+    "cell": "3/1",
+    "word": "不",
+    "sk": "불",
+    "verdict": "S"
+   },
+   {
+    "id": "w2hz",
+    "cell": "3/1",
+    "word": "中",
+    "sk": "중",
+    "verdict": "S"
+   },
+   {
+    "id": "w155",
+    "cell": "3/1",
+    "word": "格",
+    "sk": "격",
+    "verdict": "S"
+   },
+   {
+    "id": "w2iu",
+    "cell": "3/1",
+    "word": "綿",
+    "sk": "면",
+    "verdict": "S"
+   },
+   {
+    "id": "w1ap",
+    "cell": "3/1",
+    "word": "郡",
+    "sk": "군",
+    "verdict": "S"
+   },
+   {
+    "id": "w1qu",
+    "cell": "3/1",
+    "word": "碑",
+    "sk": "비",
+    "verdict": "S"
+   },
+   {
+    "id": "w2hq",
+    "cell": "3/1",
+    "word": "胃",
+    "sk": "위",
+    "verdict": "S"
+   },
+   {
+    "id": "w23i",
+    "cell": "3/1",
+    "word": "逆",
+    "sk": "역",
+    "verdict": "S"
+   },
+   {
+    "id": "w2bz",
+    "cell": "3/1",
+    "word": "菌",
+    "sk": "균",
+    "verdict": "S"
+   },
+   {
+    "id": "w2d3",
+    "cell": "3/2",
+    "word": "興奮",
+    "sk": "흥분",
+    "verdict": "S"
+   },
+   {
+    "id": "w27b",
+    "cell": "3/2",
+    "word": "唯一",
+    "sk": "유일",
+    "verdict": "S"
+   },
+   {
+    "id": "w2m4",
+    "cell": "3/2",
+    "word": "遅刻",
+    "sk": "지각",
+    "verdict": "S"
+   },
+   {
+    "id": "w25o",
+    "cell": "3/2",
+    "word": "老人",
+    "sk": "노인",
+    "verdict": "S"
+   },
+   {
+    "id": "w1im",
+    "cell": "3/2",
+    "word": "前者",
+    "sk": "전자",
+    "verdict": "S"
+   },
+   {
+    "id": "w16m",
+    "cell": "3/2",
+    "word": "政府",
+    "sk": "정부",
+    "verdict": "S"
+   },
+   {
+    "id": "w1c8",
+    "cell": "3/2",
+    "word": "給料",
+    "sk": "급료",
+    "verdict": "S"
+   },
+   {
+    "id": "w194",
+    "cell": "3/2",
+    "word": "選手",
+    "sk": "선수",
+    "verdict": "S"
+   },
+   {
+    "id": "w221",
+    "cell": "3/2",
+    "word": "契機",
+    "sk": "계기",
+    "verdict": "S"
+   },
+   {
+    "id": "w13c",
+    "cell": "3/2",
+    "word": "宿泊",
+    "sk": "숙박",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ix",
+    "cell": "3/2",
+    "word": "新鮮",
+    "sk": "신선",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ju",
+    "cell": "3/2",
+    "word": "立場",
+    "sk": "입장",
+    "verdict": "S"
+   },
+   {
+    "id": "w1c1",
+    "cell": "3/2",
+    "word": "器官",
+    "sk": "기관",
+    "verdict": "S"
+   },
+   {
+    "id": "w2kl",
+    "cell": "3/2",
+    "word": "四角",
+    "sk": "사각",
+    "verdict": "S"
+   },
+   {
+    "id": "w1rw",
+    "cell": "3/2",
+    "word": "国籍",
+    "sk": "국적",
+    "verdict": "S"
+   },
+   {
+    "id": "w2nd",
+    "cell": "3/2",
+    "word": "覚悟",
+    "sk": "각오",
+    "verdict": "S"
+   },
+   {
+    "id": "w2bv",
+    "cell": "3/2",
+    "word": "生物",
+    "sk": "생물",
+    "verdict": "S"
+   },
+   {
+    "id": "w1ba",
+    "cell": "3/2",
+    "word": "多少",
+    "sk": "다소",
+    "verdict": "S"
+   },
+   {
+    "id": "w27x",
+    "cell": "3/2",
+    "word": "区別",
+    "sk": "구별",
+    "verdict": "S"
+   },
+   {
+    "id": "w1f7",
+    "cell": "3/2",
+    "word": "今後",
+    "sk": "금후",
+    "verdict": "S"
+   },
+   {
+    "id": "w18b",
+    "cell": "3/2",
+    "word": "期待",
+    "sk": "기대",
+    "verdict": "S"
+   },
+   {
+    "id": "w274",
+    "cell": "3/2",
+    "word": "衝突",
+    "sk": "충돌",
+    "verdict": "S"
+   },
+   {
+    "id": "w1rk",
+    "cell": "3/2",
+    "word": "世紀",
+    "sk": "세기",
+    "verdict": "S"
+   },
+   {
+    "id": "w1m4",
+    "cell": "3/2",
+    "word": "天然",
+    "sk": "천연",
+    "verdict": "S"
+   },
+   {
+    "id": "w2dn",
+    "cell": "3/2",
+    "word": "軍隊",
+    "sk": "군대",
+    "verdict": "S"
+   },
+   {
+    "id": "w1vb",
+    "cell": "3/2",
+    "word": "風景",
+    "sk": "풍경",
+    "verdict": "S"
+   },
+   {
+    "id": "w13w",
+    "cell": "3/2",
+    "word": "現場",
+    "sk": "현장",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ee",
+    "cell": "3/2",
+    "word": "申告",
+    "sk": "신고",
+    "verdict": "S"
+   },
+   {
+    "id": "w1hb",
+    "cell": "3/2",
+    "word": "愉快",
+    "sk": "유쾌",
+    "verdict": "S"
+   },
+   {
+    "id": "w1bt",
+    "cell": "3/2",
+    "word": "名人",
+    "sk": "명인",
+    "verdict": "S"
+   },
+   {
+    "id": "w1gr",
+    "cell": "3/2",
+    "word": "食糧",
+    "sk": "식량",
+    "verdict": "S"
+   },
+   {
+    "id": "w24d",
+    "cell": "3/2",
+    "word": "目的",
+    "sk": "목적",
+    "verdict": "S"
+   },
+   {
+    "id": "w1p9",
+    "cell": "3/2",
+    "word": "進歩",
+    "sk": "진보",
+    "verdict": "S"
+   },
+   {
+    "id": "w2n2",
+    "cell": "3/2",
+    "word": "挑戦",
+    "sk": "도전",
+    "verdict": "S"
+   },
+   {
+    "id": "w2aj",
+    "cell": "3/2",
+    "word": "定期",
+    "sk": "정기",
+    "verdict": "S"
+   },
+   {
+    "id": "w17c",
+    "cell": "3/2",
+    "word": "宝石",
+    "sk": "보석",
+    "verdict": "S"
+   },
+   {
+    "id": "w1r8",
+    "cell": "3/2",
+    "word": "神経",
+    "sk": "신경",
+    "verdict": "S"
+   },
+   {
+    "id": "w1wq",
+    "cell": "3/2",
+    "word": "非行",
+    "sk": "비행",
+    "verdict": "S"
+   },
+   {
+    "id": "w1ed",
+    "cell": "3/2",
+    "word": "動揺",
+    "sk": "동요",
+    "verdict": "S"
+   },
+   {
+    "id": "w2dr",
+    "cell": "3/2",
+    "word": "金融",
+    "sk": "금융",
+    "verdict": "S"
+   },
+   {
+    "id": "w257",
+    "cell": "3/2",
+    "word": "女優",
+    "sk": "여우",
+    "verdict": "S"
+   },
+   {
+    "id": "w14r",
+    "cell": "3/2",
+    "word": "努力",
+    "sk": "노력",
+    "verdict": "S"
+   },
+   {
+    "id": "w28o",
+    "cell": "3/2",
+    "word": "独立",
+    "sk": "독립",
+    "verdict": "S"
+   },
+   {
+    "id": "w1ph",
+    "cell": "3/2",
+    "word": "郵便",
+    "sk": "우편",
+    "verdict": "S"
+   },
+   {
+    "id": "w2if",
+    "cell": "3/2",
+    "word": "傾向",
+    "sk": "경향",
+    "verdict": "S"
+   },
+   {
+    "id": "w2d7",
+    "cell": "3/2",
+    "word": "相続",
+    "sk": "상속",
+    "verdict": "S"
+   },
+   {
+    "id": "w1xe",
+    "cell": "3/2",
+    "word": "注文",
+    "sk": "주문",
+    "verdict": "S"
+   },
+   {
+    "id": "w2h2",
+    "cell": "3/2",
+    "word": "作曲",
+    "sk": "작곡",
+    "verdict": "S"
+   },
+   {
+    "id": "w1gl",
+    "cell": "3/2",
+    "word": "報告",
+    "sk": "보고",
+    "verdict": "S"
+   },
+   {
+    "id": "w1ub",
+    "cell": "3/2",
+    "word": "資源",
+    "sk": "자원",
+    "verdict": "S"
+   },
+   {
+    "id": "w1u4",
+    "cell": "3/2",
+    "word": "財産",
+    "sk": "재산",
+    "verdict": "S"
+   },
+   {
+    "id": "w29m",
+    "cell": "3/2",
+    "word": "完成",
+    "sk": "완성",
+    "verdict": "S"
+   },
+   {
+    "id": "w22m",
+    "cell": "3/2",
+    "word": "賛成",
+    "sk": "찬성",
+    "verdict": "S"
+   },
+   {
+    "id": "w1jc",
+    "cell": "3/2",
+    "word": "公正",
+    "sk": "공정",
+    "verdict": "S"
+   },
+   {
+    "id": "w1xy",
+    "cell": "3/2",
+    "word": "宇宙",
+    "sk": "우주",
+    "verdict": "S"
+   },
+   {
+    "id": "w1rx",
+    "cell": "3/2",
+    "word": "姉妹",
+    "sk": "자매",
+    "verdict": "S"
+   },
+   {
+    "id": "w23t",
+    "cell": "3/2",
+    "word": "販売",
+    "sk": "판매",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ni",
+    "cell": "3/2",
+    "word": "上京",
+    "sk": "상경",
+    "verdict": "S"
+   },
+   {
+    "id": "w293",
+    "cell": "3/2",
+    "word": "分野",
+    "sk": "분야",
+    "verdict": "S"
+   },
+   {
+    "id": "w2g3",
+    "cell": "3/2",
+    "word": "成長",
+    "sk": "성장",
+    "verdict": "S"
+   },
+   {
+    "id": "w1dq",
+    "cell": "3/2",
+    "word": "適切",
+    "sk": "적절",
+    "verdict": "S"
+   },
+   {
+    "id": "w285",
+    "cell": "3/2",
+    "word": "慎重",
+    "sk": "신중",
+    "verdict": "S"
+   },
+   {
+    "id": "w1kh",
+    "cell": "3/2",
+    "word": "首相",
+    "sk": "수상",
+    "verdict": "S"
+   },
+   {
+    "id": "w139",
+    "cell": "3/2",
+    "word": "悪魔",
+    "sk": "악마",
+    "verdict": "S"
+   },
+   {
+    "id": "w17w",
+    "cell": "3/2",
+    "word": "砂漠",
+    "sk": "사막",
+    "verdict": "S"
+   },
+   {
+    "id": "w1c0",
+    "cell": "3/2",
+    "word": "常識",
+    "sk": "상식",
+    "verdict": "S"
+   },
+   {
+    "id": "w2d1",
+    "cell": "3/2",
+    "word": "意志",
+    "sk": "의지",
+    "verdict": "S"
+   },
+   {
+    "id": "w1rq",
+    "cell": "3/2",
+    "word": "書斎",
+    "sk": "서재",
+    "verdict": "S"
+   },
+   {
+    "id": "w1gg",
+    "cell": "3/2",
+    "word": "満足",
+    "sk": "만족",
+    "verdict": "S"
+   },
+   {
+    "id": "w1o8",
+    "cell": "3/2",
+    "word": "主婦",
+    "sk": "주부",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ew",
+    "cell": "3/2",
+    "word": "季刊",
+    "sk": "계간",
+    "verdict": "S"
+   },
+   {
+    "id": "w21y",
+    "cell": "3/2",
+    "word": "職業",
+    "sk": "직업",
+    "verdict": "S"
+   },
+   {
+    "id": "w2fi",
+    "cell": "3/2",
+    "word": "青年",
+    "sk": "청년",
+    "verdict": "S"
+   },
+   {
+    "id": "w1ke",
+    "cell": "3/2",
+    "word": "照明",
+    "sk": "조명",
+    "verdict": "S"
+   },
+   {
+    "id": "w280",
+    "cell": "3/2",
+    "word": "相当",
+    "sk": "상당",
+    "verdict": "S"
+   },
+   {
+    "id": "w1h2",
+    "cell": "3/2",
+    "word": "急速",
+    "sk": "급속",
+    "verdict": "S"
+   },
+   {
+    "id": "w1bb",
+    "cell": "3/2",
+    "word": "情報",
+    "sk": "정보",
+    "verdict": "S"
+   },
+   {
+    "id": "w1dc",
+    "cell": "3/2",
+    "word": "電子",
+    "sk": "전자",
+    "verdict": "S"
+   },
+   {
+    "id": "w2b1",
+    "cell": "3/2",
+    "word": "省略",
+    "sk": "생략",
+    "verdict": "S"
+   },
+   {
+    "id": "w1dh",
+    "cell": "3/2",
+    "word": "学期",
+    "sk": "학기",
+    "verdict": "S"
+   },
+   {
+    "id": "w1k5",
+    "cell": "3/2",
+    "word": "利益",
+    "sk": "이익",
+    "verdict": "S"
+   },
+   {
+    "id": "w1be",
+    "cell": "3/2",
+    "word": "加味",
+    "sk": "가미",
+    "verdict": "S"
+   },
+   {
+    "id": "w2gy",
+    "cell": "3/2",
+    "word": "字体",
+    "sk": "자체",
+    "verdict": "unsure"
+   },
+   {
+    "id": "w1kq",
+    "cell": "3/2",
+    "word": "有無",
+    "sk": "유무",
+    "verdict": "S"
+   },
+   {
+    "id": "w2eo",
+    "cell": "3/2",
+    "word": "欠点",
+    "sk": "결점",
+    "verdict": "S"
+   },
+   {
+    "id": "w17s",
+    "cell": "3/2",
+    "word": "指揮",
+    "sk": "지휘",
+    "verdict": "S"
+   },
+   {
+    "id": "w19y",
+    "cell": "3/2",
+    "word": "増加",
+    "sk": "증가",
+    "verdict": "S"
+   },
+   {
+    "id": "w2nw",
+    "cell": "3/2",
+    "word": "信仰",
+    "sk": "신앙",
+    "verdict": "S"
+   },
+   {
+    "id": "w275",
+    "cell": "3/2",
+    "word": "交換",
+    "sk": "교환",
+    "verdict": "S"
+   },
+   {
+    "id": "w2h8",
+    "cell": "3/2",
+    "word": "豪華",
+    "sk": "호화",
+    "verdict": "S"
+   },
+   {
+    "id": "w1ol",
+    "cell": "3/2",
+    "word": "視点",
+    "sk": "시점",
+    "verdict": "S"
+   },
+   {
+    "id": "w18w",
+    "cell": "3/2",
+    "word": "人気",
+    "sk": "인기",
+    "verdict": "S"
+   },
+   {
+    "id": "w1c3",
+    "cell": "3/2",
+    "word": "心理",
+    "sk": "심리",
+    "verdict": "S"
+   },
+   {
+    "id": "w1zv",
+    "cell": "3/2",
+    "word": "許可",
+    "sk": "허가",
+    "verdict": "S"
+   },
+   {
+    "id": "w1oq",
+    "cell": "3/2",
+    "word": "器械",
+    "sk": "기계",
+    "verdict": "S"
+   },
+   {
+    "id": "w1gs",
+    "cell": "3/2",
+    "word": "女史",
+    "sk": "여사",
+    "verdict": "S"
+   },
+   {
+    "id": "w1wt",
+    "cell": "3/2",
+    "word": "急激",
+    "sk": "급격",
+    "verdict": "S"
+   },
+   {
+    "id": "w14k",
+    "cell": "3/2",
+    "word": "保護",
+    "sk": "보호",
+    "verdict": "S"
+   },
+   {
+    "id": "w1fv",
+    "cell": "3/2",
+    "word": "需要",
+    "sk": "수요",
+    "verdict": "S"
+   },
+   {
+    "id": "w1cz",
+    "cell": "3/2",
+    "word": "健康",
+    "sk": "건강",
+    "verdict": "S"
+   },
+   {
+    "id": "w2cn",
+    "cell": "3/2",
+    "word": "記入",
+    "sk": "기입",
+    "verdict": "S"
+   },
+   {
+    "id": "w19r",
+    "cell": "3/2",
+    "word": "強調",
+    "sk": "강조",
+    "verdict": "S"
+   },
+   {
+    "id": "w2p3",
+    "cell": "3/2",
+    "word": "事件",
+    "sk": "사건",
+    "verdict": "S"
+   },
+   {
+    "id": "w1yl",
+    "cell": "3/2",
+    "word": "正直",
+    "sk": "정직",
+    "verdict": "S"
+   },
+   {
+    "id": "w27r",
+    "cell": "3/2",
+    "word": "指導",
+    "sk": "지도",
+    "verdict": "S"
+   },
+   {
+    "id": "w1bj",
+    "cell": "3/3+",
+    "word": "奨学金",
+    "sk": "장학금",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ic",
+    "cell": "3/3+",
+    "word": "停留所",
+    "sk": "정류소",
+    "verdict": "S"
+   },
+   {
+    "id": "w1wz",
+    "cell": "3/3+",
+    "word": "不自由",
+    "sk": "부자유",
+    "verdict": "S"
+   },
+   {
+    "id": "w2d9",
+    "cell": "3/3+",
+    "word": "地平線",
+    "sk": "지평선",
+    "verdict": "S"
+   },
+   {
+    "id": "w147",
+    "cell": "3/3+",
+    "word": "教科書",
+    "sk": "교과서",
+    "verdict": "S"
+   },
+   {
+    "id": "w2j6",
+    "cell": "3/3+",
+    "word": "生年月日",
+    "sk": "생년월일",
+    "verdict": "S"
+   },
+   {
+    "id": "w2p1",
+    "cell": "3/3+",
+    "word": "大部分",
+    "sk": "대부분",
+    "verdict": "S"
+   },
+   {
+    "id": "w18i",
+    "cell": "3/3+",
+    "word": "大統領",
+    "sk": "대통령",
+    "verdict": "S"
+   },
+   {
+    "id": "w1ul",
+    "cell": "3/kana",
+    "word": "対する",
+    "sk": "대",
+    "verdict": "S"
+   },
+   {
+    "id": "w1uc",
+    "cell": "3/kana",
+    "word": "受け取る",
+    "sk": "수취",
+    "verdict": "S"
+   },
+   {
+    "id": "w1bi",
+    "cell": "3/kana",
+    "word": "支払う",
+    "sk": "지불",
+    "verdict": "S"
+   },
+   {
+    "id": "w14u",
+    "cell": "3/kana",
+    "word": "罰する",
+    "sk": "벌",
+    "verdict": "S"
+   },
+   {
+    "id": "w27j",
+    "cell": "3/kana",
+    "word": "関する",
+    "sk": "관",
+    "verdict": "S"
+   },
+   {
+    "id": "w25g",
+    "cell": "3/kana",
+    "word": "論じる",
+    "sk": "논",
+    "verdict": "S"
+   },
+   {
+    "id": "w27q",
+    "cell": "3/kana",
+    "word": "徐々に",
+    "sk": "서서",
+    "verdict": "S"
+   },
+   {
+    "id": "w20b",
+    "cell": "3/kana",
+    "word": "達する",
+    "sk": "달",
+    "verdict": "S"
+   },
+   {
+    "id": "w34w",
+    "cell": "2/1",
+    "word": "画",
+    "sk": "화",
+    "verdict": "S"
+   },
+   {
+    "id": "w33u",
+    "cell": "2/1",
+    "word": "教",
+    "sk": "교",
+    "verdict": "S"
+   },
+   {
+    "id": "w44z",
+    "cell": "2/1",
+    "word": "所",
+    "sk": "소",
+    "verdict": "S"
+   },
+   {
+    "id": "w3tq",
+    "cell": "2/1",
+    "word": "小",
+    "sk": "소",
+    "verdict": "S"
+   },
+   {
+    "id": "w3wg",
+    "cell": "2/1",
+    "word": "一",
+    "sk": "일",
+    "verdict": "S"
+   },
+   {
+    "id": "w444",
+    "cell": "2/1",
+    "word": "日",
+    "sk": "일",
+    "verdict": "S"
+   },
+   {
+    "id": "w2xs",
+    "cell": "2/1",
+    "word": "非",
+    "sk": "비",
+    "verdict": "S"
+   },
+   {
+    "id": "w3rf",
+    "cell": "2/1",
+    "word": "女",
+    "sk": "여",
+    "verdict": "S"
+   },
+   {
+    "id": "w40w",
+    "cell": "2/1",
+    "word": "現",
+    "sk": "현",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ne",
+    "cell": "2/1",
+    "word": "勝",
+    "sk": "승",
+    "verdict": "S"
+   },
+   {
+    "id": "w2z2",
+    "cell": "2/1",
+    "word": "外",
+    "sk": "외",
+    "verdict": "S"
+   },
+   {
+    "id": "w2vk",
+    "cell": "2/1",
+    "word": "所",
+    "sk": "소",
+    "verdict": "S"
+   },
+   {
+    "id": "w2yy",
+    "cell": "2/1",
+    "word": "系",
+    "sk": "계",
+    "verdict": "S"
+   },
+   {
+    "id": "w39v",
+    "cell": "2/1",
+    "word": "病",
+    "sk": "병",
+    "verdict": "S"
+   },
+   {
+    "id": "w3zk",
+    "cell": "2/1",
+    "word": "姓",
+    "sk": "성",
+    "verdict": "S"
+   },
+   {
+    "id": "w2q0",
+    "cell": "2/1",
+    "word": "同",
+    "sk": "동",
+    "verdict": "S"
+   },
+   {
+    "id": "w374",
+    "cell": "2/1",
+    "word": "長",
+    "sk": "장",
+    "verdict": "S"
+   },
+   {
+    "id": "w3gd",
+    "cell": "2/2",
+    "word": "受取",
+    "sk": "수취",
+    "verdict": "S"
+   },
+   {
+    "id": "w2rw",
+    "cell": "2/2",
+    "word": "通用",
+    "sk": "통용",
+    "verdict": "S"
+   },
+   {
+    "id": "w43t",
+    "cell": "2/2",
+    "word": "重力",
+    "sk": "중력",
+    "verdict": "S"
+   },
+   {
+    "id": "w3yn",
+    "cell": "2/2",
+    "word": "撮影",
+    "sk": "촬영",
+    "verdict": "S"
+   },
+   {
+    "id": "w2zd",
+    "cell": "2/2",
+    "word": "南極",
+    "sk": "남극",
+    "verdict": "S"
+   },
+   {
+    "id": "w3u8",
+    "cell": "2/2",
+    "word": "儀式",
+    "sk": "의식",
+    "verdict": "S"
+   },
+   {
+    "id": "w3jl",
+    "cell": "2/2",
+    "word": "満員",
+    "sk": "만원",
+    "verdict": "S"
+   },
+   {
+    "id": "w3d8",
+    "cell": "2/2",
+    "word": "書店",
+    "sk": "서점",
+    "verdict": "S"
+   },
+   {
+    "id": "w37b",
+    "cell": "2/2",
+    "word": "工芸",
+    "sk": "공예",
+    "verdict": "S"
+   },
+   {
+    "id": "w3f5",
+    "cell": "2/2",
+    "word": "伝染",
+    "sk": "전염",
+    "verdict": "S"
+   },
+   {
+    "id": "w3d6",
+    "cell": "2/2",
+    "word": "回答",
+    "sk": "회답",
+    "verdict": "S"
+   },
+   {
+    "id": "w462",
+    "cell": "2/2",
+    "word": "水産",
+    "sk": "수산",
+    "verdict": "S"
+   },
+   {
+    "id": "w41f",
+    "cell": "2/2",
+    "word": "彫刻",
+    "sk": "조각",
+    "verdict": "S"
+   },
+   {
+    "id": "w3md",
+    "cell": "2/2",
+    "word": "鑑賞",
+    "sk": "감상",
+    "verdict": "S"
+   },
+   {
+    "id": "w38m",
+    "cell": "2/2",
+    "word": "対照",
+    "sk": "대조",
+    "verdict": "S"
+   },
+   {
+    "id": "w2qc",
+    "cell": "2/2",
+    "word": "電球",
+    "sk": "전구",
+    "verdict": "S"
+   },
+   {
+    "id": "w3an",
+    "cell": "2/2",
+    "word": "断定",
+    "sk": "단정",
+    "verdict": "S"
+   },
+   {
+    "id": "w43s",
+    "cell": "2/2",
+    "word": "随筆",
+    "sk": "수필",
+    "verdict": "S"
+   },
+   {
+    "id": "w31y",
+    "cell": "2/2",
+    "word": "休講",
+    "sk": "휴강",
+    "verdict": "S"
+   },
+   {
+    "id": "w38j",
+    "cell": "2/2",
+    "word": "不潔",
+    "sk": "불결",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ev",
+    "cell": "2/2",
+    "word": "体系",
+    "sk": "체계",
+    "verdict": "S"
+   },
+   {
+    "id": "w31g",
+    "cell": "2/2",
+    "word": "公害",
+    "sk": "공해",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ke",
+    "cell": "2/2",
+    "word": "往復",
+    "sk": "왕복",
+    "verdict": "S"
+   },
+   {
+    "id": "w3mw",
+    "cell": "2/2",
+    "word": "診断",
+    "sk": "진단",
+    "verdict": "S"
+   },
+   {
+    "id": "w3d9",
+    "cell": "2/2",
+    "word": "実物",
+    "sk": "실물",
+    "verdict": "S"
+   },
+   {
+    "id": "w2v3",
+    "cell": "2/2",
+    "word": "平日",
+    "sk": "평일",
+    "verdict": "S"
+   },
+   {
+    "id": "w42a",
+    "cell": "2/2",
+    "word": "見本",
+    "sk": "견본",
+    "verdict": "S"
+   },
+   {
+    "id": "w31s",
+    "cell": "2/2",
+    "word": "統計",
+    "sk": "통계",
+    "verdict": "S"
+   },
+   {
+    "id": "w36u",
+    "cell": "2/2",
+    "word": "灰色",
+    "sk": "회색",
+    "verdict": "S"
+   },
+   {
+    "id": "w3fq",
+    "cell": "2/2",
+    "word": "温泉",
+    "sk": "온천",
+    "verdict": "S"
+   },
+   {
+    "id": "w34r",
+    "cell": "2/2",
+    "word": "県庁",
+    "sk": "현청",
+    "verdict": "S"
+   },
+   {
+    "id": "w3mz",
+    "cell": "2/2",
+    "word": "先頭",
+    "sk": "선두",
+    "verdict": "S"
+   },
+   {
+    "id": "w3b0",
+    "cell": "2/2",
+    "word": "国王",
+    "sk": "국왕",
+    "verdict": "S"
+   },
+   {
+    "id": "w3gx",
+    "cell": "2/2",
+    "word": "当日",
+    "sk": "당일",
+    "verdict": "S"
+   },
+   {
+    "id": "w30v",
+    "cell": "2/2",
+    "word": "真空",
+    "sk": "진공",
+    "verdict": "S"
+   },
+   {
+    "id": "w3n5",
+    "cell": "2/2",
+    "word": "各地",
+    "sk": "각지",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ge",
+    "cell": "2/2",
+    "word": "文献",
+    "sk": "문헌",
+    "verdict": "S"
+   },
+   {
+    "id": "w2sm",
+    "cell": "2/2",
+    "word": "牧畜",
+    "sk": "목축",
+    "verdict": "S"
+   },
+   {
+    "id": "w2yo",
+    "cell": "2/2",
+    "word": "厳重",
+    "sk": "엄중",
+    "verdict": "S"
+   },
+   {
+    "id": "w3dk",
+    "cell": "2/2",
+    "word": "標準",
+    "sk": "표준",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ui",
+    "cell": "2/2",
+    "word": "単数",
+    "sk": "단수",
+    "verdict": "S"
+   },
+   {
+    "id": "w40h",
+    "cell": "2/2",
+    "word": "送別",
+    "sk": "송별",
+    "verdict": "S"
+   },
+   {
+    "id": "w3cx",
+    "cell": "2/2",
+    "word": "地名",
+    "sk": "지명",
+    "verdict": "S"
+   },
+   {
+    "id": "w2yd",
+    "cell": "2/2",
+    "word": "材木",
+    "sk": "재목",
+    "verdict": "S"
+   },
+   {
+    "id": "w3tp",
+    "cell": "2/2",
+    "word": "幼稚",
+    "sk": "유치",
+    "verdict": "S"
+   },
+   {
+    "id": "w43m",
+    "cell": "2/2",
+    "word": "習字",
+    "sk": "습자",
+    "verdict": "S"
+   },
+   {
+    "id": "w3t7",
+    "cell": "2/2",
+    "word": "日時",
+    "sk": "일시",
+    "verdict": "S"
+   },
+   {
+    "id": "w3q5",
+    "cell": "2/2",
+    "word": "名作",
+    "sk": "명작",
+    "verdict": "S"
+   },
+   {
+    "id": "w3mb",
+    "cell": "2/2",
+    "word": "区分",
+    "sk": "구분",
+    "verdict": "S"
+   },
+   {
+    "id": "w3sn",
+    "cell": "2/2",
+    "word": "小便",
+    "sk": "소변",
+    "verdict": "S"
+   },
+   {
+    "id": "w3w5",
+    "cell": "2/2",
+    "word": "年度",
+    "sk": "연도",
+    "verdict": "S"
+   },
+   {
+    "id": "w451",
+    "cell": "2/2",
+    "word": "肯定",
+    "sk": "긍정",
+    "verdict": "S"
+   },
+   {
+    "id": "w3sl",
+    "cell": "2/2",
+    "word": "民間",
+    "sk": "민간",
+    "verdict": "S"
+   },
+   {
+    "id": "w2rf",
+    "cell": "2/2",
+    "word": "下降",
+    "sk": "하강",
+    "verdict": "S"
+   },
+   {
+    "id": "w2vh",
+    "cell": "2/2",
+    "word": "清掃",
+    "sk": "청소",
+    "verdict": "S"
+   },
+   {
+    "id": "w3py",
+    "cell": "2/2",
+    "word": "看板",
+    "sk": "간판",
+    "verdict": "S"
+   },
+   {
+    "id": "w376",
+    "cell": "2/2",
+    "word": "純情",
+    "sk": "순정",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ii",
+    "cell": "2/2",
+    "word": "盗難",
+    "sk": "도난",
+    "verdict": "S"
+   },
+   {
+    "id": "w45j",
+    "cell": "2/2",
+    "word": "感想",
+    "sk": "감상",
+    "verdict": "S"
+   },
+   {
+    "id": "w31d",
+    "cell": "2/2",
+    "word": "功績",
+    "sk": "공적",
+    "verdict": "S"
+   },
+   {
+    "id": "w2z8",
+    "cell": "2/2",
+    "word": "父母",
+    "sk": "부모",
+    "verdict": "S"
+   },
+   {
+    "id": "w357",
+    "cell": "2/2",
+    "word": "列島",
+    "sk": "열도",
+    "verdict": "S"
+   },
+   {
+    "id": "w2uq",
+    "cell": "2/2",
+    "word": "高層",
+    "sk": "고층",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ip",
+    "cell": "2/2",
+    "word": "写生",
+    "sk": "사생",
+    "verdict": "S"
+   },
+   {
+    "id": "w2z7",
+    "cell": "2/2",
+    "word": "部品",
+    "sk": "부품",
+    "verdict": "S"
+   },
+   {
+    "id": "w3n4",
+    "cell": "2/2",
+    "word": "武士",
+    "sk": "무사",
+    "verdict": "S"
+   },
+   {
+    "id": "w3o0",
+    "cell": "2/2",
+    "word": "木材",
+    "sk": "목재",
+    "verdict": "S"
+   },
+   {
+    "id": "w33l",
+    "cell": "2/2",
+    "word": "編集",
+    "sk": "편집",
+    "verdict": "S"
+   },
+   {
+    "id": "w31b",
+    "cell": "2/2",
+    "word": "商社",
+    "sk": "상사",
+    "verdict": "S"
+   },
+   {
+    "id": "w3q2",
+    "cell": "2/2",
+    "word": "低下",
+    "sk": "저하",
+    "verdict": "S"
+   },
+   {
+    "id": "w30f",
+    "cell": "2/2",
+    "word": "要領",
+    "sk": "요령",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ky",
+    "cell": "2/2",
+    "word": "定員",
+    "sk": "정원",
+    "verdict": "S"
+   },
+   {
+    "id": "w3d4",
+    "cell": "2/2",
+    "word": "方言",
+    "sk": "방언",
+    "verdict": "S"
+   },
+   {
+    "id": "w37s",
+    "cell": "2/2",
+    "word": "高等",
+    "sk": "고등",
+    "verdict": "S"
+   },
+   {
+    "id": "w30w",
+    "cell": "2/2",
+    "word": "上下",
+    "sk": "상하",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ui",
+    "cell": "2/2",
+    "word": "全身",
+    "sk": "전신",
+    "verdict": "S"
+   },
+   {
+    "id": "w30z",
+    "cell": "2/2",
+    "word": "内線",
+    "sk": "내선",
+    "verdict": "S"
+   },
+   {
+    "id": "w2z6",
+    "cell": "2/2",
+    "word": "不運",
+    "sk": "불운",
+    "verdict": "S"
+   },
+   {
+    "id": "w407",
+    "cell": "2/2",
+    "word": "光線",
+    "sk": "광선",
+    "verdict": "S"
+   },
+   {
+    "id": "w397",
+    "cell": "2/2",
+    "word": "等分",
+    "sk": "등분",
+    "verdict": "S"
+   },
+   {
+    "id": "w385",
+    "cell": "2/2",
+    "word": "加熱",
+    "sk": "가열",
+    "verdict": "S"
+   },
+   {
+    "id": "w3bk",
+    "cell": "2/2",
+    "word": "洗剤",
+    "sk": "세제",
+    "verdict": "S"
+   },
+   {
+    "id": "w3vv",
+    "cell": "2/2",
+    "word": "実績",
+    "sk": "실적",
+    "verdict": "S"
+   },
+   {
+    "id": "w3z2",
+    "cell": "2/2",
+    "word": "課税",
+    "sk": "과세",
+    "verdict": "S"
+   },
+   {
+    "id": "w3vd",
+    "cell": "2/2",
+    "word": "素質",
+    "sk": "소질",
+    "verdict": "S"
+   },
+   {
+    "id": "w2zc",
+    "cell": "2/3+",
+    "word": "自然科学",
+    "sk": "자연과학",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ut",
+    "cell": "2/3+",
+    "word": "望遠鏡",
+    "sk": "망원경",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ss",
+    "cell": "2/3+",
+    "word": "洋品店",
+    "sk": "양품점",
+    "verdict": "S"
+   },
+   {
+    "id": "w31o",
+    "cell": "2/3+",
+    "word": "大学院",
+    "sk": "대학원",
+    "verdict": "S"
+   },
+   {
+    "id": "w3lh",
+    "cell": "2/3+",
+    "word": "受話器",
+    "sk": "수화기",
+    "verdict": "S"
+   },
+   {
+    "id": "w3ey",
+    "cell": "2/3+",
+    "word": "機関車",
+    "sk": "기관차",
+    "verdict": "S"
+   },
+   {
+    "id": "w3pr",
+    "cell": "2/3+",
+    "word": "比較的",
+    "sk": "비교적",
+    "verdict": "S"
+   },
+   {
+    "id": "w3pz",
+    "cell": "2/3+",
+    "word": "調味料",
+    "sk": "조미료",
+    "verdict": "S"
+   },
+   {
+    "id": "w340",
+    "cell": "2/kana",
+    "word": "属する",
+    "sk": "속",
+    "verdict": "S"
+   },
+   {
+    "id": "w310",
+    "cell": "2/kana",
+    "word": "組合せ",
+    "sk": "조합",
+    "verdict": "S"
+   },
+   {
+    "id": "w450",
+    "cell": "2/kana",
+    "word": "論ずる",
+    "sk": "논",
+    "verdict": "S"
+   },
+   {
+    "id": "w2ts",
+    "cell": "2/kana",
+    "word": "売り上げ",
+    "sk": "매상",
+    "verdict": "S"
+   },
+   {
+    "id": "w2yx",
+    "cell": "2/kana",
+    "word": "引受る",
+    "sk": "인수",
+    "verdict": "S"
+   },
+   {
+    "id": "w40u",
+    "cell": "2/kana",
+    "word": "叔父さん",
+    "sk": "숙부",
+    "verdict": "S"
+   },
+   {
+    "id": "w36a",
+    "cell": "2/kana",
+    "word": "手続き",
+    "sk": "수속",
+    "verdict": "S"
+   },
+   {
+    "id": "w2tp",
+    "cell": "2/kana",
+    "word": "応ずる",
+    "sk": "응",
+    "verdict": "S"
+   },
+   {
+    "id": "w4qb",
+    "cell": "1/1",
+    "word": "網",
+    "sk": "망",
+    "verdict": "S"
+   },
+   {
+    "id": "w67s",
+    "cell": "1/1",
+    "word": "乙",
+    "sk": "을",
+    "verdict": "S"
+   },
+   {
+    "id": "w5mi",
+    "cell": "1/1",
+    "word": "脈",
+    "sk": "맥",
+    "verdict": "S"
+   },
+   {
+    "id": "w51a",
+    "cell": "1/1",
+    "word": "症",
+    "sk": "증",
+    "verdict": "S"
+   },
+   {
+    "id": "w58d",
+    "cell": "1/1",
+    "word": "腸",
+    "sk": "장",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ak",
+    "cell": "1/1",
+    "word": "超",
+    "sk": "초",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ny",
+    "cell": "1/1",
+    "word": "嬢",
+    "sk": "양",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ui",
+    "cell": "1/1",
+    "word": "美",
+    "sk": "미",
+    "verdict": "S"
+   },
+   {
+    "id": "w4eo",
+    "cell": "1/2",
+    "word": "潜入",
+    "sk": "잠입",
+    "verdict": "S"
+   },
+   {
+    "id": "w5dq",
+    "cell": "1/2",
+    "word": "異性",
+    "sk": "이성",
+    "verdict": "S"
+   },
+   {
+    "id": "w4dk",
+    "cell": "1/2",
+    "word": "過密",
+    "sk": "과밀",
+    "verdict": "S"
+   },
+   {
+    "id": "w54j",
+    "cell": "1/2",
+    "word": "万能",
+    "sk": "만능",
+    "verdict": "S"
+   },
+   {
+    "id": "w4qk",
+    "cell": "1/2",
+    "word": "業務",
+    "sk": "업무",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ih",
+    "cell": "1/2",
+    "word": "教職",
+    "sk": "교직",
+    "verdict": "S"
+   },
+   {
+    "id": "w5u7",
+    "cell": "1/2",
+    "word": "天地",
+    "sk": "천지",
+    "verdict": "S"
+   },
+   {
+    "id": "w5j8",
+    "cell": "1/2",
+    "word": "名称",
+    "sk": "명칭",
+    "verdict": "S"
+   },
+   {
+    "id": "w4a8",
+    "cell": "1/2",
+    "word": "民族",
+    "sk": "민족",
+    "verdict": "S"
+   },
+   {
+    "id": "w4e8",
+    "cell": "1/2",
+    "word": "模範",
+    "sk": "모범",
+    "verdict": "S"
+   },
+   {
+    "id": "w4qg",
+    "cell": "1/2",
+    "word": "知性",
+    "sk": "지성",
+    "verdict": "S"
+   },
+   {
+    "id": "w49t",
+    "cell": "1/2",
+    "word": "否決",
+    "sk": "부결",
+    "verdict": "S"
+   },
+   {
+    "id": "w4nc",
+    "cell": "1/2",
+    "word": "円満",
+    "sk": "원만",
+    "verdict": "S"
+   },
+   {
+    "id": "w4wl",
+    "cell": "1/2",
+    "word": "敏感",
+    "sk": "민감",
+    "verdict": "S"
+   },
+   {
+    "id": "w4x3",
+    "cell": "1/2",
+    "word": "吹奏",
+    "sk": "취주",
+    "verdict": "unsure"
+   },
+   {
+    "id": "w5kj",
+    "cell": "1/2",
+    "word": "失脚",
+    "sk": "실각",
+    "verdict": "S"
+   },
+   {
+    "id": "w60v",
+    "cell": "1/2",
+    "word": "当選",
+    "sk": "당선",
+    "verdict": "S"
+   },
+   {
+    "id": "w49o",
+    "cell": "1/2",
+    "word": "類似",
+    "sk": "유사",
+    "verdict": "S"
+   },
+   {
+    "id": "w59k",
+    "cell": "1/2",
+    "word": "存続",
+    "sk": "존속",
+    "verdict": "S"
+   },
+   {
+    "id": "w49e",
+    "cell": "1/2",
+    "word": "得点",
+    "sk": "득점",
+    "verdict": "S"
+   },
+   {
+    "id": "w4oh",
+    "cell": "1/2",
+    "word": "結晶",
+    "sk": "결정",
+    "verdict": "S"
+   },
+   {
+    "id": "w4s9",
+    "cell": "1/2",
+    "word": "云々",
+    "sk": "운운",
+    "verdict": "S"
+   },
+   {
+    "id": "w63f",
+    "cell": "1/2",
+    "word": "細胞",
+    "sk": "세포",
+    "verdict": "S"
+   },
+   {
+    "id": "w57v",
+    "cell": "1/2",
+    "word": "負債",
+    "sk": "부채",
+    "verdict": "S"
+   },
+   {
+    "id": "w4gx",
+    "cell": "1/2",
+    "word": "革新",
+    "sk": "혁신",
+    "verdict": "S"
+   },
+   {
+    "id": "w5kh",
+    "cell": "1/2",
+    "word": "最善",
+    "sk": "최선",
+    "verdict": "S"
+   },
+   {
+    "id": "w5u5",
+    "cell": "1/2",
+    "word": "共鳴",
+    "sk": "공명",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ev",
+    "cell": "1/2",
+    "word": "滅亡",
+    "sk": "멸망",
+    "verdict": "S"
+   },
+   {
+    "id": "w4el",
+    "cell": "1/2",
+    "word": "嗜好",
+    "sk": "기호",
+    "verdict": "S"
+   },
+   {
+    "id": "w4xj",
+    "cell": "1/2",
+    "word": "家出",
+    "sk": "가출",
+    "verdict": "S"
+   },
+   {
+    "id": "w47f",
+    "cell": "1/2",
+    "word": "是正",
+    "sk": "시정",
+    "verdict": "S"
+   },
+   {
+    "id": "w49x",
+    "cell": "1/2",
+    "word": "控除",
+    "sk": "공제",
+    "verdict": "S"
+   },
+   {
+    "id": "w4sa",
+    "cell": "1/2",
+    "word": "侮辱",
+    "sk": "모욕",
+    "verdict": "S"
+   },
+   {
+    "id": "w53h",
+    "cell": "1/2",
+    "word": "国防",
+    "sk": "국방",
+    "verdict": "S"
+   },
+   {
+    "id": "w5i9",
+    "cell": "1/2",
+    "word": "応急",
+    "sk": "응급",
+    "verdict": "S"
+   },
+   {
+    "id": "w64u",
+    "cell": "1/2",
+    "word": "長編",
+    "sk": "장편",
+    "verdict": "S"
+   },
+   {
+    "id": "w555",
+    "cell": "1/2",
+    "word": "数詞",
+    "sk": "수사",
+    "verdict": "S"
+   },
+   {
+    "id": "w5rg",
+    "cell": "1/2",
+    "word": "討議",
+    "sk": "토의",
+    "verdict": "S"
+   },
+   {
+    "id": "w5kp",
+    "cell": "1/2",
+    "word": "法学",
+    "sk": "법학",
+    "verdict": "S"
+   },
+   {
+    "id": "w5i3",
+    "cell": "1/2",
+    "word": "首脳",
+    "sk": "수뇌",
+    "verdict": "S"
+   },
+   {
+    "id": "w5l0",
+    "cell": "1/2",
+    "word": "露骨",
+    "sk": "노골",
+    "verdict": "S"
+   },
+   {
+    "id": "w4vb",
+    "cell": "1/2",
+    "word": "平常",
+    "sk": "평상",
+    "verdict": "S"
+   },
+   {
+    "id": "w5sm",
+    "cell": "1/2",
+    "word": "条約",
+    "sk": "조약",
+    "verdict": "S"
+   },
+   {
+    "id": "w5yn",
+    "cell": "1/2",
+    "word": "様式",
+    "sk": "양식",
+    "verdict": "S"
+   },
+   {
+    "id": "w62d",
+    "cell": "1/2",
+    "word": "文書",
+    "sk": "문서",
+    "verdict": "S"
+   },
+   {
+    "id": "w68k",
+    "cell": "1/2",
+    "word": "対等",
+    "sk": "대등",
+    "verdict": "S"
+   },
+   {
+    "id": "w5hh",
+    "cell": "1/2",
+    "word": "講習",
+    "sk": "강습",
+    "verdict": "S"
+   },
+   {
+    "id": "w5dl",
+    "cell": "1/2",
+    "word": "譲歩",
+    "sk": "양보",
+    "verdict": "S"
+   },
+   {
+    "id": "w4r1",
+    "cell": "1/2",
+    "word": "領土",
+    "sk": "영토",
+    "verdict": "S"
+   },
+   {
+    "id": "w5jd",
+    "cell": "1/2",
+    "word": "着手",
+    "sk": "착수",
+    "verdict": "S"
+   },
+   {
+    "id": "w50j",
+    "cell": "1/2",
+    "word": "排除",
+    "sk": "배제",
+    "verdict": "S"
+   },
+   {
+    "id": "w62v",
+    "cell": "1/2",
+    "word": "配布",
+    "sk": "배포",
+    "verdict": "S"
+   },
+   {
+    "id": "w56p",
+    "cell": "1/2",
+    "word": "放射",
+    "sk": "방사",
+    "verdict": "S"
+   },
+   {
+    "id": "w4bg",
+    "cell": "1/2",
+    "word": "購買",
+    "sk": "구매",
+    "verdict": "S"
+   },
+   {
+    "id": "w5gc",
+    "cell": "1/2",
+    "word": "議題",
+    "sk": "의제",
+    "verdict": "S"
+   },
+   {
+    "id": "w5fu",
+    "cell": "1/2",
+    "word": "要因",
+    "sk": "요인",
+    "verdict": "S"
+   },
+   {
+    "id": "w499",
+    "cell": "1/2",
+    "word": "交渉",
+    "sk": "교섭",
+    "verdict": "S"
+   },
+   {
+    "id": "w5q8",
+    "cell": "1/2",
+    "word": "無効",
+    "sk": "무효",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ue",
+    "cell": "1/2",
+    "word": "内部",
+    "sk": "내부",
+    "verdict": "S"
+   },
+   {
+    "id": "w4ql",
+    "cell": "1/2",
+    "word": "普遍",
+    "sk": "보편",
+    "verdict": "S"
+   },
+   {
+    "id": "w52w",
+    "cell": "1/2",
+    "word": "運用",
+    "sk": "운용",
+    "verdict": "S"
+   },
+   {
+    "id": "w63q",
+    "cell": "1/2",
+    "word": "証言",
+    "sk": "증언",
+    "verdict": "S"
+   },
+   {
+    "id": "w5xp",
+    "cell": "1/2",
+    "word": "送金",
+    "sk": "송금",
+    "verdict": "S"
+   },
+   {
+    "id": "w4at",
+    "cell": "1/2",
+    "word": "外貨",
+    "sk": "외화",
+    "verdict": "S"
+   },
+   {
+    "id": "w5qi",
+    "cell": "1/2",
+    "word": "記述",
+    "sk": "기술",
+    "verdict": "S"
+   },
+   {
+    "id": "w4i0",
+    "cell": "1/2",
+    "word": "優越",
+    "sk": "우월",
+    "verdict": "S"
+   },
+   {
+    "id": "w675",
+    "cell": "1/2",
+    "word": "単一",
+    "sk": "단일",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ag",
+    "cell": "1/2",
+    "word": "一同",
+    "sk": "일동",
+    "verdict": "S"
+   },
+   {
+    "id": "w5i4",
+    "cell": "1/2",
+    "word": "著名",
+    "sk": "저명",
+    "verdict": "S"
+   },
+   {
+    "id": "w5d5",
+    "cell": "1/2",
+    "word": "所持",
+    "sk": "소지",
+    "verdict": "S"
+   },
+   {
+    "id": "w4u4",
+    "cell": "1/2",
+    "word": "連休",
+    "sk": "연휴",
+    "verdict": "S"
+   },
+   {
+    "id": "w4lf",
+    "cell": "1/2",
+    "word": "決議",
+    "sk": "결의",
+    "verdict": "S"
+   },
+   {
+    "id": "w5z4",
+    "cell": "1/2",
+    "word": "制約",
+    "sk": "제약",
+    "verdict": "S"
+   },
+   {
+    "id": "w4fn",
+    "cell": "1/2",
+    "word": "口述",
+    "sk": "구술",
+    "verdict": "S"
+   },
+   {
+    "id": "w4k1",
+    "cell": "1/2",
+    "word": "紛失",
+    "sk": "분실",
+    "verdict": "S"
+   },
+   {
+    "id": "w4hc",
+    "cell": "1/2",
+    "word": "破棄",
+    "sk": "파기",
+    "verdict": "S"
+   },
+   {
+    "id": "w5tt",
+    "cell": "1/2",
+    "word": "体験",
+    "sk": "체험",
+    "verdict": "S"
+   },
+   {
+    "id": "w5at",
+    "cell": "1/2",
+    "word": "群集",
+    "sk": "군집",
+    "verdict": "unsure"
+   },
+   {
+    "id": "w5cl",
+    "cell": "1/2",
+    "word": "好評",
+    "sk": "호평",
+    "verdict": "S"
+   },
+   {
+    "id": "w4js",
+    "cell": "1/2",
+    "word": "模倣",
+    "sk": "모방",
+    "verdict": "S"
+   },
+   {
+    "id": "w4wk",
+    "cell": "1/2",
+    "word": "燃焼",
+    "sk": "연소",
+    "verdict": "S"
+   },
+   {
+    "id": "w60k",
+    "cell": "1/2",
+    "word": "旅券",
+    "sk": "여권",
+    "verdict": "S"
+   },
+   {
+    "id": "w47d",
+    "cell": "1/2",
+    "word": "冷蔵",
+    "sk": "냉장",
+    "verdict": "S"
+   },
+   {
+    "id": "w622",
+    "cell": "1/2",
+    "word": "市場",
+    "sk": "시장",
+    "verdict": "S"
+   },
+   {
+    "id": "w5dt",
+    "cell": "1/2",
+    "word": "好況",
+    "sk": "호황",
+    "verdict": "S"
+   },
+   {
+    "id": "w5rk",
+    "cell": "1/2",
+    "word": "確信",
+    "sk": "확신",
+    "verdict": "S"
+   },
+   {
+    "id": "w5k5",
+    "cell": "1/2",
+    "word": "企画",
+    "sk": "기획",
+    "verdict": "S"
+   },
+   {
+    "id": "w51j",
+    "cell": "1/2",
+    "word": "免除",
+    "sk": "면제",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ps",
+    "cell": "1/2",
+    "word": "促進",
+    "sk": "촉진",
+    "verdict": "S"
+   },
+   {
+    "id": "w580",
+    "cell": "1/2",
+    "word": "対面",
+    "sk": "대면",
+    "verdict": "S"
+   },
+   {
+    "id": "w4va",
+    "cell": "1/2",
+    "word": "定年",
+    "sk": "정년",
+    "verdict": "S"
+   },
+   {
+    "id": "w5bz",
+    "cell": "1/2",
+    "word": "入賞",
+    "sk": "입상",
+    "verdict": "S"
+   },
+   {
+    "id": "w5xg",
+    "cell": "1/2",
+    "word": "好調",
+    "sk": "호조",
+    "verdict": "S"
+   },
+   {
+    "id": "w59x",
+    "cell": "1/2",
+    "word": "出世",
+    "sk": "출세",
+    "verdict": "S"
+   },
+   {
+    "id": "w57r",
+    "cell": "1/2",
+    "word": "確保",
+    "sk": "확보",
+    "verdict": "S"
+   },
+   {
+    "id": "w4x4",
+    "cell": "1/2",
+    "word": "神殿",
+    "sk": "신전",
+    "verdict": "S"
+   },
+   {
+    "id": "w60x",
+    "cell": "1/2",
+    "word": "暗算",
+    "sk": "암산",
+    "verdict": "S"
+   },
+   {
+    "id": "w4vl",
+    "cell": "1/2",
+    "word": "林業",
+    "sk": "임업",
+    "verdict": "S"
+   },
+   {
+    "id": "w5em",
+    "cell": "1/2",
+    "word": "中枢",
+    "sk": "중추",
+    "verdict": "S"
+   },
+   {
+    "id": "w62j",
+    "cell": "1/2",
+    "word": "移住",
+    "sk": "이주",
+    "verdict": "S"
+   },
+   {
+    "id": "w4qn",
+    "cell": "1/2",
+    "word": "嫉妬",
+    "sk": "질투",
+    "verdict": "S"
+   },
+   {
+    "id": "w5xw",
+    "cell": "1/2",
+    "word": "極楽",
+    "sk": "극락",
+    "verdict": "S"
+   },
+   {
+    "id": "w4vh",
+    "cell": "1/2",
+    "word": "語源",
+    "sk": "어원",
+    "verdict": "S"
+   },
+   {
+    "id": "w5l7",
+    "cell": "1/2",
+    "word": "打開",
+    "sk": "타개",
+    "verdict": "S"
+   },
+   {
+    "id": "w5wh",
+    "cell": "1/2",
+    "word": "返還",
+    "sk": "반환",
+    "verdict": "S"
+   },
+   {
+    "id": "w4r7",
+    "cell": "1/2",
+    "word": "説得",
+    "sk": "설득",
+    "verdict": "S"
+   },
+   {
+    "id": "w5aq",
+    "cell": "1/2",
+    "word": "真心",
+    "sk": "진심",
+    "verdict": "S"
+   },
+   {
+    "id": "w5y8",
+    "cell": "1/2",
+    "word": "連帯",
+    "sk": "연대",
+    "verdict": "S"
+   },
+   {
+    "id": "w5dx",
+    "cell": "1/2",
+    "word": "貨幣",
+    "sk": "화폐",
+    "verdict": "S"
+   },
+   {
+    "id": "w5qf",
+    "cell": "1/2",
+    "word": "元年",
+    "sk": "원년",
+    "verdict": "S"
+   },
+   {
+    "id": "w5jl",
+    "cell": "1/2",
+    "word": "収集",
+    "sk": "수집",
+    "verdict": "S"
+   },
+   {
+    "id": "w47i",
+    "cell": "1/2",
+    "word": "獲得",
+    "sk": "획득",
+    "verdict": "S"
+   },
+   {
+    "id": "w58f",
+    "cell": "1/2",
+    "word": "秩序",
+    "sk": "질서",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ge",
+    "cell": "1/2",
+    "word": "適応",
+    "sk": "적응",
+    "verdict": "S"
+   },
+   {
+    "id": "w5nu",
+    "cell": "1/2",
+    "word": "同情",
+    "sk": "동정",
+    "verdict": "S"
+   },
+   {
+    "id": "w5mv",
+    "cell": "1/2",
+    "word": "隔週",
+    "sk": "격주",
+    "verdict": "S"
+   },
+   {
+    "id": "w4qy",
+    "cell": "1/2",
+    "word": "自我",
+    "sk": "자아",
+    "verdict": "S"
+   },
+   {
+    "id": "w4cd",
+    "cell": "1/2",
+    "word": "余地",
+    "sk": "여지",
+    "verdict": "S"
+   },
+   {
+    "id": "w685",
+    "cell": "1/2",
+    "word": "漁村",
+    "sk": "어촌",
+    "verdict": "S"
+   },
+   {
+    "id": "w4m4",
+    "cell": "1/2",
+    "word": "暗示",
+    "sk": "암시",
+    "verdict": "S"
+   },
+   {
+    "id": "w69n",
+    "cell": "1/2",
+    "word": "待望",
+    "sk": "대망",
+    "verdict": "S"
+   },
+   {
+    "id": "w55m",
+    "cell": "1/2",
+    "word": "合併",
+    "sk": "합병",
+    "verdict": "S"
+   },
+   {
+    "id": "w4hx",
+    "cell": "1/2",
+    "word": "途上",
+    "sk": "도상",
+    "verdict": "S"
+   },
+   {
+    "id": "w46v",
+    "cell": "1/2",
+    "word": "賃金",
+    "sk": "임금",
+    "verdict": "S"
+   },
+   {
+    "id": "w64w",
+    "cell": "1/2",
+    "word": "勝利",
+    "sk": "승리",
+    "verdict": "S"
+   },
+   {
+    "id": "w4qz",
+    "cell": "1/2",
+    "word": "本国",
+    "sk": "본국",
+    "verdict": "S"
+   },
+   {
+    "id": "w4wn",
+    "cell": "1/2",
+    "word": "損失",
+    "sk": "손실",
+    "verdict": "S"
+   },
+   {
+    "id": "w4r5",
+    "cell": "1/2",
+    "word": "知的",
+    "sk": "지적",
+    "verdict": "S"
+   },
+   {
+    "id": "w4rz",
+    "cell": "1/2",
+    "word": "名誉",
+    "sk": "명예",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ap",
+    "cell": "1/2",
+    "word": "軍服",
+    "sk": "군복",
+    "verdict": "S"
+   },
+   {
+    "id": "w516",
+    "cell": "1/2",
+    "word": "充実",
+    "sk": "충실",
+    "verdict": "S"
+   },
+   {
+    "id": "w5sv",
+    "cell": "1/2",
+    "word": "修学",
+    "sk": "수학",
+    "verdict": "unsure"
+   },
+   {
+    "id": "w4gq",
+    "cell": "1/2",
+    "word": "名札",
+    "sk": "명찰",
+    "verdict": "S"
+   },
+   {
+    "id": "w4g3",
+    "cell": "1/2",
+    "word": "不振",
+    "sk": "부진",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ek",
+    "cell": "1/2",
+    "word": "観覧",
+    "sk": "관람",
+    "verdict": "S"
+   },
+   {
+    "id": "w4nk",
+    "cell": "1/2",
+    "word": "情緒",
+    "sk": "정서",
+    "verdict": "S"
+   },
+   {
+    "id": "w5xs",
+    "cell": "1/2",
+    "word": "匹敵",
+    "sk": "필적",
+    "verdict": "S"
+   },
+   {
+    "id": "w4pv",
+    "cell": "1/2",
+    "word": "装備",
+    "sk": "장비",
+    "verdict": "S"
+   },
+   {
+    "id": "w60m",
+    "cell": "1/2",
+    "word": "回収",
+    "sk": "회수",
+    "verdict": "S"
+   },
+   {
+    "id": "w4vk",
+    "cell": "1/2",
+    "word": "介入",
+    "sk": "개입",
+    "verdict": "S"
+   },
+   {
+    "id": "w55j",
+    "cell": "1/2",
+    "word": "山岳",
+    "sk": "산악",
+    "verdict": "S"
+   },
+   {
+    "id": "w4fo",
+    "cell": "1/2",
+    "word": "購入",
+    "sk": "구입",
+    "verdict": "S"
+   },
+   {
+    "id": "w50k",
+    "cell": "1/2",
+    "word": "漠然",
+    "sk": "막연",
+    "verdict": "S"
+   },
+   {
+    "id": "w47u",
+    "cell": "1/2",
+    "word": "衣類",
+    "sk": "의류",
+    "verdict": "S"
+   },
+   {
+    "id": "w58b",
+    "cell": "1/2",
+    "word": "眼科",
+    "sk": "안과",
+    "verdict": "S"
+   },
+   {
+    "id": "w4ii",
+    "cell": "1/2",
+    "word": "古代",
+    "sk": "고대",
+    "verdict": "S"
+   },
+   {
+    "id": "w4ng",
+    "cell": "1/2",
+    "word": "事前",
+    "sk": "사전",
+    "verdict": "S"
+   },
+   {
+    "id": "w5nh",
+    "cell": "1/2",
+    "word": "財源",
+    "sk": "재원",
+    "verdict": "S"
+   },
+   {
+    "id": "w4aj",
+    "cell": "1/2",
+    "word": "円滑",
+    "sk": "원활",
+    "verdict": "S"
+   },
+   {
+    "id": "w5zv",
+    "cell": "1/2",
+    "word": "走行",
+    "sk": "주행",
+    "verdict": "S"
+   },
+   {
+    "id": "w5hg",
+    "cell": "1/2",
+    "word": "大衆",
+    "sk": "대중",
+    "verdict": "S"
+   },
+   {
+    "id": "w5u0",
+    "cell": "1/2",
+    "word": "委託",
+    "sk": "위탁",
+    "verdict": "S"
+   },
+   {
+    "id": "w4ck",
+    "cell": "1/2",
+    "word": "採掘",
+    "sk": "채굴",
+    "verdict": "S"
+   },
+   {
+    "id": "w4bb",
+    "cell": "1/2",
+    "word": "勇敢",
+    "sk": "용감",
+    "verdict": "S"
+   },
+   {
+    "id": "w5oz",
+    "cell": "1/2",
+    "word": "耕作",
+    "sk": "경작",
+    "verdict": "S"
+   },
+   {
+    "id": "w5am",
+    "cell": "1/2",
+    "word": "保険",
+    "sk": "보험",
+    "verdict": "S"
+   },
+   {
+    "id": "w560",
+    "cell": "1/2",
+    "word": "抗争",
+    "sk": "항쟁",
+    "verdict": "S"
+   },
+   {
+    "id": "w53u",
+    "cell": "1/2",
+    "word": "人民",
+    "sk": "인민",
+    "verdict": "S"
+   },
+   {
+    "id": "w5bw",
+    "cell": "1/2",
+    "word": "階層",
+    "sk": "계층",
+    "verdict": "S"
+   },
+   {
+    "id": "w5ry",
+    "cell": "1/2",
+    "word": "一連",
+    "sk": "일련",
+    "verdict": "S"
+   },
+   {
+    "id": "w5lv",
+    "cell": "1/2",
+    "word": "人材",
+    "sk": "인재",
+    "verdict": "S"
+   },
+   {
+    "id": "w4ib",
+    "cell": "1/2",
+    "word": "審議",
+    "sk": "심의",
+    "verdict": "S"
+   },
+   {
+    "id": "w4ts",
+    "cell": "1/3+",
+    "word": "文化財",
+    "sk": "문화재",
+    "verdict": "S"
+   },
+   {
+    "id": "w5o0",
+    "cell": "1/3+",
+    "word": "蛋白質",
+    "sk": "단백질",
+    "verdict": "S"
+   },
+   {
+    "id": "w61n",
+    "cell": "1/3+",
+    "word": "考古学",
+    "sk": "고고학",
+    "verdict": "S"
+   },
+   {
+    "id": "w4oc",
+    "cell": "1/3+",
+    "word": "参議院",
+    "sk": "참의원",
+    "verdict": "S"
+   },
+   {
+    "id": "w5jb",
+    "cell": "1/3+",
+    "word": "衆議院",
+    "sk": "중의원",
+    "verdict": "S"
+   },
+   {
+    "id": "w54b",
+    "cell": "1/3+",
+    "word": "座談会",
+    "sk": "좌담회",
+    "verdict": "S"
+   },
+   {
+    "id": "w590",
+    "cell": "1/3+",
+    "word": "主人公",
+    "sk": "주인공",
+    "verdict": "S"
+   },
+   {
+    "id": "w4ym",
+    "cell": "1/3+",
+    "word": "先天的",
+    "sk": "선천적",
+    "verdict": "S"
+   },
+   {
+    "id": "w682",
+    "cell": "1/kana",
+    "word": "準じる",
+    "sk": "준",
+    "verdict": "S"
+   },
+   {
+    "id": "w5hl",
+    "cell": "1/kana",
+    "word": "嘲笑う",
+    "sk": "조소",
+    "verdict": "S"
+   },
+   {
+    "id": "w5mq",
+    "cell": "1/kana",
+    "word": "要する",
+    "sk": "요",
+    "verdict": "S"
+   },
+   {
+    "id": "w4hq",
+    "cell": "1/kana",
+    "word": "面する",
+    "sk": "면",
+    "verdict": "S"
+   },
+   {
+    "id": "w5xo",
+    "cell": "1/kana",
+    "word": "一挙に",
+    "sk": "일거",
+    "verdict": "S"
+   },
+   {
+    "id": "w68m",
+    "cell": "1/kana",
+    "word": "反する",
+    "sk": "반",
+    "verdict": "S"
+   },
+   {
+    "id": "w4r8",
+    "cell": "1/kana",
+    "word": "身の上",
+    "sk": "신상",
+    "verdict": "S"
+   },
+   {
+    "id": "w4xh",
+    "cell": "1/kana",
+    "word": "成り立つ",
+    "sk": "성립",
+    "verdict": "S"
+   }
+  ],
+  "F": [
+   {
+    "id": "w000",
+    "word": "度",
+    "sk": "도",
+    "verdict": "F"
+   },
+   {
+    "id": "w00t",
+    "word": "生徒",
+    "sk": "생도",
+    "verdict": "F"
+   },
+   {
+    "id": "w061",
+    "word": "砂糖",
+    "sk": "사탕",
+    "verdict": "F"
+   },
+   {
+    "id": "w07y",
+    "word": "一月",
+    "sk": "일월",
+    "verdict": "F"
+   },
+   {
+    "id": "w09o",
+    "word": "丈夫",
+    "sk": "장부",
+    "verdict": "F"
+   },
+   {
+    "id": "w0b8",
+    "word": "多分",
+    "sk": "다분",
+    "verdict": "F"
+   },
+   {
+    "id": "w0b9",
+    "word": "一番",
+    "sk": "일번",
+    "verdict": "F"
+   },
+   {
+    "id": "w0bi",
+    "word": "洋服",
+    "sk": "양복",
+    "verdict": "F"
+   },
+   {
+    "id": "w0gr",
+    "word": "大丈夫",
+    "sk": "대장부",
+    "verdict": "F"
+   },
+   {
+    "id": "w0iw",
+    "word": "大勢",
+    "sk": "대세",
+    "verdict": "F"
+   },
+   {
+    "id": "w0kx",
+    "word": "真面目",
+    "sk": "진면목",
+    "verdict": "F"
+   },
+   {
+    "id": "w0l5",
+    "word": "気",
+    "sk": "기",
+    "verdict": "F"
+   },
+   {
+    "id": "w0l8",
+    "word": "都合",
+    "sk": "도합",
+    "verdict": "F"
+   },
+   {
+    "id": "w0sh",
+    "word": "是非",
+    "sk": "시비",
+    "verdict": "F"
+   },
+   {
+    "id": "w0ta",
+    "word": "ご主人",
+    "sk": "주인",
+    "verdict": "F"
+   },
+   {
+    "id": "w0ve",
+    "word": "非常に",
+    "sk": "비상",
+    "verdict": "F"
+   },
+   {
+    "id": "w0vo",
+    "word": "用意",
+    "sk": "용의",
+    "verdict": "F"
+   },
+   {
+    "id": "w0vq",
+    "word": "引き出し",
+    "sk": "인출",
+    "verdict": "F"
+   },
+   {
+    "id": "w0y4",
+    "word": "大事",
+    "sk": "대사",
+    "verdict": "F"
+   },
+   {
+    "id": "w0z5",
+    "word": "家内",
+    "sk": "가내",
+    "verdict": "F"
+   },
+   {
+    "id": "w0zz",
+    "word": "表",
+    "sk": "표",
+    "verdict": "F"
+   },
+   {
+    "id": "w10b",
+    "word": "変",
+    "sk": "변",
+    "verdict": "F"
+   },
+   {
+    "id": "w161",
+    "word": "一方",
+    "sk": "일방",
+    "verdict": "F"
+   },
+   {
+    "id": "w18m",
+    "word": "市",
+    "sk": "시",
+    "verdict": "F"
+   },
+   {
+    "id": "w18r",
+    "word": "迷惑",
+    "sk": "미혹",
+    "verdict": "F"
+   },
+   {
+    "id": "w1bq",
+    "word": "大家",
+    "sk": "대가",
+    "verdict": "F"
+   },
+   {
+    "id": "w1bv",
+    "word": "金",
+    "sk": "금",
+    "verdict": "F"
+   },
+   {
+    "id": "w1d3",
+    "word": "議論",
+    "sk": "의논",
+    "verdict": "F"
+   },
+   {
+    "id": "w1di",
+    "word": "一体",
+    "sk": "일체",
+    "verdict": "F"
+   },
+   {
+    "id": "w1fm",
+    "word": "礼",
+    "sk": "예",
+    "verdict": "F"
+   },
+   {
+    "id": "w1m9",
+    "word": "得意",
+    "sk": "득의",
+    "verdict": "unsure"
+   },
+   {
+    "id": "w1vm",
+    "word": "陽気",
+    "sk": "양기",
+    "verdict": "F"
+   },
+   {
+    "id": "w1w1",
+    "word": "作法",
+    "sk": "작법",
+    "verdict": "F"
+   },
+   {
+    "id": "w21b",
+    "word": "楽",
+    "sk": "낙",
+    "verdict": "F"
+   },
+   {
+    "id": "w21w",
+    "word": "今日",
+    "sk": "금일",
+    "verdict": "F"
+   },
+   {
+    "id": "w23r",
+    "word": "模様",
+    "sk": "모양",
+    "verdict": "F"
+   },
+   {
+    "id": "w278",
+    "word": "文句",
+    "sk": "문구",
+    "verdict": "F"
+   },
+   {
+    "id": "w29t",
+    "word": "真剣",
+    "sk": "진검",
+    "verdict": "F"
+   },
+   {
+    "id": "w2a2",
+    "word": "仕様",
+    "sk": "사양",
+    "verdict": "F"
+   },
+   {
+    "id": "w2a8",
+    "word": "一層",
+    "sk": "일층",
+    "verdict": "F"
+   },
+   {
+    "id": "w2ac",
+    "word": "加減",
+    "sk": "가감",
+    "verdict": "F"
+   },
+   {
+    "id": "w2ak",
+    "word": "節",
+    "sk": "절",
+    "verdict": "F"
+   },
+   {
+    "id": "w2ot",
+    "word": "自慢",
+    "sk": "자만",
+    "verdict": "F"
+   },
+   {
+    "id": "w301",
+    "word": "関東",
+    "sk": "관동",
+    "verdict": "F"
+   },
+   {
+    "id": "w326",
+    "word": "交替",
+    "sk": "교체",
+    "verdict": "unsure"
+   },
+   {
+    "id": "w345",
+    "word": "下品",
+    "sk": "하품",
+    "verdict": "F"
+   },
+   {
+    "id": "w35j",
+    "word": "来日",
+    "sk": "내일",
+    "verdict": "F"
+   },
+   {
+    "id": "w37m",
+    "word": "上品",
+    "sk": "상품",
+    "verdict": "F"
+   },
+   {
+    "id": "w38u",
+    "word": "仮名",
+    "sk": "가명",
+    "verdict": "F"
+   },
+   {
+    "id": "w3b5",
+    "word": "下品",
+    "sk": "하품",
+    "verdict": "F"
+   },
+   {
+    "id": "w3gt",
+    "word": "主人",
+    "sk": "주인",
+    "verdict": "F"
+   },
+   {
+    "id": "w3rt",
+    "word": "工夫",
+    "sk": "공부",
+    "verdict": "F"
+   },
+   {
+    "id": "w3ts",
+    "word": "順々",
+    "sk": "순순",
+    "verdict": "F"
+   },
+   {
+    "id": "w408",
+    "word": "投書",
+    "sk": "투서",
+    "verdict": "F"
+   },
+   {
+    "id": "w41j",
+    "word": "目下",
+    "sk": "목하",
+    "verdict": "F"
+   },
+   {
+    "id": "w43x",
+    "word": "着",
+    "sk": "착",
+    "verdict": "F"
+   },
+   {
+    "id": "w469",
+    "word": "別々",
+    "sk": "별별",
+    "verdict": "F"
+   },
+   {
+    "id": "w46b",
+    "word": "年生",
+    "sk": "년생",
+    "verdict": "F"
+   },
+   {
+    "id": "w4ko",
+    "word": "無念",
+    "sk": "무념",
+    "verdict": "F"
+   },
+   {
+    "id": "w4vg",
+    "word": "漢語",
+    "sk": "한어",
+    "verdict": "F"
+   },
+   {
+    "id": "w54p",
+    "word": "人気",
+    "sk": "인기",
+    "verdict": "F"
+   },
+   {
+    "id": "w565",
+    "word": "吟味",
+    "sk": "음미",
+    "verdict": "F"
+   },
+   {
+    "id": "w57x",
+    "word": "体裁",
+    "sk": "체재",
+    "verdict": "F"
+   },
+   {
+    "id": "w5c0",
+    "word": "義理",
+    "sk": "의리",
+    "verdict": "F"
+   },
+   {
+    "id": "w5fw",
+    "word": "風俗",
+    "sk": "풍속",
+    "verdict": "ff"
+   },
+   {
+    "id": "w5ic",
+    "word": "給仕",
+    "sk": "급사",
+    "verdict": "F"
+   },
+   {
+    "id": "w5nc",
+    "word": "種々",
+    "sk": "종종",
+    "verdict": "F"
+   },
+   {
+    "id": "w5p8",
+    "word": "課外",
+    "sk": "과외",
+    "verdict": "F"
+   },
+   {
+    "id": "w5q2",
+    "word": "相対",
+    "sk": "상대",
+    "verdict": "notF"
+   },
+   {
+    "id": "w5qy",
+    "word": "長官",
+    "sk": "장관",
+    "verdict": "F"
+   },
+   {
+    "id": "w5v7",
+    "word": "手配",
+    "sk": "수배",
+    "verdict": "F"
+   },
+   {
+    "id": "w5vs",
+    "word": "心中",
+    "sk": "심중",
+    "verdict": "F"
+   },
+   {
+    "id": "w5ws",
+    "word": "華奢",
+    "sk": "화사",
+    "verdict": "F"
+   },
+   {
+    "id": "w5xd",
+    "word": "子息",
+    "sk": "자식",
+    "verdict": "F"
+   },
+   {
+    "id": "w65f",
+    "word": "始末",
+    "sk": "시말",
+    "verdict": "F"
+   }
+  ]
+ },
+ "mechanical": {
+  "file": "data/tags/audit/mechanical.json",
+  "skUnexplained": 46,
+  "skByClass": {
+   "variant": 40,
+   "dueum-inner": 2,
+   "sai": 2,
+   "none": 1,
+   "nl": 1
+  },
+  "altReadings": 134,
+  "shinjitaiHazardKanji": 82,
+  "shinjitaiByFlag": {
+   "구자체가 여럿(음이 갈림) — 어느 글자인지 확인": 67,
+   "ok": 326,
+   "신자체 자체의 한국 음(구자체와 다름) 사용 — 오류 의심": 41
+  },
+  "kanaOrKunS": 203,
+  "kanaOrKunByPattern": {
+   "한자만·훈독": 87,
+   "한자만·음훈 혼합": 34,
+   "한자만·숙자훈": 22,
+   "お/ご 접두": 4,
+   "R7 훈독 복합어(오쿠리가나·の)": 29,
+   "음독+가나": 4,
+   "R1 한 글자+する/じる": 21,
+   "～さん(R4)": 2
+  },
+  "sameCoreDifferentTag": 67,
+  "ffMisuse": 0,
+  "koContainsSk": {
+   "exact": 3391,
+   "word": 17,
+   "inside": 2,
+   "none": 79
+  }
+ }
+}
