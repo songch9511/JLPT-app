@@ -169,3 +169,21 @@ test.describe('backups', () => {
     await expect.poll(calls).toBe(1)
   })
 })
+
+test.describe('word data fails to load', () => {
+  test('"다시 시도" loads the studied levels again without a reload', async ({ page }) => {
+    await page.route('**/data/n5.json', (route) => route.fulfill({ status: 404, body: 'not found' }))
+    await open(page, { state: user(), hash: '/study' })
+    const alert = page.getByRole('alert')
+    await expect(alert).toContainText('단어 데이터를 불러오지 못했어요 (N5)')
+    await expect(page.locator('.flash')).toHaveCount(0)
+
+    await page.unroute('**/data/n5.json')
+    let loads = 0
+    page.on('load', () => loads++)
+    await alert.getByRole('button', { name: '다시 시도' }).click()
+    await expect(page.locator('.flash')).toBeVisible()
+    await expect(alert).toHaveCount(0)
+    expect(loads).toBe(0)
+  })
+})
