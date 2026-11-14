@@ -1,8 +1,9 @@
 """Cheap mechanical scan for two classes of source-deck errors (docs/plan/12 §6). Reports, never fixes.
 
 Run (after scripts/enrich/fetch-sources.sh; JMdict from the cache):
-    python3 -I scripts/audit/source-errors.py [--root <checkout>] [--out <csv>] [--max 40]
-Writes data/tags/audit/source-errors.csv (UTF-8 BOM, opens in Excel), most likely first.
+    python3 -I scripts/audit/source-errors.py [--root <checkout>] [--out <csv>] [--max 40] [--force]
+Writes data/tags/audit/source-errors.csv (UTF-8 BOM, opens in Excel), most likely first. Refuses to overwrite a
+file that has a `decision` column (the reviewed 2026-11-14 list is a record): use --out for a fresh scan.
 
 (a) headword/reading mismatch, the class of w4db (副 read とりわけ): the headword has kanji, the per-kanji
     on/kun readings of data/hanja/kanji.tsv cannot produce the reading (the pre-pass reading type is 'irr'), and
@@ -188,6 +189,11 @@ def main():
                       f"영어 뜻이 {w['expr']}({w['reading']})의 JMdict 뜻과 전혀 겹치지 않고, 같은 표기의 다른 말 뜻과 겹침 → 다른 읽기의 뜻일 수 있음"))
 
     found.sort(key=lambda t: (-t[0], t[2]['level'], t[2]['id']))
+    # a reviewed list (a `decision` column, docs/plan/12 §6) is a record: never overwrite it
+    if os.path.exists(OUT) and '--force' not in args:
+        with open(OUT, encoding='utf-8-sig', newline='') as fh:
+            if 'decision' in next(csv.reader(fh), []):
+                sys.exit(f'{OUT} has a decision column (a reviewed list): write elsewhere with --out <csv>, or pass --force')
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, 'w', encoding='utf-8-sig', newline='') as fh:
         out = csv.writer(fh, lineterminator='\n')

@@ -1219,7 +1219,7 @@
 "w3nr":{"core":"子孫","hk":1,"auto":"","sk":["자손"],"rt":"on","hint":"S"},
 "w3ns":{"core":"客間","hk":1,"auto":"","sk":["객간"],"rt":"mix","hint":"M"},
 "w3nt":{"core":"有料","hk":1,"auto":"","sk":["유료","유요"],"rt":"on","hint":"S"},
-"w3nu":{"core":"蒸す","hk":1,"auto":"","sk":["증"],"rt":"irr","hint":"M"},
+"w3nu":{"core":"蒸す","hk":1,"auto":"","sk":["증"],"rt":"kun","hint":"N"},
 "w3nv":{"core":"団","hk":1,"auto":"","sk":["단"],"rt":"on","hint":"S"},
 "w3nw":{"core":"紅葉","hk":1,"auto":"","sk":["홍엽","홍섭","공엽","공섭"],"rt":"on","hint":"J"},
 "w3nx":{"core":"応対","hk":1,"auto":"","sk":["응대"],"rt":"on","hint":"S"},

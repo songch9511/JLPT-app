@@ -28,7 +28,7 @@ const legacyTarget = (id: string) => LEGACY_WORD.get(split(id)[0]) + split(id)[1
  * Words whose headword was corrected after that version (docs/plan/08 §7.2: same id, registry entry edited), as the
  * frozen files spell them: a card of the old spelling must land on the corrected word.
  */
-const CORRECTED_HEADWORD: Record<string, string> = { w4db: 'N1 副|とりわけ' }
+const CORRECTED_HEADWORD: Record<string, string> = { w4db: 'N1 副|とりわけ', w3nu: 'N2 蒸す|ふす', w4ta: 'N1 摩する|さする' }
 const target = (id: string) => (CORRECTED_HEADWORD[split(id)[0]] ?? WORD.get(split(id)[0])) + split(id)[1]
 
 type Legacy = Omit<State, 'v'> & { v: 2 | 3 }
