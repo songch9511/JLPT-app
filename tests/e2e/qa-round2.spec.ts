@@ -76,7 +76,7 @@ test.describe('accessibility (Q7, Q8)', () => {
     await expect(page.locator('.study-tip')).toBeVisible()
     expect(await violations(page)).toEqual([])
     await page.getByRole('button', { name: /나가기/ }).click()
-    await expect(page.locator('.bubble.tip')).toBeVisible()
+    await expect(page.locator('.ruma-line.tip')).toBeVisible()
     expect(await violations(page)).toEqual([])
   })
 
@@ -115,7 +115,7 @@ test.describe('accessibility (Q7, Q8)', () => {
           await open(page, { state: state(theme) })
           await homeShown(page)
           await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-          await expect(page.locator('.words-card')).toBeVisible()
+          await expect(page.locator('.home-words')).toBeVisible()
           expect(await violations(page)).toEqual([])
           expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
           expect(await page.locator('.btn[data-variant="primary"]').count()).toBeLessThanOrEqual(1)
@@ -130,9 +130,14 @@ test.describe('accessibility (Q7, Q8)', () => {
     await page.evaluate(() => {
       const s = { 'large-title': 48 / 34, title1: 43 / 28, title2: 39 / 22, title3: 37 / 20, body: 33 / 17, footnote: 27 / 13, caption1: 26 / 12 }
       for (const [k, v] of Object.entries(s)) document.documentElement.style.setProperty(`--_dynamic-type-${k}`, String(v))
+      document.documentElement.dataset.textSize = 'large'
     })
     await page.waitForTimeout(200)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
+    // the sky folds into one row, so the start button stays on the first screen
+    const box = (await page.getByRole('button', { name: /^오늘의 학습 시작/ }).boundingBox())!
+    const tabbar = (await page.locator('.tabbar').boundingBox())!
+    expect(box.y + box.height).toBeLessThanOrEqual(tabbar.y)
   })
 })
 

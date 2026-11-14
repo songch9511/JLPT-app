@@ -25,6 +25,8 @@ const STYLES: Record<string, number[]> = {
   caption1: [11, 11, 11, 12, 14, 16, 18, 22, 26, 32, 37, 43],
 }
 const LARGE = 3
+/** The first of the accessibility sizes (AX1, body 28). */
+const AX1 = 7
 
 /**
  * Follows the reader's text size on Apple platforms: a hidden probe in `font: -apple-system-body` tells the Dynamic
@@ -42,6 +44,9 @@ export function syncTextSize(doc = document): () => void {
   const read = () => {
     const px = parseFloat(view.getComputedStyle(probe).fontSize)
     const col = BODY.findIndex((s) => Math.abs(s - px) < 0.5)
+    // the accessibility sizes (AX1 and up): layouts that stack or fold for very large text read <html data-text-size>
+    if (col >= AX1) doc.documentElement.dataset.textSize = 'large'
+    else delete doc.documentElement.dataset.textSize
     for (const [name, row] of Object.entries(STYLES)) {
       if (col < 0 || col === LARGE) root.removeProperty(`--_dynamic-type-${name}`)
       else root.setProperty(`--_dynamic-type-${name}`, String(Number((row[col] / row[LARGE]).toFixed(4))))

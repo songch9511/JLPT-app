@@ -287,7 +287,11 @@ const SHOTS = [
     name: '01-home',
     state: () => base,
     hash: '/',
-    ready: (p) => p.getByRole('heading', { name: '오늘의 계획' }).waitFor(),
+    // Home "루마의 하늘": the sky in Ruma's state (asleep before today's study) and the plan sheet's start button
+    ready: async (p) => {
+      await p.locator('.home-sky[data-sky="sleep"]').waitFor()
+      await p.locator('.home-sheet .home-go').waitFor()
+    },
   },
   {
     name: '02-reading-card',
@@ -352,7 +356,11 @@ const SHOTS = [
     name: '07-home-dark',
     state: () => ({ ...clone(base), settings: { ...base.settings, theme: 'dark' } }),
     hash: '/',
-    ready: (p) => p.getByRole('heading', { name: '오늘의 계획' }).waitFor(),
+    // Home "루마의 하늘": the sky in Ruma's state (asleep before today's study) and the plan sheet's start button
+    ready: async (p) => {
+      await p.locator('.home-sky[data-sky="sleep"]').waitFor()
+      await p.locator('.home-sheet .home-go').waitFor()
+    },
   },
   {
     name: '08-level',

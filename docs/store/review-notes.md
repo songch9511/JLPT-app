@@ -14,8 +14,8 @@ JLPT Ruma (JLPT 루마) is a Korean-language vocabulary trainer for Korean speak
 NO LOGIN. No account, no network use, no data collected. All 8,130 words are bundled; study records stay on the device. The UI is Korean; key labels are given below.
 
 QUICK TOUR (about 3 minutes)
-1. First launch opens on Home: the mascot asks the target level (tap e.g. N3), then tap 첫 학습 시작 (Start first session). New words per day default to 20 (Settings).
-2. Home (홈): today's plan (오늘의 계획: reviews, new words, minutes) and a count of the level's words met so far (만남) and in long-term memory (장기 기억).
+1. First launch opens on Home: the mascot asks the target level (tap e.g. N3), then tap 시작하기 (Start) to begin the first session. New words per day default to 20 (Settings).
+2. Home (홈): the mascot's mood and this week's study days at the top; below, today's plan (the number of cards, minutes, reviews and new words, one Start button) and the words met so far (만난 단어), which opens the Records tab (기록).
 3. Tap 오늘의 학습 시작 (Start today's study). Meaning cards: tap the card, then answer 모르겠어요 / 알아요 / 쉬워요 (don't know / know / easy). Words that share a Korean hanja reading (e.g. 産業 = 산업) come as reading cards: pick the reading among four, the app then shows the Korean-to-Japanese reading bridge. Words whose meaning differs from the Korean look-alike (e.g. 大丈夫) show a red "meaning differs" note.
 4. Tabs: 단어장 (Words: search all 8,130 words, word sheet), 기록 (Records: stamps, 7-day review forecast, calendar), 설정 (Settings).
 

@@ -29,8 +29,18 @@ const c = {
   yamabukicha: ['#c89932', '#d9b45a'], // 山吹茶 "익히는 중" (learning), XP
   odo: ['#866415', '#d9b45a'], // 黄土 gold text and icons (3% darker than before: 4.6:1 on 鳥の子)
   torinoko: ['#f6ecd0', '#2e2718'], // 鳥の子 gold tint
-  kaki: ['#d9743f', '#e08a55'], // 柿 the streak flame
+  kaki: ['#c9662f', '#e08a55'], // 柿 the streak flame (deepened from #d9743f: 3.3:1 on every Home sky, 3.8 on 生成り)
   kakiSoft: ['#f8e4d5', '#40291b'],
+  // Home's sky (docs/design-system.md §3 "홈"): pale grounds that follow Ruma's state, and their seigaiha line
+  shiraaiSky: ['#e8eef2', '#1a222a'], // 白藍 dawn (asleep) / night
+  torinokoSky: ['#f7eedb', '#29241a'], // 鳥の子 sunrise (one eye) / lamplight
+  byakurokuSky: ['#e8f0e6', '#1c2a22'], // 白緑 day (both eyes) / forest
+  shironeriSky: ['#f2eee5', '#24221f'], // 白練 a day off, the first run / quiet night
+  shiraaiWave: ['#d5e1e8', '#243140'],
+  torinokoWave: ['#ecdcb6', '#3a3223'],
+  byakurokuWave: ['#d1e3cd', '#29402f'],
+  shironeriWave: ['#e5dfd1', '#312e29'],
+  skyInk: ['#5f5a52', '#a39d90'], // 利休鼠 one step deeper: secondary text on the sky, 5.8:1 on every sky
   fuji: ['#8f7fb0', '#b3a6d1'], // 藤 (not used by the app; keeps Astryx's purple role on-palette)
   ink: ['#2d2a26', '#000000'],
 } as const
@@ -229,6 +239,19 @@ export const rumaTheme = defineTheme({
     // game marks: gold only on XP/quest icons, persimmon only on the streak flame
     '--ruma-gold-icon': pair(c.odo),
     '--ruma-flame': pair(c.kaki),
+    // Home's sky by Ruma's state (sleep = before studying today, wake = started, day = today's share done, rest = nothing
+    // to do today / the first run) and the seigaiha drawn along its foot; secondary text on the sky; the week's seals
+    '--ruma-sky-sleep': pair(c.shiraaiSky),
+    '--ruma-sky-wake': pair(c.torinokoSky),
+    '--ruma-sky-day': pair(c.byakurokuSky),
+    '--ruma-sky-rest': pair(c.shironeriSky),
+    '--ruma-wave-sleep': pair(c.shiraaiWave),
+    '--ruma-wave-wake': pair(c.torinokoWave),
+    '--ruma-wave-day': pair(c.byakurokuWave),
+    '--ruma-wave-rest': pair(c.shironeriWave),
+    '--ruma-sky-text-secondary': pair(c.skyInk),
+    // a stamped seal (a studied day, a level whose words are all met): 弁柄 in light, the dark theme's 朱
+    '--ruma-seal': [c.bengara[0], c.shu[1]],
     // the shallow edge under a pressable thing; 紺 under the primary
     '--ruma-depth': '3px',
     '--ruma-edge': pair(c.kaihaku),
