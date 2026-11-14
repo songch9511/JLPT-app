@@ -381,7 +381,14 @@ export function Study() {
         {error && (
           <div className="load-error" role="alert">
             <p>{error}</p>
-            <Button label="다시 시도" onClick={() => setRetry((n) => n + 1)} />
+            <Button
+              label="다시 시도"
+              onClick={() => {
+                // the studied levels' data (the queue) and the current card's level load separately
+                if (levels.error) levels.retry()
+                setRetry((n) => n + 1)
+              }}
+            />
           </div>
         )}
         {!ready && !error && (
