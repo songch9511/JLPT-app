@@ -1,5 +1,6 @@
 // The cognate fast-track (03 §2.4, §3 C): frequency order, reading cards for words tagged S, per-word stats,
 // the state migration, and readiness with mixed card types.
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { at, boot, bootUser, card, DAY, KEY, L } from './helpers'
 import type { SCard, State } from '../../src/store'
@@ -129,6 +130,87 @@ describe('reading cards (fast-track)', () => {
     const { srs, store, data } = await setup({}, { [L('5-10')]: card({ due: T + 3 * DAY }) })
     n5(data, [10, 11], [10])
     expect(srs.buildQueue(store.getState(), at(NOW)).next?.id).toBe(L('5-11'))
+  })
+})
+
+// Tags get corrected (docs/plan/12: 18 words stopped being S). A learner may hold a reading card for such a word —
+// often its only card, the meaning card having been skipped. The card must not be lost or crash anything, must not
+// keep coming as a reading card with a bridge word that misleads, and the word must get its meaning card.
+describe('a word whose tag stops being S', () => {
+  const mature = card({ due: T - DAY, stability: 40, scheduled_days: 30, last_review: T - 31 * DAY, lapses: 2 })
+
+  it('its reading card rests (kept as it was, not shown, not counted) and the word is introduced with its meaning card', async () => {
+    const { srs, store, data } = await setup({}, { [L('5-10:r')]: mature })
+    const s = store.getState()
+    // before the level's data has loaded nothing is known: the card is due as before
+    expect(srs.buildQueue(s, at(NOW)).next).toEqual({ id: L('5-10:r'), kind: 'review' })
+    // the data now tags 5-10 as something other than S; the same state object is not served from a stale memo
+    n5(data, [10, 11])
+    const q = srs.buildQueue(s, at(NOW))
+    expect(q.review).toBe(0)
+    expect(q.next).toEqual({ id: L('5-10'), kind: 'new' })
+    expect(q.freshReading).toBe(0)
+    expect(srs.isSeen(s, L('5-10'))).toBe(false)
+    expect(srs.wordCards(s, L('5-10'))).toEqual([])
+    expect(srs.wordStage(s, L('5-10'))).toBe('new')
+    expect(srs.breakdowns(s)[5].new).toBe(718)
+    expect(srs.forecast(s, at(NOW))[0]).toBe(0)
+    expect(srs.leechIds(s.cards)).toEqual([])
+    const rd = await import('../../src/readiness')
+    expect(rd.readiness(s, at(NOW)).unseen).toBe(718)
+
+    // the meaning card is learned like any new word's; the reading card stays exactly as it was, never shown
+    srs.answer(L('5-10'), srs.Rating.Good, at(NOW))
+    const after = store.getState()
+    expect(after.cards[L('5-10')]).toBeDefined()
+    expect(after.cards[L('5-10:r')]).toEqual(mature)
+    expect(after.log['2026-11-13']).toMatchObject({ c: 1, n: 1, r: 0 })
+    expect(srs.wordCards(after, L('5-10')).map((c) => c.id)).toEqual([L('5-10')])
+    for (let i = 0; i < 5; i++) {
+      const next = srs.buildQueue(after, at(NOW), L('5-10')).next
+      expect(next?.id).not.toBe(L('5-10:r'))
+      if (next) srs.answer(next.id, srs.Rating.Good, at(NOW))
+    }
+    expect(store.getState().cards[L('5-10:r')]).toEqual(mature)
+
+    // tagged S again (a correction undone): the reading card comes back as it was, next to the meaning card
+    n5(data, [10, 11], [10])
+    const back = store.getState()
+    expect(srs.wordCards(back, L('5-10')).map((c) => c.id)).toEqual([L('5-10'), L('5-10:r')])
+    expect(back.cards[L('5-10:r')]).toEqual(mature)
+  })
+
+  it('a word that had both cards keeps studying its meaning card; the reading card rests', async () => {
+    const meaning = card({ due: T - DAY })
+    const { srs, store, data } = await setup({ dailyNew: 0 }, { [L('5-10')]: meaning, [L('5-10:r')]: mature })
+    n5(data, [10, 11])
+    const s = store.getState()
+    const q = srs.buildQueue(s, at(NOW))
+    expect(q.review).toBe(1)
+    expect(q.next).toEqual({ id: L('5-10'), kind: 'review' })
+    expect(srs.wordCards(s, L('5-10')).map((c) => c.id)).toEqual([L('5-10')])
+    expect(srs.wordLapses(s, L('5-10'))).toBe(0)
+  })
+
+  it('the shipped data: 元気 (w0ed, was S 원기) and ～中 じゅう (w0g8, now F) with old reading cards get meaning cards', async () => {
+    const rows = JSON.parse(readFileSync(new URL('../../public/data/words-n5.json', import.meta.url), 'utf8'))
+    const { srs, store, data } = await setup({}, { 'w0ed:r': mature, 'w0g8:r': mature, 'w0fq:r': mature })
+    const words = rows.map((r: Parameters<Data['parseRow']>[1], i: number) => data.parseRow(5, r, i))
+    data.setLevelInfo(5, words)
+    const byId = new Map(words.map((w: { id: string }) => [w.id, w]))
+    expect(byId.get('w0ed')).toMatchObject({ k: 'J', sk: '원기' })
+    expect(byId.get('w0g8')).toMatchObject({ k: 'F', sk: '중' })
+    expect(byId.get('w0fq')).toMatchObject({ w: '一', k: 'S' })
+    const s = store.getState()
+    // 一 is still S: its reading card is due as a reading card; the other two are new words for their meaning
+    const q = srs.buildQueue(s, at(NOW))
+    expect(q.review).toBe(1)
+    expect(srs.wordCards(s, 'w0fq').map((c) => c.id)).toEqual(['w0fq:r'])
+    expect(srs.isSeen(s, 'w0ed')).toBe(false)
+    expect(srs.isSeen(s, 'w0g8')).toBe(false)
+    expect(srs.introCard(s, 'w0ed')).toBe('w0ed')
+    expect(srs.introCard(s, 'w0g8')).toBe('w0g8')
+    expect(srs.breakdowns(s)[5].new).toBe(717)
   })
 })
 

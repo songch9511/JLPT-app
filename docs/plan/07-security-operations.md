@@ -28,7 +28,7 @@
 | 서비스 워커 캐시 | `sw.js`는 빌드 산출물(js/css/html/svg/png/json 24개)만 precache. `runtimeCaching` 설정 없음 → **API 요청·응답은 캐시되지 않음.** |
 | 오류 메시지 | `ai-client.ts`는 상태 코드만 문구에 넣음. 키나 응답 본문을 화면·콘솔에 쓰지 않음. |
 | 외부 스크립트 | 빌드된 `index.html`은 자체 번들, `registerSW.js`, 매니페스트만 불러옴. 웹폰트·분석 도구·CDN 없음(폰트는 시스템 폰트). |
-| DOM 주입 지점 | `dangerouslySetInnerHTML`/`innerHTML`/`eval`/`new Function` 없음. `href`는 모두 상수(`#/settings` 등). `style` 값은 모두 계산된 숫자. |
+| DOM 주입 지점 | `dangerouslySetInnerHTML`/`innerHTML`/`eval`/`new Function` 없음. `href`는 모두 상수(`#/settings` 등). `style` 값은 모두 계산된 숫자. (2026-11-14 추가: `src/screens/Doc.tsx` 하나가 `dangerouslySetInnerHTML`을 씀 — 앱과 함께 배포되는 같은 출처 파일 `public/privacy/`, `public/support/`의 본문이고, 빌드 스크립트가 `docs/store/*.md`에서 글자를 이스케이프해 만든 것. 사용자·네트워크 입력은 들어가지 않음.) |
 | 저장소 비밀 노출 | `git log -S "sk-ant"` 결과는 입력창 placeholder뿐. 실제 키 커밋 없음. |
 
 **AI 응답·백업 파일로 할 수 있는 일**: 스크립트 실행은 불가(React가 텍스트로 이스케이프). 할 수 있는 것은 이상한 문장 표시, 앱 죽이기(A-2 #2), 상태 객체의 prototype 바꾸기 정도입니다. 마지막 것은 Node로 재현해 봤고(`__proto__` 키가 `replaceState`의 `Object.assign`에서 setter로 동작), 전역 `Object.prototype`은 오염되지 않아 영향은 미미합니다.

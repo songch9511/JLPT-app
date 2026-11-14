@@ -3,7 +3,7 @@
 // comes from the multi-step projection in ./projection.ts (ts-fsrs `next_state`/`next_interval`); nothing here
 // re-derives a formula.
 import { fsrs, generatorParameters, Rating, type Card } from 'ts-fsrs'
-import { COUNTS, levelOf, wordOfCard, type Level } from './data'
+import { COUNTS, levelInfoVersion, levelOf, wordOfCard, type Level } from './data'
 import { pNew } from './pnew'
 import { examRecall, recallAt as fastRecall } from './projection'
 import { endOfDay, isActive, newLeftToday, newPerDay, spreadReviews, studyLevels, toCard, type Spread } from './srs'
@@ -162,7 +162,7 @@ function newWordsTerm(left: number, today: number, daily: number, daysLeft: numb
 const reviewAt = (due: number, k: number, nowQ: number, eod: number) => Math.max(due, k === 0 ? nowQ : eod + (k - 1) * DAY)
 
 let memo: { args: unknown[]; value: Readiness } | null = null
-const memoArgs = (s: State, now: Date, dailyNew?: number) => [s.cards, s.log, s.settings, Math.floor(now.getTime() / HOUR) * HOUR, dayKey(now), dailyNew]
+const memoArgs = (s: State, now: Date, dailyNew?: number) => [s.cards, s.log, s.settings, Math.floor(now.getTime() / HOUR) * HOUR, dayKey(now), dailyNew, levelInfoVersion()]
 
 /**
  * Readiness for the exam in `s.settings.examDate`. `dailyNew` replaces the daily new-word setting, to ask

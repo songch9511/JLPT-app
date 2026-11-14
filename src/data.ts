@@ -76,8 +76,11 @@ export interface LevelInfo {
   fast: Set<string>
 }
 const infos = new Map<Level, LevelInfo>()
+let infoVersion = 0
 /** Introduction order and fast-track words of a level, once its data has loaded (null before). */
 export const levelInfo = (l: Level): LevelInfo | null => infos.get(l) ?? null
+/** Changes whenever a level's data is registered: results that depend on `levelInfo` are memoised on it. */
+export const levelInfoVersion = () => infoVersion
 
 export function setLevelInfo(l: Level, words: Pick<Word, 'id' | 'idx' | 'o' | 'k'>[]) {
   const order = words
@@ -85,6 +88,19 @@ export function setLevelInfo(l: Level, words: Pick<Word, 'id' | 'idx' | 'o' | 'k
     .sort((a, b) => a.o - b.o || a.idx - b.idx)
     .map((w) => w.id)
   infos.set(l, { order, fast: new Set(words.filter((w) => w.k === 'S').map((w) => w.id)) })
+  infoVersion++
+}
+
+/**
+ * Whether the loaded data says this word no longer takes a reading card: its level has loaded and the word is not
+ * tagged S (any more — tags are corrected, docs/plan/12). A reading card learned while it was S then rests like
+ * one with the fast-track off: kept, not shown, not counted, and the word is introduced with its meaning card.
+ * False until the level's data has loaded (nothing is known yet, so the card is left as it is).
+ */
+export const readingRetired = (word: string): boolean => {
+  const l = levelOf(word)
+  const info = l === undefined ? null : levelInfo(l)
+  return !!info && !info.fast.has(word)
 }
 
 /** A row of public/data/words-n{l}.json (scripts/build-data.mjs): the stable id, then the word's columns. */
@@ -164,7 +180,15 @@ export function useLevels(ls: Level[]): { ready: boolean; error: string | null; 
     }
   }, [key, attempt])
   const cur = res.key === key ? res : { ready: false, error: null }
-  return { ready: cur.ready, error: cur.error, retry: () => setAttempt((n) => n + 1) }
+  return {
+    ready: cur.ready,
+    error: cur.error,
+    // loading again: the error goes while it does (a failed level is not cached, so it is fetched again)
+    retry: () => {
+      setRes({ key, ready: false, error: null })
+      setAttempt((n) => n + 1)
+    },
+  }
 }
 
 /** `attempt` changes to load again after a failure. */

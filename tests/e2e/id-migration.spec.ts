@@ -2,6 +2,10 @@
 // (tests/fixtures/legacy/state-v3.json, made by that version's own scheduler) loads, migrates, and every screen
 // shows the same words and counts as that version showed. The expected texts in legacy-screens.json were
 // recorded from the app at commit 5fd69b4 with RECORD_LEGACY=1 (this spec, run before any id change).
+// One later, deliberate edit: the tag audit's corrections (docs/plan/12) took 7 of this learner's reading-card-only
+// words off S (N5 前·～中(じゅう)·元気, N4 大体, N2 伯父さん·叔父さん·作者). Those reading cards now rest and the
+// words count as new until their meaning card is learned, so the N5/N4/N2 breakdowns, readiness (−7 words) and
+// today's reading-card count (8 → 6) changed by hand; every other recorded text is as recorded.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { homeShown, KEY, L, NOW, open, saved, user } from './fixtures'

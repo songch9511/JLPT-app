@@ -149,6 +149,37 @@ test('licence links open in the in-app Safari view, the local notice in a sheet;
   expect(page.url()).toContain('#/settings')
 })
 
+test('the privacy policy and support pages open inside the app, from the bundled files; nothing navigates away', async ({ page }) => {
+  await openShell(page, { state: user(), hash: '/settings' })
+  let popup = false
+  page.on('popup', () => (popup = true))
+  await page.getByRole('link', { name: '개인정보 처리방침' }).click()
+  await expect(page).toHaveURL(/#\/doc\/privacy$/)
+  await expect(page.getByRole('heading', { level: 1, name: '개인정보 처리방침' })).toBeVisible()
+  const doc = page.locator('article.doc')
+  await expect(doc.getByRole('heading', { name: '1. 한눈에 보기' })).toBeVisible()
+  await expect(doc).not.toContainText('RevenueCat')
+  await expect(doc.locator('mark.placeholder').first()).toBeVisible()
+  // the English version is the next page in the app
+  await doc.getByRole('link', { name: 'English' }).click()
+  await expect(page).toHaveURL(/#\/doc\/privacy-en$/)
+  await expect(page.getByRole('article')).toContainText('We do not collect personal data.')
+  await page.getByRole('link', { name: '뒤로' }).click()
+  await expect(page).toHaveURL(/#\/doc\/privacy$/)
+  await page.getByRole('link', { name: '뒤로' }).click()
+  await page.getByRole('link', { name: '도움말 · 문의' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: '도움말 · 문의' })).toBeVisible()
+  // the support page's link to the policy stays in the app too
+  await page.locator('article.doc').getByRole('link', { name: '개인정보 처리방침' }).click()
+  await expect(page).toHaveURL(/#\/doc\/privacy$/)
+  await expect(page.locator('article.doc')).toContainText('운영자는 이용자의 개인정보를')
+  expect(await calls(page, 'Browser', 'open')).toEqual([])
+  await expect(page.locator('.text-sheet')).toHaveCount(0)
+  expect(popup).toBe(false)
+  // the tab bar keeps 설정 as the current tab
+  await expect(page.getByRole('link', { name: '설정' })).toHaveAttribute('aria-current', 'page')
+})
+
 test('finishing the day: haptics, then the reminder offer; permission is asked only on “알림 받기”, then reminders are scheduled', async ({ page }) => {
   await openShell(page, { state: user({ dailyNew: 1 }) })
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()

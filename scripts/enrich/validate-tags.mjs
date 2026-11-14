@@ -2,6 +2,8 @@
 //   node scripts/enrich/validate-tags.mjs                       all data/tags/n*-*.json + aggregate check
 //   node scripts/enrich/validate-tags.mjs data/tags/n5-1.json   one or more files (+ aggregate over those)
 //   add --quiet to hide warnings. Exit code 1 if there is any error.
+// Checks the schema, the chunk's ids and the mechanical rules R1, R3, R4, R5, R9, R10 (data/tags/LABELLING.md §2.1,
+// tables in tags-schema.mjs). Judgement rules (R2, R6 and its homophone supplement, R7, R8) are not checked here.
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { basename } from 'node:path'
 import { root, levelById } from './words.mjs'

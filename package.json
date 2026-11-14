@@ -1,7 +1,7 @@
 {
   "name": "jlpt-ruma",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,7 +17,8 @@
     "ios:assets": "node scripts/ios/make-assets.mjs",
     "ios:set-id": "node scripts/ios/set-bundle-id.mjs",
     "theme": "node scripts/build-theme.mjs",
-    "astryx": "astryx"
+    "astryx": "astryx",
+    "pages": "node scripts/build-pages.mjs"
   },
   "dependencies": {
     "@astryxdesign/core": "0.7.15",

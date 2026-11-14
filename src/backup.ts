@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { platform } from './platform'
 import { getState, isBackup, migrate, type State } from './store'
 import { addDays, dayKey, daysBetween, parseDay } from './util'
+import { APP_VERSION } from './brand'
 
 // ── export format ──
 
@@ -13,8 +14,6 @@ export const BACKUP_FORMAT = 'jlpt-luma-backup'
  * by the same `migrate` as a saved state.
  */
 export const BACKUP_FORMAT_VERSION = 3
-declare const __APP_VERSION__: string | undefined
-const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'
 
 /** Fields a backup file carries next to the state; they are not part of the state itself. */
 const ENVELOPE = ['format', 'formatVersion', 'app', 'exportedAt'] as const

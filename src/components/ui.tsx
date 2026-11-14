@@ -106,6 +106,19 @@ export function Card({ padding, className, ...rest }: ComponentProps<'div'> & { 
   return <div className={cx('card', padding === 3 && 'pad-3', className)} {...rest} />
 }
 
+/**
+ * A plain row that goes somewhere: label, chevron, 48px, a hairline below (styles.css `.row-link`). `newWindow` for a
+ * page outside the app (the browser opens it beside the app).
+ */
+export function RowLink({ label, href, newWindow, className }: { label: string; href: string; newWindow?: boolean; className?: string }) {
+  return (
+    <a href={href} className={cx('row-link', className)} {...(newWindow ? { target: '_blank', rel: 'noreferrer' } : {})}>
+      <span className="grow">{label}</span>
+      <Icon name="chevron" size={18} />
+    </a>
+  )
+}
+
 /** One of a few fixed choices (2–5, short labels): a segmented control, read as a radio group (arrow keys move). */
 export function Choice<T extends string | number>({
   label,

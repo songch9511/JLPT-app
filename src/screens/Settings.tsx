@@ -1,14 +1,23 @@
 import { lazy, Suspense, useRef, useState } from 'react'
 import { exportBackup, readBackup, useMeta } from '../backup'
-import { TITLE, UNOFFICIAL_NOTICE } from '../brand'
-import { Banner, Button, Card, ChipGroup, Choice, ConfirmDialog, MessageDialog, Switch } from '../components/ui'
+import { APP_VERSION, TITLE, UNOFFICIAL_NOTICE } from '../brand'
+import { Banner, Button, Card, ChipGroup, Choice, ConfirmDialog, MessageDialog, RowLink, Switch } from '../components/ui'
 import { LEVELS } from '../data'
 import { canUndoImport, GOALS, importState, MAX_DAILY_NEW, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
+import { docHref, type DocName } from './Doc'
 import { formatDay, upcomingExams } from '../util'
 
 // reminders, haptics and voice: only in the iOS app (not even in the web bundle, see src/platform/index.ts)
 const NativeSettings = import.meta.env.MODE === 'native' ? lazy(() => import('../platform/NativeSettings')) : null
+
+/**
+ * The privacy policy and support pages (App Review 5.1.1(i)): on the web the site's own pages in a new window; in the
+ * iOS app the same files from the app bundle, shown in place (screens/Doc.tsx) so they open offline.
+ */
+function DocLink({ doc, label }: { doc: DocName; label: string }) {
+  return platform.native ? <RowLink href={`#/doc/${doc}`} label={label} /> : <RowLink href={docHref(doc)} label={label} newWindow />
+}
 
 export function Settings() {
   const st = useStore((s) => s.settings)
@@ -160,7 +169,13 @@ export function Settings() {
         <h2 className="card-title" id="about-title">정보</h2>
         <p>
           <b>{TITLE}</b>
+          <br />
+          <span className="small muted">버전 {APP_VERSION}</span>
         </p>
+        <nav className="about-links" aria-label="개인정보 처리방침과 도움말">
+          <DocLink doc="privacy" label="개인정보 처리방침" />
+          <DocLink doc="support" label="도움말 · 문의" />
+        </nav>
         <p className="notice">{UNOFFICIAL_NOTICE}</p>
         <ul className="credits">
           <li>단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반). JLPT는 공식 어휘 목록을 공개하지 않아서 비공식 목록이에요.</li>

@@ -118,17 +118,34 @@ describe('the id registry (data/ids.json)', () => {
   })
 })
 
+/**
+ * Words whose type tags (k, sk, ff, rt and the derived a, x) were corrected after the positional files froze: the
+ * native review of the tag audit (docs/plan/12, data/tags/audit/review.csv). Every other column of these rows, and
+ * every column of all other rows, is still what the frozen file says.
+ */
+const TAGS_CORRECTED: Record<number, string[]> = {
+  5: ['w08t', 'w0ed', 'w0g8'],
+  4: ['w0xf'],
+  3: ['w1i9', 'w1m9', 'w2gy', 'w2ll', 'w2om'],
+  2: ['w326', 'w36f', 'w3hc', 'w3qa', 'w3qu', 'w3ry', 'w3sz', 'w40u'],
+  1: ['w4x3', 'w4xx', 'w5at', 'w5fw', 'w5q2', 'w5sv'],
+}
+
 describe('public/data', () => {
   for (const l of LEVELS)
-    it(`N${l}: words-n${l}.json is the positional file plus the id, row for row; o is a permutation; every word is typed`, () => {
+    it(`N${l}: words-n${l}.json is the positional file plus the id, row for row (tags as corrected since); o is a permutation; every word is typed`, () => {
       const r = rows(l)
       const old = legacyRows(l)
       expect(r).toHaveLength(COUNTS[l])
       const reg = registry()
+      const corrected: string[] = []
       r.forEach((row, i) => {
-        expect(row.slice(1)).toEqual(old[i])
+        // id, w, r, ko, en, o, f never change; the tag columns only for the listed corrections
+        expect(row.slice(1, 7)).toEqual(old[i].slice(0, 6))
+        if (JSON.stringify(row.slice(1)) !== JSON.stringify(old[i])) corrected.push(row[0] as string)
         expect(reg.ids[row[0] as string].legacy).toBe(`${l}-${i}`)
       })
+      expect(corrected.sort()).toEqual(TAGS_CORRECTED[l])
       const o = r.map((row) => row[5] as number)
       expect([...o].sort((a, b) => a - b)).toEqual(o.map((_, i) => i))
       for (const row of r) {

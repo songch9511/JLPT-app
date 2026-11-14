@@ -18,13 +18,12 @@ name: iOS TestFlight upload (signed, manual)
 # The key needs a role allowed to manage certificates/profiles (Admin; App Manager may not be enough — not
 # verified). NOT RUN YET: the first run is its first test (no Apple account existed when it was written).
 
+# The version shown in the App Store (CFBundleShortVersionString) is `version` in package.json, the app's one version
+# number (also shown in settings › 정보 and in backups; tests/unit/pages.test.ts checks the Xcode project has the same).
+# To release a new version, change package.json and MARKETING_VERSION in ios/App/App.xcodeproj together.
+
 on:
   workflow_dispatch:
-    inputs:
-      marketing_version:
-        description: 'Version shown in the App Store (CFBundleShortVersionString), e.g. 1.0.0'
-        required: true
-        default: '1.0.0'
 
 permissions:
   contents: read
@@ -90,9 +89,10 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          MARKETING_VERSION: ${{ inputs.marketing_version }}
         run: |
           set -o pipefail
+          MARKETING_VERSION="$(node -p "require('./package.json').version")"
+          echo "marketing version $MARKETING_VERSION (package.json)"
           mkdir -p build
           xcodebuild archive \
             -project ios/App/App.xcodeproj \

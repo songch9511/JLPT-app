@@ -80,7 +80,7 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 - App Group ID는 빌드 설정 `RUMA_APP_GROUP`(= `group.<번들 ID>`) 하나에서 Info.plist와 entitlements로 들어갑니다.
 
 ### 3.6 심사 관련 준비
-- **개인정보 매니페스트**: 추적 없음, 수집 없음. 필수 사유 API: UserDefaults `1C8F.1`(App Group, 앱·위젯), 파일 타임스탬프 `C617.1`(앱 컨테이너 안 파일, `@capacitor/filesystem`)·`3B52.1`(사용자가 문서 선택기로 고른 파일, `@capawesome/capacitor-file-picker`). 플러그인별 범주는 Ionic의 매니페스트 규칙[S3]과 소스 검색으로 확인했고, 사유 코드의 정의 문구는 Apple 문서가 이 환경에서 읽히지 않아 **기억에 의존(미확인)** 합니다. 업로드 후 App Store Connect 경고 메일로 확인합니다.
+- **개인정보 매니페스트**: 추적 없음, 수집 없음. 필수 사유 API: UserDefaults `1C8F.1`(App Group, 앱·위젯), 파일 타임스탬프 `C617.1`(앱 컨테이너 안 파일, `@capacitor/filesystem`)·`3B52.1`(사용자가 문서 선택기로 고른 파일, `@capawesome/capacitor-file-picker`). 플러그인별 범주는 Ionic의 매니페스트 규칙[S3]과 소스 검색으로 확인했고, 사유 코드의 정의 문구도 2026-11-14 `docs/store/privacy-labels.md` §3에서 Apple의 현재 목록과 대조해 **확인했습니다**(세 코드 모두 코드 사용과 맞음). 남은 것은 빌드에 매니페스트가 실제로 들어가는지로, 업로드 후 App Store Connect 경고 메일로 확인합니다(같은 문서 §3.3).
 - **Info.plist**: `ITSAppUsesNonExemptEncryption = NO`(HTTPS 외 암호화 없음), 세로 고정, 개발 언어 한국어. **사용 목적 문자열은 없습니다**: 로컬 알림·햅틱·음성·공유·문서 선택기는 Info.plist 문자열이 필요 없고, 카메라·사진·위치는 쓰지 않습니다(파일 선택기의 사진 선택 경로는 호출하지 않으며 권한 없이 동작하는 PHPicker 계열).
 - **iPhone 전용**(`TARGETED_DEVICE_FAMILY = 1`, 06 결정 7 추천을 적용).
 - 앱 안 데이터 전체 삭제(초기화), 비공식 고지(설정 › 정보), 웹 전용 문구 정리(저장 위치, 저장 실패 경고, "새로고침" 안내)를 앱에서 맞게 바꿨습니다.
@@ -199,4 +199,4 @@ JLPT; the notice is in Settings > 정보.
 - [S3] Capacitor 문서 Privacy Manifest(GitHub 원문) — https://github.com/ionic-team/capacitor-docs/blob/main/docs/main/ios/privacy-manifest.md ; Ionic VS Code 매니페스트 규칙 — https://github.com/ionic-team/vscode-ionic/blob/main/src/privacy-manifest.ts
 - [S4] Capacitor 8 요건(Xcode 26, iOS 15, SPM 권장, 검색 요약) — https://capacitorjs.com/docs/next/getting-started/environment-setup , https://capawesome.io/blog/how-to-upgrade-your-capacitor-app-to-capacitor-8/ (capacitorjs.com은 이 환경에서 직접 접속 불가)
 - [S5] API 키와 `exportArchive` 업로드 대상 문제(Xcode 15 시점 포럼) — https://developer.apple.com/forums/thread/682091 ; API 키 기반 CI 업로드 안내(제3자) — https://docs.devin.ai/onboard-devin/environment/testflight
-- [S6] Apple 필수 사유 API 문서(이 환경에서 본문 미표시, 사유 코드 문구 미확인) — https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
+- [S6] Apple 필수 사유 API 문서(이 문서를 쓸 때는 본문 미표시. 사유 코드 문구는 2026-11-14 `docs/store/privacy-labels.md` §3.1에서 확인) — https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
