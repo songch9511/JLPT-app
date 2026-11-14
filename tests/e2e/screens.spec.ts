@@ -228,32 +228,39 @@ test('settings: daily new words stop at 40; lower levels can be set; no exam dat
 
 test('P4: with lower levels included an N3 learner meets N5 words first, and the card says which level', async ({ page }) => {
   await open(page, { state: user({ target: 3, includeLower: true }) })
-  await expect(page.getByRole('heading', { name: /^N5~N3 단어/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /^N5~N3 단어 3,526개 중 0개 만남/ })).toBeVisible()
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   await expect(page.locator('.flash-head').getByText('N5', { exact: true })).toBeVisible()
 })
 
 test.describe('home: Ruma, today’s plan, then the words met', () => {
-  test('an established learner: the day and level on top, Ruma’s card, the plan with its one primary, the word card; nothing about an exam', async ({ page }) => {
+  test('an established learner: the sky with the day, level, Ruma and the week; the plan sheet with its one primary; the words met; nothing about an exam', async ({ page }) => {
     const t = NOW.getTime()
     const cards = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`5-${i}`, review(t + ((i % 20) - 5) * DAY, { stability: 10 + (i % 30) })]))
     await open(page, { state: user({}, { cards, log: { '2026-11-12': { c: 60, n: 0, r: 40, p: 36 } } }) })
     await homeShown(page)
     await expect(page.getByRole('heading', { name: '오늘', level: 1 })).toBeVisible()
     await expect(page.locator('.home-head .subtitle')).toHaveText('11월 13일 금요일 · N5')
-    await expect(page.locator('.streak')).toBeVisible()
-    // order: Ruma's card, the plan, the word card
-    const order = await page.locator('main.page > .card').evaluateAll((els) => els.map((e) => e.className))
-    expect(order.slice(0, 3).map((c) => c.split(' ').find((x) => ['week-card', 'plan', 'words-card'].includes(x)))).toEqual(['week-card', 'plan', 'words-card'])
-    const words = page.getByRole('region', { name: /N5 단어/ })
-    await expect(words.locator('.card-title')).toHaveText('N5 단어200 / 718 만남')
-    await expect(words.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '718개 중 200개 만남')
-    await expect(words.locator('.words-sub')).toHaveText(/^그중 장기 기억 \d+개$/)
+    await expect(page.getByRole('img', { name: '연속 1일, 오늘 하면 2일' })).toHaveText('1')
+    // order: the sky (header, Ruma, its line, the week), then the plan sheet (figure, button, the words met)
+    const sky = page.locator('main.page > .home-sky')
+    await expect(sky.locator(':scope > :not(.waves)')).toHaveClass([/home-head/, /sky-ruma/, /ruma-line/, /seals/])
+    await expect(sky.getByRole('img', { name: '이번 주 1일 공부함' })).toBeVisible()
+    const plan = page.locator('main.page > .home-sheet')
+    await expect(plan).toHaveAccessibleName('오늘의 계획')
+    const words = plan.getByRole('link', { name: 'N5 단어 718개 중 200개 만남, 기록 보기' })
+    await expect(words).toHaveAttribute('href', '#/stats')
+    await expect(words.locator('.home-words-text')).toHaveText('만난 단어200 / 718')
+    // what left home: the long-term-memory line, the weak-words and 기록 rows (both are tabs), the quest
+    await expect(page.getByText(/장기 기억|약한 단어|오늘 분량 끝내기|읽기만/)).toHaveCount(0)
     await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
     // the start button stays in the first screen
-    const box = await page.getByRole('button', { name: '오늘의 학습 시작' }).boundingBox()
+    const box = await page.getByRole('button', { name: /^오늘의 학습 시작, \d+장$/ }).boundingBox()
     expect(box!.y + box!.height).toBeLessThan(844 - 70)
     await expect(page.getByText(/시험|D-\d|예상|목표에 닿아요|합격/)).toHaveCount(0)
+    // the weak words and the records are a tab away
+    await page.locator('.tabbar').getByRole('link', { name: '단어장' }).click()
+    await expect(page.getByRole('radio', { name: /^약한 단어/ })).toBeVisible()
   })
 
   test('the 기록 tab holds the stamps, forecast and heatmap that left home', async ({ page }) => {

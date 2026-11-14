@@ -126,3 +126,14 @@ export const homeShown = (page: Page) => expect(page.getByRole('heading', { name
 
 /** Current word on the study card. */
 export const currentWord = (page: Page) => page.locator('.flash-word').innerText()
+
+const AXE = readFileSync(new URL('../../node_modules/axe-core/axe.min.js', import.meta.url), 'utf8')
+/** axe-core's violations on the page as it is now, once the entry motions have settled. */
+export async function axeViolations(page: Page) {
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished.catch(() => {}))))
+  await page.addScriptTag({ content: AXE })
+  return page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (d: Document) => Promise<{ violations: { id: string; impact: string; nodes: unknown[] }[] }> } }).axe
+    return (await axe.run(document)).violations.map((v) => `${v.impact} ${v.id} ×${v.nodes.length}`)
+  })
+}

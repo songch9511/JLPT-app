@@ -1,6 +1,6 @@
 // Ruma's first run (docs/design-system.md §3 "루마의 안내"): no onboarding page. A new learner lands on Home, where
-// Ruma asks the one thing the plan needs (the level) in the mascot card, then offers the first session; what the app
-// does is explained once each, in context, when it becomes relevant.
+// Ruma asks the one thing the plan needs (the level) in the sky, with the answers in the plan sheet, then the sheet
+// offers the first session; what the app does is explained once each, in context, when it becomes relevant.
 //
 // Progress lives in `State.guide.done` (store.ts). A state without `guide` — every learner from before this version,
 // and their backups — never sees any of it.

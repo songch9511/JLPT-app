@@ -7,8 +7,9 @@ test('first run on home → a full day of study → done screen → home', async
   // no onboarding page: Ruma asks the level on home
   await page.getByRole('button', { name: 'N4' }).click()
   // a new learner studies the lower level too (settings turn it off)
-  await expect(page.locator('.guide-card .bubble')).toContainText('좋아요, N4! 쉬운 N5 단어도 함께 나와요.')
-  await expect(page.locator('.first-note')).toHaveText('JLPT 주최 기관(JF·JEES)과 관계없는 비공식 학습 앱이에요.')
+  await expect(page.locator('.ruma-line')).toHaveText('깨워 줄래요?')
+  await expect(page.locator('.home-head .subtitle b')).toHaveText('N4')
+  await expect(page.locator('.first-note')).toHaveText('JF·JEES와 무관한 비공식 앱')
   // daily new words have a default and are changed in settings
   await page.getByRole('link', { name: '설정' }).click()
   await page.getByRole('radio', { name: '10', exact: true }).click()
@@ -18,10 +19,11 @@ test('first run on home → a full day of study → done screen → home', async
   await expect(page.getByRole('heading', { name: '오늘의 계획' })).toBeVisible()
   await expect(page.locator('.home-head .subtitle b')).toHaveText('N4')
   await expect(page.locator('.plan-counts .c-new b')).toHaveText('10')
-  await expect(page.locator('.guide-card .bubble')).toContainText('오늘은 새 단어 10개')
-  // one primary: Ruma's
+  await expect(page.locator('.big .num')).toHaveText('10')
+  // one primary: the first session
   await expect(page.getByRole('button', { name: '오늘의 학습 시작' })).toHaveCount(0)
-  await page.getByRole('button', { name: '첫 학습 시작' }).click()
+  await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
+  await page.getByRole('button', { name: '첫 학습 시작, 새 단어 10개' }).click()
   await expect(page).toHaveURL(/#\/study$/)
 
   // each new word: 알아요 (→ 10 min) then 알아요 again (shown early thanks to learn-ahead)
@@ -43,13 +45,15 @@ test('first run on home → a full day of study → done screen → home', async
 
   await page.getByRole('button', { name: '홈으로' }).click()
   // after the first study Ruma explains, once, what the app just did
-  await expect(page.locator('.bubble.tip')).toContainText('잊을 때쯤 다시 가져올게요')
+  await expect(page.locator('.ruma-line.tip')).toContainText('본 단어는 잊을 때쯤 돌아와요. 기억할수록 간격이 길어져요.')
   await page.getByRole('button', { name: '알겠어요' }).click()
-  await expect(page.locator('.bubble')).toHaveText('두 눈 번쩍! 오늘 분량 끝.')
-  await expect(page.locator('.quest-mini.done')).toHaveText('오늘 분량 끝내기')
+  await expect(page.locator('.ruma-line')).toHaveText(/^(두 눈 다 떴어요|내일 봐요)$/)
+  await expect(page.locator('.home-sky')).toHaveAttribute('data-sky', 'day')
+  await expect(page.locator('.plan-eyebrow')).toHaveText('오늘 끝')
+  await expect(page.locator('.big .num')).toHaveText('20')
   await expect(page.locator('.home-head .streak')).toHaveText('1')
   await expect(page.locator('.home-head .streak')).toHaveClass(/lit/)
-  await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toHaveText('새 단어 10개 더')
   // the streak is shown once on home
   await expect(page.locator('.streak')).toHaveCount(1)
 })
@@ -123,7 +127,7 @@ test('the next day’s reviews appear (clock moves forward)', async ({ page }) =
   for (let i = 0; i < 10; i++) await answer(page, '알아요')
   await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
   await page.getByRole('button', { name: '홈으로' }).click()
-  await expect(page.locator('.bubble')).toContainText('두 눈 번쩍')
+  await expect(page.locator('.home-sky')).toHaveAttribute('data-sky', 'day')
 
   // the five words graduated with a ~2 day interval
   await page.clock.setSystemTime(new Date(NOW.getTime() + 3 * 86400_000))
@@ -140,7 +144,7 @@ test('home rolls over to the new day while the app stays open', async ({ page })
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   for (let i = 0; i < 5; i++) await answer(page, '쉬워요')
   await page.getByRole('button', { name: '홈으로' }).click()
-  await expect(page.locator('.bubble')).toContainText('두 눈 번쩍')
+  await expect(page.locator('.home-sky')).toHaveAttribute('data-sky', 'day')
   // the app is left open past midnight (e.g. a PWA left in the background)
   await page.clock.runFor('20:00')
   await expect(page.locator('.plan-counts .c-new b')).toHaveText('5')
@@ -328,9 +332,11 @@ test.describe('nothing new left in the target level', () => {
 
   test('offers the next level and the mascot sleeps on a day with nothing to do', async ({ page }) => {
     await open(page, { state: user({ target: 5 }, { cards: allOfN5() }) })
-    await expect(page.locator('.bubble')).toHaveText('N5 단어를 모두 만났어요. 다음은 N4!')
-    await expect(page.locator('.week-card .ruma')).toHaveClass(/sleep/)
-    await page.getByRole('button', { name: 'N4 시작하기' }).click()
+    await expect(page.locator('.ruma-line')).toHaveText('다음은 N4예요')
+    await expect(page.locator('.home-sky .ruma')).toHaveClass(/sleep/)
+    await expect(page.locator('.home-sky')).toHaveAttribute('data-sky', 'rest')
+    await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
+    await page.getByRole('button', { name: '다음 급수 N4 시작하기' }).click()
     await expect(page).toHaveURL(/#\/study$/)
     await expect(page.locator('.flash')).toBeVisible()
     expect((await saved(page)).settings.target).toBe(4)
@@ -338,9 +344,11 @@ test.describe('nothing new left in the target level', () => {
 
   test('a day with no reviews but new words left suggests them', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 0 }) })
-    await expect(page.locator('.bubble')).toHaveText('오늘은 복습이 없어요. 새 단어를 해 볼까요?')
-    await expect(page.locator('.week-card .ruma')).toHaveClass(/sleep/)
-    await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toBeVisible()
+    await expect(page.locator('.ruma-line')).toHaveText('오늘은 쉬어요')
+    await expect(page.locator('.home-sky .ruma')).toHaveClass(/sleep/)
+    await expect(page.locator('.home-sky')).toHaveAttribute('data-sky', 'rest')
+    await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toHaveText('새 단어 10개 더')
   })
 })
 

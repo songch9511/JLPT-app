@@ -40,7 +40,7 @@
   /* ── page frame: 16px sides (or the safe area), cards 12px apart, room for the tab bar ── */
   .app, .study { max-width: 520px; margin: 0 auto; }
   .page {
-    padding: calc(env(safe-area-inset-top) + var(--spacing-3)) max(var(--spacing-4), env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 104px) max(var(--spacing-4), env(safe-area-inset-left));
+    padding: calc(env(safe-area-inset-top) + var(--spacing-3)) max(var(--spacing-4), env(safe-area-inset-right)) calc(var(--tabbar-h, calc(env(safe-area-inset-bottom) + 64px)) + 40px) max(var(--spacing-4), env(safe-area-inset-left));
     display: flex; flex-direction: column; gap: var(--spacing-3);
   }
   .top { display: flex; align-items: center; gap: var(--spacing-3); min-height: 52px; }
@@ -223,33 +223,148 @@
   .astryx-button:not([data-variant='ghost'], [aria-disabled='true']) { margin-bottom: var(--ruma-depth); }
   .astryx-button:not([data-variant='ghost'], [aria-disabled='true']):active { transform: translateY(var(--ruma-depth)); box-shadow: 0 0 0 transparent; }
 
-  /* ── home ── */
-  /* the top line: "오늘" and the day · level, the streak on the right (a `.top` header like every tab's) */
+  /* ── home: Ruma's sky and the plan sheet (screens/Home.tsx, docs/design-system.md §3 "홈") ── */
+  /* the sky's colour by Ruma's state: on the band, and on <html> for the ground behind the page and the theme-color */
+  [data-sky] { --sky: var(--ruma-sky-sleep); --wave: var(--ruma-wave-sleep); }
+  [data-sky='wake'] { --sky: var(--ruma-sky-wake); --wave: var(--ruma-wave-wake); }
+  [data-sky='day'] { --sky: var(--ruma-sky-day); --wave: var(--ruma-wave-day); }
+  [data-sky='rest'] { --sky: var(--ruma-sky-rest); --wave: var(--ruma-wave-rest); }
+  :root[data-sky] body { background: var(--sky); }
+  .app.at-home .tabbar { background: var(--color-background-surface); }
+
+  .page.home { gap: 0; padding: 0; min-height: 100dvh; }
+  .home-sky {
+    position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center;
+    padding: calc(env(safe-area-inset-top) + var(--spacing-3)) max(var(--spacing-4), env(safe-area-inset-right)) calc(var(--spacing-6) + 28px) max(var(--spacing-4), env(safe-area-inset-left));
+    background: var(--sky); transition: background-color calc(2 * var(--duration-slow)) var(--ease-standard);
+  }
+  .home-sky .top { align-self: stretch; text-align: left; }
+  /* text on the sky: the deeper secondary ink keeps 5.8:1 on every sky */
+  .home-sky .subtitle { color: var(--ruma-sky-text-secondary); }
   .home-head .subtitle b { color: var(--color-text-primary); }
   .streak { display: inline-flex; align-items: center; gap: var(--spacing-1); color: var(--color-text-primary); white-space: nowrap; }
   .streak svg { color: var(--ruma-flame); }
   .streak .num { font-size: var(--font-size-lg); }
-  .streak small { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 
-  .plan { display: flex; flex-direction: column; gap: var(--spacing-3); }
-  .plan .card-title { margin-bottom: 0; }
-  .plan-counts { display: flex; flex-wrap: wrap; gap: var(--spacing-1) var(--spacing-4); font-size: var(--font-size-base); color: var(--color-text-secondary); }
-  .plan-counts .num { color: var(--color-text-primary); font-size: var(--font-size-xl); margin-left: 2px; }
-  .plan-note { font-size: var(--font-size-base); background: var(--color-background-muted); border-radius: var(--radius-element); padding: 10px var(--spacing-3); }
-  .plan-done { color: var(--color-text-secondary); font-size: var(--font-size-base); }
-  .plan-lever { display: flex; align-items: center; flex-wrap: wrap; gap: 0 var(--spacing-1); font-size: var(--font-size-base); margin: calc(-1 * var(--spacing-2)) 0; }
-  .link.inline-btn { color: var(--color-text-accent); font-weight: 700; text-decoration: underline; }
+  /* seigaiha along the foot of the sky, fading upward; the sky's own colours (they cross-fade with it) */
+  .waves { position: absolute; inset: auto 0 0; z-index: -1; width: 100%; height: 150px; pointer-events: none; -webkit-mask-image: linear-gradient(to top, #000 10%, transparent); mask-image: linear-gradient(to top, #000 10%, transparent); }
+  .wave-fill { fill: var(--sky); transition: fill calc(2 * var(--duration-slow)) var(--ease-standard); }
+  .wave-line { fill: none; stroke: var(--wave); stroke-width: 1.4; transition: stroke calc(2 * var(--duration-slow)) var(--ease-standard); }
 
-  /* the studied levels' words met so far: a plain count and bar */
-  .words-card { display: flex; flex-direction: column; gap: var(--spacing-2); }
-  .words-card .card-title { margin-bottom: 0; }
-  .words-card .card-title .muted { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); white-space: nowrap; }
-  .words-card .card-title .num { color: var(--color-text-primary); font-weight: 700; }
-  .words-sub { font-size: var(--font-size-base); color: var(--color-text-secondary); }
-  .words-sub .num { color: var(--color-text-primary); }
+  .sky-ruma { width: clamp(120px, 18dvh, 156px); aspect-ratio: 1; margin-top: var(--spacing-2); }
+  .sky-ruma .ruma { width: 100%; height: 100%; }
+  .ruma-line { margin-top: var(--spacing-2); max-width: 21em; font-size: var(--font-size-lg); line-height: 1.5; text-wrap: balance; }
+  .ruma-line:focus { outline: none; }
+  .ruma-line:focus-visible { outline: var(--focus-outline-width) solid var(--focus-outline-color); outline-offset: 2px; border-radius: var(--radius-inner); }
+  .ruma-ask { display: block; font-weight: 700; }
+  /* the one-time tip in place of Ruma's line, with a quiet "알겠어요" */
+  .ruma-line.tip { display: flex; flex-direction: column; align-items: center; font-size: var(--font-size-base); }
+  .ruma-line.tip .tip-close { margin: calc(-1 * var(--spacing-1)) 0 calc(-1 * var(--spacing-3)); }
 
-  .week-card { display: flex; flex-direction: column; gap: var(--spacing-3); }
-  .week-top { display: flex; align-items: center; gap: var(--spacing-2); }
+  /* the week as seven seals: 日…土 in mincho; studied = a vermilion seal stamped a little askew; today = 藍 outline and
+     a short 藍 rule; a past day without study a plain line, a coming day a dotted one */
+  .seals { --s: 30px; display: flex; justify-content: center; gap: var(--spacing-2); margin-top: var(--spacing-4); }
+  .seals span {
+    position: relative; flex: none; display: grid; place-items: center; width: var(--s); height: var(--s);
+    border: 1px solid var(--color-border); border-radius: calc(var(--s) * 0.26);
+    font-family: var(--ruma-font-ja-serif); font-weight: 600; font-size: calc(var(--s) * 0.46); line-height: 1; color: var(--ruma-sky-text-secondary);
+  }
+  .seals .future { border-style: dashed; border-color: var(--color-border-emphasized); }
+  .seals .done { --r: -4deg; border: 1.5px solid var(--ruma-seal); color: var(--ruma-seal); background: color-mix(in srgb, var(--ruma-seal) 6%, transparent); transform: rotate(var(--r)); }
+  .seals .done:nth-child(1) { --r: -5deg; } .seals .done:nth-child(2) { --r: 3deg; } .seals .done:nth-child(3) { --r: -2deg; }
+  .seals .done:nth-child(4) { --r: 4deg; } .seals .done:nth-child(5) { --r: -3deg; } .seals .done:nth-child(6) { --r: 2deg; }
+  .seals .today:not(.done) { border: 1.5px solid var(--color-accent); color: var(--color-text-accent); }
+  .seals .today::after { content: ''; position: absolute; left: 50%; bottom: calc(-1 * var(--spacing-2)); width: 12px; height: 2px; margin-left: -6px; border-radius: 1px; background: var(--color-accent); transform: rotate(calc(-1 * var(--r, 0deg))); }
+
+  /* the plan: a sheet rising over the sky, down to the tab bar */
+  .home-sheet {
+    position: relative; flex: 1; display: flex; flex-direction: column; margin-top: -28px;
+    padding: 22px max(var(--spacing-5), env(safe-area-inset-right)) calc(var(--tabbar-h, calc(env(safe-area-inset-bottom) + 64px)) + var(--spacing-4)) max(var(--spacing-5), env(safe-area-inset-left));
+    background: var(--color-background-surface); border-radius: 28px 28px 0 0; box-shadow: 0 -1px 0 var(--color-border);
+  }
+  .home-sheet.ask { gap: var(--spacing-5); padding-top: var(--spacing-5); }
+  .plan-figure { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--spacing-2) var(--spacing-4); }
+  .plan-eyebrow { font-size: var(--font-size-base); font-weight: 700; color: var(--color-text-secondary); line-height: 1.4; margin-bottom: var(--spacing-1); }
+  .big { display: flex; align-items: baseline; gap: 3px; white-space: nowrap; }
+  .big .num { font-size: min(var(--font-size-4xl), 12.5vw); line-height: 1; letter-spacing: -0.02em; }
+  .big .unit { font-size: var(--font-size-xl); font-weight: 700; }
+  .plan-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding-bottom: 2px; margin-left: auto; font-size: var(--font-size-base); color: var(--color-text-secondary); text-align: right; line-height: 1.45; }
+  .plan-time { color: var(--color-text-primary); font-weight: 700; }
+  .plan-time .num { font-size: var(--font-size-xl); }
+  .plan-counts { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline; gap: var(--spacing-1) var(--spacing-3); }
+  .home-counts { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 var(--spacing-3); }
+  .home-counts b { color: var(--color-text-primary); }
+  .home-counts .num { font-size: var(--font-size-base); line-height: 1.45; }
+  /* "밀린 587": the backlog as a tag on the numbers, not a sentence */
+  .backlog-tag { display: inline-flex; align-items: baseline; gap: 3px; padding: 0 7px; border-radius: var(--radius-full); background: var(--color-background-muted); color: var(--color-text-secondary); white-space: nowrap; }
+  .backlog-tag b { color: var(--color-text-primary); }
+  .backlog-tag .num { font-size: var(--font-size-base); line-height: 1.45; }
+  /* the one primary: a 56px pill, still the flat face on its shallow edge */
+  .btn.home-go { margin-top: var(--spacing-4); min-height: 56px; border-radius: var(--radius-full); }
+  .home-quiet { align-self: center; margin: var(--spacing-1) 0 calc(-1 * var(--spacing-3)); }
+  .home-quiet.alone { align-self: flex-start; margin: var(--spacing-3) 0 calc(-1 * var(--spacing-2)) calc(-1 * var(--spacing-2)); }
+  /* "복습 50장 늘렸어요 · 되돌리기" in the quiet action's place */
+  .plan-lever { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0 var(--spacing-1); min-height: var(--size-element-md); font-size: var(--font-size-base); margin: var(--spacing-1) 0 calc(-1 * var(--spacing-3)); }
+
+  /* word progress: the level seals, "만난 단어 2,460 / 3,526", a thin plain bar; the whole row goes to 기록 */
+  .home-words {
+    margin-top: var(--spacing-6); padding: var(--spacing-4) 0 var(--spacing-1); border-top: 1px solid var(--color-border);
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--spacing-3); color: var(--color-text-primary); text-decoration: none;
+  }
+  .home-words:active { background: var(--color-overlay-hover); }
+  .home-words > svg { color: var(--color-icon-secondary); }
+  .level-seals { display: flex; gap: 3px; }
+  .level-seals span {
+    display: grid; place-items: center; width: 32px; height: 32px; border-radius: var(--radius-full);
+    border: 1.5px dashed var(--color-border-emphasized); background: var(--color-background-surface);
+    font-family: var(--ruma-font-ja-serif); font-weight: 600; font-size: var(--font-size-sm); color: var(--color-text-secondary);
+  }
+  .level-seals .full { border: 1.5px solid var(--ruma-seal); color: var(--ruma-seal); transform: rotate(-10deg); }
+  .level-seals.many { gap: 2px; }
+  .level-seals.many span { width: 26px; height: 26px; font-size: var(--font-size-xs); border-width: 1px; }
+  .home-words-text { min-width: 0; display: flex; flex-direction: column; font-size: var(--font-size-base); line-height: 1.35; padding-left: var(--spacing-1); }
+  .home-words-title { color: var(--color-text-secondary); }
+  .home-words-text .num { font-size: var(--font-size-lg); }
+  .home-words-bar { grid-column: 1 / -1; display: block; height: 6px; border-radius: var(--radius-full); background: var(--color-track); overflow: hidden; }
+  .home-words-bar i { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); }
+  .first-note { margin-top: auto; padding-top: var(--spacing-5); font-size: var(--font-size-sm); color: var(--color-text-secondary); text-align: center; }
+  .home-sheet.ask .first-note { margin-top: 0; padding-top: 0; }
+
+  /* the first-run answers: one row of five ordinary buttons */
+  .guide-answers { display: grid; gap: var(--spacing-2); }
+  .guide-answers.level-answers { grid-template-columns: repeat(5, 1fr); }
+  .guide-answers .btn { min-width: 0; padding-inline: var(--spacing-2); font-size: var(--font-size-lg); }
+
+  /* short screens (320×568) and the accessibility text sizes: the sky folds into one row — a small Ruma at the left,
+     its line and the week at the right — so the plan and its button stay on the first screen */
+  @media (max-height: 700px) {
+    .home-sky { display: grid; grid-template-columns: auto 1fr; column-gap: var(--spacing-3); align-items: center; text-align: left; padding-bottom: calc(var(--spacing-3) + 28px); }
+    .home-sky .top { grid-column: 1 / -1; }
+    .sky-ruma { grid-column: 1; grid-row: 2 / span 2; width: 80px; margin: 0; }
+    .ruma-line { grid-column: 2; grid-row: 2; margin: 0; align-self: end; font-size: var(--font-size-base); text-wrap: pretty; }
+    .home-sky:not(:has(.seals)) .ruma-line { grid-row: 2 / span 2; align-self: center; }
+    .ruma-line.tip { align-items: flex-start; }
+    .ruma-line.tip .tip-close { margin-left: calc(-1 * var(--spacing-2)); }
+    .seals { grid-column: 2; grid-row: 3; --s: min(26px, calc((100vw - 140px) / 7.6)); gap: 3px; justify-content: flex-start; margin-top: var(--spacing-2); align-self: start; }
+    .home-sheet { padding-top: 18px; }
+    .home-sheet.ask { padding-top: var(--spacing-4); }
+    .btn.home-go { margin-top: var(--spacing-3); }
+    .home-words { margin-top: var(--spacing-4); padding-top: var(--spacing-3); }
+  }
+  :root[data-text-size='large'] .home-sky { display: grid; grid-template-columns: auto 1fr; column-gap: var(--spacing-3); align-items: center; text-align: left; padding-bottom: calc(var(--spacing-3) + 28px); }
+  :root[data-text-size='large'] .home-sky .top { grid-column: 1 / -1; }
+  :root[data-text-size='large'] .sky-ruma { grid-column: 1; grid-row: 2 / span 2; width: 72px; margin: 0; }
+  :root[data-text-size='large'] .ruma-line { grid-column: 2; grid-row: 2; margin: 0; align-self: end; font-size: var(--font-size-base); text-wrap: pretty; }
+  :root[data-text-size='large'] .home-sky:not(:has(.seals)) .ruma-line { grid-row: 2 / span 2; align-self: center; }
+  :root[data-text-size='large'] .ruma-line.tip { align-items: flex-start; }
+  :root[data-text-size='large'] .ruma-line.tip .tip-close { margin-left: calc(-1 * var(--spacing-2)); }
+  :root[data-text-size='large'] .seals { grid-column: 2; grid-row: 3; --s: min(26px, calc((100vw - 132px) / 7.6)); gap: 3px; justify-content: flex-start; margin-top: var(--spacing-2); align-self: start; }
+  :root[data-text-size='large'] .home-sheet { padding-top: 18px; }
+  :root[data-text-size='large'] .home-sheet.ask { padding-top: var(--spacing-4); }
+  :root[data-text-size='large'] .btn.home-go { margin-top: var(--spacing-3); }
+  :root[data-text-size='large'] .home-words { margin-top: var(--spacing-4); padding-top: var(--spacing-3); }
+
+  /* the reading-card tip on the study screen: a small Ruma and its bubble above the card */
   .bubble {
     position: relative; flex: 1; background: var(--color-background-muted); border-radius: var(--radius-container);
     padding: 10px var(--spacing-3); font-size: var(--font-size-base); line-height: 1.45; text-wrap: pretty;
@@ -258,44 +373,11 @@
     content: ''; position: absolute; left: -6px; top: 50%; width: 12px; height: 12px; background: var(--color-background-muted);
     transform: translateY(-50%) rotate(45deg); border-radius: 2px;
   }
-  .week-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-3); }
-  .week { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--spacing-1); text-align: center; }
-  .week li { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-1); font-size: var(--font-size-sm); color: var(--color-text-secondary); }
-  .week i { width: 12px; height: 12px; border-radius: var(--radius-full); background: var(--color-background-muted); }
-  .week .done i { background: var(--color-accent); }
-  .week .today span { color: var(--color-text-primary); font-weight: 700; }
-  .week .today i { box-shadow: 0 0 0 2px var(--color-background-surface), 0 0 0 3.5px var(--color-accent); }
-  .week .future i { opacity: 0.5; }
-  .quest-mini { display: inline-flex; align-items: center; gap: var(--spacing-1); font-size: var(--font-size-sm); color: var(--color-text-secondary); white-space: nowrap; }
-  .quest-mini.done { color: var(--color-text-primary); }
-  .quest-mini.done svg { color: var(--color-accent); }
-
-  /* ── Ruma's first run and tips (screens/HomeGuide.tsx): the same mascot card, the bubble holds the question, the
-     answers sit right under it as ordinary buttons. No overlay, nothing blocks the screen. ── */
-  .bubble > p + p { margin-top: var(--spacing-1); }
-  .bubble-sub { color: var(--color-text-secondary); }
-  .bubble:focus { outline: none; }
-  .bubble:focus-visible { outline: var(--focus-outline-width) solid var(--focus-outline-color); outline-offset: 2px; }
-  .guide-answers { display: grid; gap: var(--spacing-2); }
-  .guide-answers.level-answers { grid-template-columns: repeat(5, 1fr); }
-  .guide-answers .btn { min-width: 0; padding-inline: var(--spacing-2); font-size: var(--font-size-base); }
-  .guide-answers.level-answers .btn { font-size: var(--font-size-lg); }
-  .guide-back { align-self: center; margin: calc(-1 * var(--spacing-2)) 0; }
-  .guide-card .btn.full { margin-top: var(--spacing-1); }
-  @media (max-width: 360px) { .guide-card .ruma { width: 56px; height: 56px; } }
-  /* a tip: the bubble's words and a quiet "알겠어요" at its end */
-  .bubble.tip { display: flex; flex-direction: column; align-items: flex-start; padding-bottom: 0; }
-  .tip-close { align-self: flex-end; margin: calc(-1 * var(--spacing-1)) calc(-1 * var(--spacing-2)) 0 0; }
-  /* the plan card while Ruma asks: its place and title, no numbers yet */
-  .plan.pending .hint { margin-top: 0; }
-  .first-note { padding: 0 var(--spacing-1); font-size: var(--font-size-sm); color: var(--color-text-secondary); text-align: center; }
-  /* the reading-card tip on the study screen: a small Ruma and its bubble above the card */
   .study-tip { display: flex; align-items: center; gap: var(--spacing-2); padding: 0 max(var(--spacing-4), env(safe-area-inset-right)) var(--spacing-2) max(var(--spacing-4), env(safe-area-inset-left)); animation: fade var(--duration-medium) var(--ease-standard) both; }
   .study-tip .bubble { display: flex; align-items: center; gap: var(--spacing-1); padding-right: 0; }
   .study-tip .bubble p { flex: 1; min-width: 0; }
 
-  /* plain link rows (Astryx List was 23 KB gzip for these two rows: docs/design-system.md §쓰지 않은 것) */
-  .home-links { display: flex; flex-direction: column; }
+  /* plain link rows (Astryx List was 23 KB gzip for two rows: docs/design-system.md §쓰지 않은 것) */
   .row-link {
     display: flex; align-items: center; min-height: 48px; padding: 0 var(--spacing-1); color: var(--color-text-primary); font-size: var(--font-size-base);
     border-bottom: 1px solid var(--color-border); transition: background var(--duration-fast) var(--ease-standard);
@@ -303,8 +385,8 @@
   .row-link:active { background: var(--color-overlay-hover); }
   .row-link svg { color: var(--color-icon-secondary); }
 
-  /* notices: a quiet line on home, a floating error banner when saving fails */
-  .nudge { display: flex; align-items: center; gap: 0; margin: calc(-1 * var(--spacing-2)) 0; padding-left: var(--spacing-1); }
+  /* notices: the backup reminder (a quiet line in 설정 › 데이터), a floating error banner when saving fails */
+  .nudge { display: flex; align-items: center; gap: 0; margin: calc(-1 * var(--spacing-2)) 0; }
   .nudge p { font-size: var(--font-size-base); color: var(--color-text-secondary); }
   .save-warning {
     position: fixed; z-index: 20; left: 50%; transform: translateX(-50%);
@@ -407,6 +489,10 @@
   .tabbar a.on { color: var(--color-text-accent); font-weight: 700; }
   .tabbar a.on .tab-icon { background: var(--color-accent-muted); }
   .tabbar a:active .tab-icon { background: var(--color-background-muted); }
+  .tab-icon { position: relative; }
+  /* the backup reminder is due (it waits in 설정 › 데이터) */
+  .tab-dot { position: absolute; top: 4px; left: calc(50% + 8px); width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--ruma-flame); box-shadow: 0 0 0 2px var(--color-background-body); }
+  .app.at-home .tab-dot { box-shadow: 0 0 0 2px var(--color-background-surface); }
 
   /* ── study ── */
   .study { height: 100dvh; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
@@ -532,7 +618,6 @@
   /* small phones: keep the plan's start button within the first screen; segment labels keep their words */
   @media (max-width: 360px) {
     .segmented > button { padding-inline: var(--spacing-1); }
-    .streak small { display: none; }
   }
 
   /* ── the iOS app's own settings (src/platform/NativeSettings.tsx, ReminderOffer.tsx) are plain elements: they share

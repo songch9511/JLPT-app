@@ -40,7 +40,7 @@ const DOUBLE_TAP_MS = 350
 const NOTE_MS = 900
 const UNDO_CHIP_MS = 4000
 /** Ruma's words on the first reading card (src/guide.ts). */
-const READING_TIP = '읽기 카드예요. 한국어와 뜻이 같은 한자어는 읽는 법만 골라요.'
+const READING_TIP = '한국어와 뜻이 같은 한자어는 읽기만 골라요.'
 
 /** "알아요, 26일 뒤 다시" — the interval read as part of the button's name. */
 const answerLabel = (label: string, interval?: string) =>

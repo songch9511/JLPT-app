@@ -22,7 +22,7 @@ export function SaveWarning() {
   )
 }
 
-/** One quiet line asking for a backup when there is real progress and no recent export. */
+/** One quiet line asking for a backup when there is real progress and no recent export (설정 › 데이터; the 설정 tab shows a dot). */
 export function BackupNudge({ today }: { today: Date }) {
   const meta = useMeta()
   const s = useStore((x) => x)

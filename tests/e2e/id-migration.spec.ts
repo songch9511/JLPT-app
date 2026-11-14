@@ -9,6 +9,8 @@
 // A second (2026-11-14): the exam-day estimate was removed from Home. The plan lost its "오늘 하면 시험날 예상" line and
 // pace advice, and the readiness card gave way to the word card, whose counts were written by hand from this file's
 // own level breakdowns (N5~N2: 5,431 words, 2,655 new → 2,776 met; 631 + 566 + 634 + 259 = 2,090 long-term).
+// A third (2026-11-14, Home "루마의 하늘"): the same counts in the new plan sheet — 159 left (130 + 12 + 17), 26 min,
+// "계속하기" — and the word line without the long-term count and the "(읽기만 6)" note; rewritten by hand from the above.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { homeShown, KEY, L, NOW, open, saved, user } from './fixtures'
@@ -30,9 +32,11 @@ const text = (page: Page, sel: string) =>
 async function screens(page: Page) {
   const out: Record<string, unknown> = {}
   await homeShown(page)
-  // today's plan counts its reading cards once the studied levels' data has loaded (this learner has 8 new ones)
-  await expect(page.locator('.plan')).toContainText('(읽기만')
-  out.home = { plan: await text(page, '.plan'), words: await text(page, '.words-card') }
+  // the counts are final once the studied levels' data has loaded: before that the 7 words the tag audit took off S
+  // still count as met (2,783 instead of 2,776; "(읽기만 n)", the old signal, is no longer on Home)
+  await expect(page.locator('.plan .c-new b')).toHaveText('17')
+  await expect(page.locator('.home-words')).toContainText('2,776 / 5,431')
+  out.home = { plan: await text(page, '.plan'), words: await text(page, '.home-words') }
   await page.goto('./#/words')
   await page.getByRole('radio', { name: /^북마크/ }).click()
   await expect(page.locator('.word-row').first()).toBeVisible()

@@ -129,28 +129,37 @@ test.describe('backups', () => {
     for (const k of ['format', 'formatVersion', 'app', 'exportedAt']) expect(s).not.toHaveProperty(k)
   })
 
-  test('home shows a dismissible backup reminder once there is progress worth keeping', async ({ page }) => {
+  test('the backup reminder waits in 설정 (a dot on the tab while it is due) and can be dismissed; home stays calm', async ({ page }) => {
     await open(page, { state: user({}, { cards: manyCards(30) }) })
+    await homeShown(page)
+    await expect(page.locator('.nudge')).toHaveCount(0)
+    const tab = page.locator('.tabbar').getByRole('link', { name: '설정, 백업 권유 있음' })
+    await expect(tab.locator('.tab-dot')).toBeVisible()
+    await tab.click()
     const nudge = page.locator('.nudge')
     await expect(nudge).toContainText('백업해 두세요')
     await nudge.getByRole('button', { name: '백업 알림 닫기' }).click()
     await expect(nudge).toBeHidden()
+    await expect(page.locator('.tab-dot')).toHaveCount(0)
     await page.reload()
-    await homeShown(page)
+    await expect(page.getByRole('heading', { name: '설정', level: 1 })).toBeVisible()
     await expect(nudge).toBeHidden()
+    await expect(page.locator('.tabbar').getByRole('link', { name: '설정', exact: true })).toBeVisible()
   })
 
   test('backing up from the reminder hides it', async ({ page }) => {
-    await open(page, { state: user({}, { cards: manyCards(30) }) })
+    await open(page, { state: user({}, { cards: manyCards(30) }), hash: '/settings' })
     const nudge = page.locator('.nudge')
     await downloadJson(page, () => nudge.getByRole('button', { name: '백업하기' }).click())
     await expect(nudge).toBeHidden()
+    await expect(page.locator('.tab-dot')).toHaveCount(0)
   })
 
   test('no reminder without real progress', async ({ page }) => {
-    await open(page, { state: user({}, { cards: manyCards(5) }) })
-    await homeShown(page)
+    await open(page, { state: user({}, { cards: manyCards(5) }), hash: '/settings' })
+    await expect(page.getByRole('heading', { name: '설정', level: 1 })).toBeVisible()
     await expect(page.locator('.nudge')).toHaveCount(0)
+    await expect(page.locator('.tab-dot')).toHaveCount(0)
   })
 
   test('persistent storage is requested once the first day is finished', async ({ page }) => {

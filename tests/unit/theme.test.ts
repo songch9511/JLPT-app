@@ -43,7 +43,22 @@ const PAIRS: [string, string, number][] = [
   ['--ruma-gold-icon', '--color-background-surface', 3],
   ['--ruma-flame', '--color-background-body', 3],
   ['--ruma-stage-young', '--color-background-surface', 3],
+  // Home (docs/design-system.md §3 "홈"): the level seals and the backlog tag on the plan sheet
+  ['--ruma-seal', '--color-background-surface', 4.5],
 ]
+
+// Home's sky, in each of Ruma's states: everything written on it. Held to 5:1 (AA with a margin) for text, 3:1 for the
+// streak flame. A stamped seal's ground is the sky with 6% of the seal's ink in it (styles.css `.seals .done`).
+const SKIES = ['--ruma-sky-sleep', '--ruma-sky-wake', '--ruma-sky-day', '--ruma-sky-rest']
+const ON_SKY: [string, number][] = [
+  ['--color-text-primary', 5],
+  ['--ruma-sky-text-secondary', 5],
+  ['--color-text-accent', 5],
+  ['--ruma-seal', 5],
+  ['--ruma-flame', 3],
+]
+const mix = (a: string, b: string, t: number) =>
+  '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * t + parseInt(b.slice(i, i + 2), 16) * (1 - t)).toString(16).padStart(2, '0')).join('')
 
 describe('ruma theme', () => {
   for (const [mode, i] of [['light', 0], ['dark', 1]] as const)
@@ -52,6 +67,25 @@ describe('ruma theme', () => {
       expect(tokens[bgName], bgName).toBeDefined()
       expect(contrast(tokens[fg][i].slice(0, 7), tokens[bgName][i].slice(0, 7))).toBeGreaterThanOrEqual(min)
     })
+
+  for (const [mode, i] of [['light', 0], ['dark', 1]] as const)
+    for (const sky of SKIES)
+      it.each(ON_SKY)(`${mode}: %s on ${sky} meets %s:1`, (fg, min) => {
+        expect(tokens[fg], fg).toBeDefined()
+        expect(tokens[sky], sky).toBeDefined()
+        const [ink, ground] = [tokens[fg][i].slice(0, 7), tokens[sky][i].slice(0, 7)]
+        expect(contrast(ink, ground)).toBeGreaterThanOrEqual(min)
+        // a stamped day: the seal's ink on its own 6% tint of the sky
+        if (fg === '--ruma-seal') expect(contrast(ink, mix(ink, ground, 0.06))).toBeGreaterThanOrEqual(min)
+      })
+
+  it('gives each of Ruma’s states its own sky, distinct from the ground and from each other', () => {
+    for (const i of [0, 1]) {
+      const values = SKIES.map((k) => tokens[k][i])
+      expect(new Set(values).size).toBe(4)
+      expect(values).not.toContain(tokens['--color-background-body'][i])
+    }
+  })
 
   it('keeps the traditional palette (生成り ground, 墨 text, 藍 accent, 緑青, 朱, 山吹茶)', () => {
     expect(tokens['--color-background-body']).toEqual(['#fbfaf5', '#1b1a18'])
