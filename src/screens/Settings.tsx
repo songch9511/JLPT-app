@@ -1,6 +1,7 @@
-import { lazy, Suspense, useRef } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { exportBackup, readBackup, useMeta } from '../backup'
 import { TITLE, UNOFFICIAL_NOTICE } from '../brand'
+import { Banner, Button, Card, ChipGroup, Choice, ConfirmDialog, MessageDialog, Switch } from '../components/ui'
 import { LEVELS } from '../data'
 import { canUndoImport, GOALS, importState, MAX_DAILY_NEW, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
@@ -15,6 +16,10 @@ export function Settings() {
   const file = useRef<HTMLInputElement>(null)
   const exams = upcomingExams(new Date(), 4)
   const set = (patch: Partial<State['settings']>) => update((d) => void Object.assign(d.settings, patch))
+  /** in-app dialogs instead of the browser's confirm()/alert() (05 batch 4) */
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [pending, setPending] = useState<State | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
 
   const importData = async (f: File) => importText(await f.text())
   const importText = (text: string) => {
@@ -26,7 +31,7 @@ export function Settings() {
     }
     const read = readBackup(data)
     if (!read.ok) {
-      alert(
+      setProblem(
         read.reason === 'newer'
           ? platform.native
             ? '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 업데이트한 뒤 다시 가져와 주세요.'
@@ -35,8 +40,7 @@ export function Settings() {
       )
       return
     }
-    if (!confirm('지금 기록을 백업 파일의 내용으로 바꿀까요? 바로 되돌릴 수 있어요.')) return
-    importState(read.state)
+    setPending(read.state)
   }
 
   return (
@@ -45,92 +49,63 @@ export function Settings() {
         <h1>설정</h1>
       </header>
 
-      <section className="card form">
-        <h3>학습 목표</h3>
-        <label>목표 급수</label>
-        <div className="seg">
-          {LEVELS.map((l) => (
-            <button key={l} className={st.target === l ? 'on' : ''} aria-pressed={st.target === l} onClick={() => set({ target: l })}>
-              N{l}
-            </button>
-          ))}
-        </div>
+      <Card className="form" role="region" aria-labelledby="goal-title">
+        <h2 className="card-title" id="goal-title">학습 목표</h2>
+        <p className="field-label">목표 급수</p>
+        <Choice label="목표 급수" value={st.target} options={LEVELS.map((l) => [l, `N${l}`])} onChange={(target) => set({ target })} />
         {st.target < 5 && (
-          <label className="switch">
-            <span>
-              아래 급수 단어도 함께 (N{LEVELS.filter((l) => l > st.target).join('·N')})
-              <small className="muted">시험은 아래 급수 단어를 안다고 보고 나와요. 켜면 쉬운 급수부터 새 단어가 나오고, 시험 준비도에도 함께 세요.</small>
-            </span>
-            <input type="checkbox" checked={st.includeLower} onChange={(e) => set({ includeLower: e.target.checked })} />
-          </label>
+          <Switch
+            label={`아래 급수 단어도 함께 (N${LEVELS.filter((l) => l > st.target).join('·N')})`}
+            description="시험은 아래 급수 단어를 안다고 보고 나와요. 켜면 쉬운 급수부터 새 단어가 나오고, 시험 준비도에도 함께 세요."
+            value={st.includeLower}
+            onChange={(includeLower) => set({ includeLower })}
+          />
         )}
-        <label>하루 새 단어</label>
-        <div className="seg">
-          {[5, 10, 20, 30, MAX_DAILY_NEW].map((n) => (
-            <button key={n} className={st.dailyNew === n ? 'on' : ''} aria-pressed={st.dailyNew === n} onClick={() => set({ dailyNew: n })}>
-              {n}
-            </button>
-          ))}
-        </div>
-        <p className="muted small">
+        <p className="field-label">하루 새 단어</p>
+        <Choice label="하루 새 단어" value={st.dailyNew} options={[5, 10, 20, 30, MAX_DAILY_NEW].map((n) => [n, String(n)])} onChange={(dailyNew) => set({ dailyNew })} />
+        <p className="hint">
           지금 {st.dailyNew}개. 새 단어가 많을수록 며칠 뒤 복습도 늘어나요. 복습이 밀리지 않도록 하루 {MAX_DAILY_NEW}개까지만 정할 수
           있어요.
         </p>
-        <label>시험날 목표</label>
-        <div className="seg">
-          {GOALS.map((g) => (
-            <button key={g} className={st.goal === g ? 'on' : ''} aria-pressed={st.goal === g} onClick={() => set({ goal: g })}>
-              {Math.round(g * 100)}%
-            </button>
-          ))}
-        </div>
-        <p className="muted small">시험날 기억할 단어의 목표 비율이에요. 합격선에서 나온 숫자가 아니라 앱이 정한 기준이에요.</p>
-        <label htmlFor="exam">시험일</label>
-        <div className="chips">
-          {exams.map((d) => (
-            <button key={d} className={`chip-btn ${st.examDate === d ? 'on' : ''}`} aria-pressed={st.examDate === d} onClick={() => set({ examDate: d })}>
-              {formatDay(d)}
-            </button>
-          ))}
-        </div>
-        <input id="exam" type="date" value={st.examDate} onChange={(e) => e.target.value && set({ examDate: e.target.value })} />
-      </section>
-
-      <section className="card form">
-        <h3>학습 방식</h3>
-        <label className="switch">
-          <span>
-            한자어 빠른 통과
-            <small className="muted">
-              한국어 한자어와 뜻이 같은 단어(産業 = 산업)는 뜻 대신 읽기를 4지선다로 물어요. 끄면 모든 단어를 뜻 카드로 배우고, 읽기로만 배운
-              단어도 뜻 카드로 새로 나와요. 다시 켜면 읽기 카드가 이어서 나와요.
-            </small>
-          </span>
-          <input type="checkbox" checked={st.fastTrack} onChange={(e) => set({ fastTrack: e.target.checked })} />
+        <p className="field-label">시험날 목표</p>
+        <Choice label="시험날 목표" value={st.goal} options={GOALS.map((g) => [g, `${Math.round(g * 100)}%`])} onChange={(goal) => set({ goal })} />
+        <p className="hint">시험날 기억할 단어의 목표 비율이에요. 합격선에서 나온 숫자가 아니라 앱이 정한 기준이에요.</p>
+        <label className="field-label" htmlFor="exam">
+          시험일
         </label>
-      </section>
+        <ChipGroup label="시험일" value={st.examDate} options={exams.map((d) => [d, formatDay(d)])} onChange={(examDate) => set({ examDate })} />
+        <input id="exam" className="date-input" type="date" value={st.examDate} onChange={(e) => e.target.value && set({ examDate: e.target.value })} />
+      </Card>
 
-      <section className="card form">
-        <h3>화면 · 소리</h3>
-        <label>테마</label>
-        <div className="seg">
-          {(
-            [
-              ['system', '시스템'],
-              ['light', '라이트'],
-              ['dark', '다크'],
-            ] as const
-          ).map(([k, label]) => (
-            <button key={k} className={st.theme === k ? 'on' : ''} aria-pressed={st.theme === k} onClick={() => set({ theme: k })}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <label className="switch">
-          <span>카드가 나올 때 발음 자동 재생</span>
-          <input type="checkbox" checked={st.autoSpeak} onChange={(e) => set({ autoSpeak: e.target.checked })} />
-        </label>
-      </section>
+      <Card className="form" role="region" aria-labelledby="method-title">
+        <h2 className="card-title" id="method-title">학습 방식</h2>
+        <Switch
+          label="한자어 빠른 통과"
+          description="한국어 한자어와 뜻이 같은 단어(産業 = 산업)는 뜻 대신 읽기를 4지선다로 물어요. 끄면 모든 단어를 뜻 카드로 배우고, 읽기로만 배운 단어도 뜻 카드로 새로 나와요. 다시 켜면 읽기 카드가 이어서 나와요."
+          value={st.fastTrack}
+          onChange={(fastTrack) => set({ fastTrack })}
+        />
+      </Card>
+
+      <Card className="form" role="region" aria-labelledby="display-title">
+        <h2 className="card-title" id="display-title">화면 · 소리</h2>
+        <p className="field-label">테마</p>
+        <Choice
+          label="테마"
+          value={st.theme}
+          options={[
+            ['system', '시스템'],
+            ['light', '라이트'],
+            ['dark', '다크'],
+          ]}
+          onChange={(theme) => set({ theme })}
+        />
+        <Switch
+          label="카드가 나올 때 발음 자동 재생"
+          value={st.autoSpeak}
+          onChange={(autoSpeak) => set({ autoSpeak })}
+        />
+      </Card>
 
       {NativeSettings && platform.native && (
         <Suspense fallback={null}>
@@ -138,34 +113,29 @@ export function Settings() {
         </Suspense>
       )}
 
-      <section className="card form">
-        <h3>데이터</h3>
-        <p className="muted small">
+      <Card className="form" role="region" aria-labelledby="data-title">
+        <h2 className="card-title" id="data-title">데이터</h2>
+        <p className="hint">
           {platform.native
             ? '학습 기록은 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업 파일을 내보내 두세요.'
             : '학습 기록은 이 기기의 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'}
         </p>
-        <p className="small last-backup">
-          {meta.lastExport ? `마지막 백업: ${formatDay(meta.lastExport)}` : '아직 백업한 적이 없어요.'}
-        </p>
+        <p className="small last-backup">{meta.lastExport ? `마지막 백업: ${formatDay(meta.lastExport)}` : '아직 백업한 적이 없어요.'}</p>
         {canUndoImport() && (
-          <p className="note row-note" role="status">
-            <span className="grow">백업 파일의 기록으로 바꿨어요.</span>
-            <button className="link" onClick={() => undoImport()}>
-              가져오기 되돌리기
-            </button>
-          </p>
+          <div role="status">
+            <Banner
+              status="success"
+              title="백업 파일의 기록으로 바꿨어요."
+              action={<Button label="가져오기 되돌리기" variant="ghost" className="text-action" onClick={() => undoImport()} />}
+            />
+          </div>
         )}
         <div className="row">
-          <button className="btn ghost" onClick={exportBackup}>
-            백업 내보내기
-          </button>
-          <button
-            className="btn ghost"
+          <Button label="백업 내보내기" onClick={exportBackup} />
+          <Button
+            label="백업 가져오기"
             onClick={() => (platform.pickFile ? void platform.pickFile().then((t) => t !== null && importText(t)) : file.current?.click())}
-          >
-            백업 가져오기
-          </button>
+          />
           <input
             ref={file}
             type="file"
@@ -178,24 +148,26 @@ export function Settings() {
             }}
           />
         </div>
-        <button
-          className="btn danger"
-          onClick={() => confirm('모든 학습 기록과 설정을 지울까요? 되돌릴 수 없어요.') && resetAll()}
-        >
-          모든 기록 초기화
-        </button>
-      </section>
+        <Button label="모든 기록 초기화" variant="destructive" onClick={() => setConfirmReset(true)} />
+      </Card>
 
-      <section className="card about" aria-labelledby="about-title">
-        <h3 id="about-title">정보</h3>
+      <Card className="about" role="region" aria-labelledby="about-title">
+        <h2 className="card-title" id="about-title">정보</h2>
         <p>
           <b>{TITLE}</b>
         </p>
         <p className="notice">{UNOFFICIAL_NOTICE}</p>
-        <ul className="muted small credits">
+        <ul className="credits">
           <li>단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반). JLPT는 공식 어휘 목록을 공개하지 않아서 비공식 목록이에요.</li>
           <li>한국어 뜻은 기계 번역이라 틀린 곳이 있을 수 있어요.</li>
           <li>복습 간격: FSRS (ts-fsrs, MIT)</li>
+          <li>
+            디자인 시스템:{' '}
+            <a href="https://github.com/meta/astryx" target="_blank" rel="noreferrer">
+              Astryx
+            </a>{' '}
+            (Meta, MIT) · 아이콘: Lucide (ISC)
+          </li>
           <li>
             단어 빈도·소개 순서:{' '}
             <a href="https://github.com/rspeer/wordfreq" target="_blank" rel="noreferrer">
@@ -237,7 +209,32 @@ export function Settings() {
             ).
           </li>
         </ul>
-      </section>
+      </Card>
+
+      <ConfirmDialog
+        isOpen={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        title="모든 기록을 지울까요?"
+        description="이 기기의 학습 기록과 설정을 모두 지우고 처음부터 시작해요. 되돌릴 수 없어요."
+        actionLabel="모두 지우기"
+        onAction={() => {
+          setConfirmReset(false)
+          resetAll()
+        }}
+      />
+      <ConfirmDialog
+        isOpen={pending !== null}
+        onClose={() => setPending(null)}
+        title="백업으로 바꿀까요?"
+        description="지금 기록을 백업 파일의 내용으로 바꿔요. 바꾼 뒤 이 화면에서 바로 되돌릴 수 있어요."
+        actionLabel="백업으로 바꾸기"
+        actionVariant="primary"
+        onAction={() => {
+          if (pending) importState(pending)
+          setPending(null)
+        }}
+      />
+      <MessageDialog title="가져오지 못했어요" message={problem} onClose={() => setProblem(null)} />
     </>
   )
 }

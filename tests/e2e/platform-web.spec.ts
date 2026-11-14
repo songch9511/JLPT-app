@@ -35,7 +35,7 @@ test('pronunciation uses the browser’s speech synthesis in Japanese', async ({
 
 test('backup is a browser download (without the app-only save counter) and import is a file input', async ({ page }) => {
   await open(page, { state: user({}, { xp: 21 }), hash: '/settings' })
-  await page.getByRole('button', { name: 'N4' }).click() // a save: the state now has a save counter
+  await page.getByRole('radio', { name: 'N4' }).click() // a save: the state now has a save counter
   expect((await saved(page)).rev).toBeGreaterThan(0)
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '백업 내보내기' }).click()])
   const backup = JSON.parse(await readFile((await download.path())!, 'utf8'))

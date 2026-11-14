@@ -147,7 +147,7 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 - [ ] 단어장 검색창에 키보드가 올라올 때 레이아웃, 더블 탭 확대 여부(04 5절)
 - [ ] 라이선스 링크 → 앱 안 Safari 뷰, 닫으면 같은 화면. "고지문"은 시트
 - [ ] 세로 고정, 가로로 돌려도 그대로
-- [ ] (최소 iOS를 15~16으로 둘 경우) 가장 낮은 버전 기기에서 입력란 테두리(`color-mix`, iOS 16.2+)·`100dvh` 레이아웃
+- [ ] 최소 버전인 iOS 16.4 기기(또는 시뮬레이터)에서: 색·다크 모드(`light-dark()`를 변수로 바꾼 CSS), 카드·버튼 모양(`@layer`), 확인 대화상자와 시트(17.5 미만에서는 `@starting-style`이 없어 나타나는 움직임이 짧거나 없을 수 있음, 동작은 같아야 함), Dynamic Type 크게에서 글자 크기
 
 ## 6. 심사 메모(App Review Information › Notes에 그대로)
 
@@ -186,7 +186,7 @@ JLPT; the notice is in Settings > 정보.
 
 1. **번들 ID**(한 번 정하면 못 바꿈). → **추천: `io.github.songch9511.jlptruma`**(도메인을 사면 `kr.<도메인>.ruma`). `npm run ios:set-id`로 한 번에 바꿉니다. App Group은 `group.<번들 ID>`로 따라갑니다.
 2. **스토어 이름과 홈 화면 이름**(JLPT 상표 우려, 06 4.2절). → **추천: 스토어 이름 "루마 – JLPT 단어 N5~N1", 홈 화면 아이콘 아래 이름은 "JLPT 루마"(지금 값)**. 리젝되면 스토어 이름에서 JLPT를 빼고, 아이콘 이름은 "루마"로 바꿉니다(`--name`).
-3. **최소 iOS 버전**. 지금은 Capacitor 8 최소값 **15.0**입니다. 다만 CSS의 `color-mix`는 iOS 16.2부터라 15.x에서는 입력란 테두리 색이 빠집니다. → **추천: 16.4로 올리기**(`project.pbxproj`의 `IPHONEOS_DEPLOYMENT_TARGET` 6곳). 위젯·테스트 범위가 줄고 잃는 사용자는 아주 적다고 봅니다(점유율 수치는 미확인).
+3. **최소 iOS 버전 — 결정됨(2026-11-14): 16.4.** Capacitor 8의 기본값은 15.0이지만, 화면 CSS가 `@layer`(15.4)·`color-mix`(16.2)·`@property`(16.4)에 기대고 Vite의 빌드 대상도 safari16.4입니다(`docs/design-system.md` 8장). `project.pbxproj`의 `IPHONEOS_DEPLOYMENT_TARGET` 6곳(프로젝트·앱·위젯 × Debug/Release)을 16.4로 올렸고, `npm run ios:sync`가 이 값을 읽어 `CapApp-SPM/Package.swift`를 `.iOS(.v16)`로 다시 씁니다(이 파일은 손으로 고치지 않음, SPM 플랫폼은 주 버전만 받음). 새로 만든 Xcode 프로젝트에는 `scripts/ios/patch-pbxproj.py`가 같은 값을 넣습니다. CI(`ios.yml`, `ios-testflight.yml`)는 `generic/platform=iOS…` 대상이라 따로 바꿀 것이 없습니다.
 4. **위젯을 v1에 넣을지**. → **추천: 넣기.** 코드는 준비됐고 4.2 위험을 줄입니다. 조건: `ios.yml`이 통과하고 5절 위젯 항목이 기기에서 맞을 것. 아니면 3.5절대로 타깃을 빼고 1.1에서 넣습니다.
 5. **기기 범위**: iPhone 전용으로 설정해 두었습니다(06 추천). iPad를 넣으려면 13인치 스크린샷과 레이아웃 확인이 더 필요합니다.
 6. **알림 기본 시각**: 20:00으로 두었습니다. 학습 패턴 데이터가 없어서 정한 값입니다.

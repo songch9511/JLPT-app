@@ -70,6 +70,7 @@
   - (가) 소유자의 Mac에서 Xcode로 아카이브 → 업로드
   - (나) 클라우드 Mac CI(Codemagic 또는 GitHub Actions macOS)에서 App Store Connect API 키로 서명·업로드(3.5절)
 - **SDK 요건**: 2026-04-28부터 App Store Connect 업로드는 Xcode 26 이상, iOS 26 SDK로 빌드해야 합니다 [A16].
+- **최소 iOS**: 16.4(결정 2026-11-14, 10 문서 결정 3). 스토어의 "호환성"에 iOS 16.4 이상으로 표시됩니다. 화면 CSS가 16.4 기능에 기대기 때문입니다(`docs/design-system.md` 8장).
 
 ### 2.2 브라우저에서 WKWebView로 옮길 때 깨지는 것
 

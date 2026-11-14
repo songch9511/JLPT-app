@@ -26,8 +26,8 @@ test('an S word is asked for its reading: four choices, a wrong pick shows the a
   const card = page.locator('.flash.reading-card')
   await expect(card).toBeVisible()
   await expect(page.locator('.flash-word')).toHaveText(w)
-  await expect(card.locator('.chip.k-read')).toHaveText('읽기')
-  await expect(card.locator('.chip.k-new')).toHaveText('새 단어')
+  await expect(card.locator('.flash-head').getByText('읽기', { exact: true })).toBeVisible()
+  await expect(card.locator('.flash-head').getByText('새 단어', { exact: true })).toBeVisible()
   await expect(page.locator('#reading-prompt')).toHaveText('어떻게 읽을까요?')
   // the speaker would give the answer away before answering
   await expect(page.getByRole('button', { name: '발음 듣기' })).toHaveCount(0)
@@ -71,8 +71,9 @@ test('an S word is asked for its reading: four choices, a wrong pick shows the a
   await page.getByRole('button', { name: '익히는 중', exact: true }).click()
   await expect(page.locator('.word-row')).toHaveCount(1)
   await page.locator('.word-row', { hasText: ko }).click()
-  await expect(page.locator('.sheet .type-line')).toContainText(`한자어 · 뜻이 같아요 · ${sk}`)
-  await expect(page.locator('.sheet .muted.small').first()).toContainText('익히는 중 · 읽기 다음 복습')
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.locator('.type-line')).toContainText(`한자어 · 뜻이 같아요 · ${sk}`)
+  await expect(sheet.locator('.sheet-status')).toContainText('익히는 중 · 읽기 다음 복습')
 })
 
 test('the right reading moves on with "다음"; keys 1–4 choose', async ({ page }) => {
@@ -109,14 +110,14 @@ test('an F word warns after the reveal, not before, and on the word sheet', asyn
   await page.getByRole('button', { name: /^뜻 다른 한자어/ }).click()
   await expect(page.locator('.word-row').first()).toBeVisible()
   await page.locator('.word-row', { hasText: w }).first().click()
-  await expect(page.locator('.sheet .false-friend')).toContainText(ff)
+  await expect(page.getByRole('dialog').locator('.false-friend')).toContainText(ff)
 })
 
 test('turning the fast-track off in settings: the S word comes as a meaning card, and back on as a reading card', async ({ page }) => {
   const pos = firstOf('S')
   const idx = ORDER[pos]
   await open(page, { state: user({ fastTrack: true, dailyNew: 3 }, { cards: seen(pos) }), hash: '/settings' })
-  const toggle = page.getByRole('checkbox', { name: /한자어 빠른 통과/ })
+  const toggle = page.getByRole('switch', { name: /한자어 빠른 통과/ })
   await expect(toggle).toBeChecked()
   await toggle.uncheck()
   await expect.poll(async () => (await saved(page)).settings.fastTrack).toBe(false)
@@ -129,7 +130,7 @@ test('turning the fast-track off in settings: the S word comes as a meaning card
   await page.goto('./#/level/5')
   await expect(page.locator('.fast-count')).toContainText('한자어 빠른 통과가 꺼져 있어요')
   await page.goto('./#/settings')
-  await page.getByRole('checkbox', { name: /한자어 빠른 통과/ }).check()
+  await page.getByRole('switch', { name: /한자어 빠른 통과/ }).check()
   await page.goto('./#/study')
   await expect(page.locator('.flash.reading-card')).toBeVisible()
 })

@@ -6,6 +6,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Circle,
+  CircleCheck,
+  CircleX,
   Flame,
   House,
   Info,
@@ -35,6 +37,8 @@ const ICONS = {
   circle: Circle,
   chart: ChartColumn,
   alert: TriangleAlert,
+  error: CircleX,
+  success: CircleCheck,
 } satisfies Record<string, LucideIcon>
 
 export type IconName = keyof typeof ICONS

@@ -1,6 +1,7 @@
 import { COUNTS, LEVELS, type Level } from '../data'
 import type { Breakdown } from '../srs'
 import { Icon } from './Icon'
+import { Badge } from './ui'
 
 export function StageBar({ b, total }: { b: Breakdown; total: number }) {
   return (
@@ -34,7 +35,7 @@ export function LevelList({ all, target }: { all: Record<Level, Breakdown>; targ
           >
             <div className="level-name">
               <b>N{l}</b>
-              {l === target && <span className="chip accent">목표</span>}
+              {l === target && <Badge variant="blue" label="목표" />}
             </div>
             <StageBar b={all[l]} total={COUNTS[l]} />
             <span className="level-count">

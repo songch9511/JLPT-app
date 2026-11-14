@@ -4,10 +4,10 @@ import { answer, currentWord, NOW, open, READ_MS, saved, todayLog, user } from '
 test('onboarding → home → a full day of study → done screen → home', async ({ page }) => {
   await open(page)
   await expect(page.getByRole('heading', { name: /잊기 전에 한 겹 더/ })).toBeVisible()
-  await page.getByRole('button', { name: 'N4' }).click()
+  await page.getByRole('radio', { name: 'N4' }).click()
   // a new learner studies the lower level too, unless they turn it off
-  await expect(page.getByRole('checkbox', { name: /아래 급수 단어도 함께 \(N5\)/ })).toBeChecked()
-  await page.getByRole('button', { name: '10개' }).click()
+  await expect(page.getByRole('switch', { name: /아래 급수 단어도 함께 \(N5\)/ })).toBeChecked()
+  await page.getByRole('radio', { name: '10개' }).click()
   await expect(page.getByText('JLPT 주최 기관(JF·JEES)과 관계없는 비공식 학습 앱이에요.')).toBeVisible()
   await page.getByRole('button', { name: '시작하기' }).click()
 
@@ -227,7 +227,7 @@ test('two open tabs do not overwrite each other’s progress', async ({ page, co
   await other.goto('./#/settings')
   await expect(other.getByRole('heading', { name: '설정' })).toBeVisible()
   for (let i = 0; i < 3; i++) await answer(page, '쉬워요')
-  await other.getByRole('button', { name: '다크' }).click()
+  await other.getByRole('radio', { name: '다크' }).click()
   await expect(other.locator('html')).toHaveAttribute('data-theme', 'dark')
   const s = await saved(page)
   expect(Object.keys(s.cards)).toHaveLength(3)
@@ -249,6 +249,7 @@ test.describe('progress bar', () => {
     await expect(bar).toHaveAttribute('aria-valuenow', '3')
     await expect(bar).toHaveAttribute('aria-valuemax', '5')
     await expect(page.locator('.left-count')).toHaveText('남은 2장')
+    // the visible share: the fill's width inside the track
     const fill = await bar.locator('i').evaluate((el) => el.getBoundingClientRect().width / el.parentElement!.getBoundingClientRect().width)
     expect(fill).toBeCloseTo(0.6, 1)
     // the old three-colour count row is gone
@@ -271,10 +272,11 @@ test.describe('a forgotten card', () => {
     await page.addInitScript(spy)
     await open(page, { state: user({ dailyNew: 5 }) })
     await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
-    await expect(page.locator('.flash .chip')).toHaveText('새 단어')
+    await expect(page.locator('.flash-head')).toHaveText('새 단어')
     await expect(page.locator('.flash')).not.toHaveClass(/missed/)
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
-    await expect(page.locator('.flash .chip')).toHaveText('다시 나와요 · 1분')
+    await expect(page.locator('.flash-head').getByRole('status').filter({ hasText: '다시 나와요' })).toHaveText('다시 나와요 · 1분')
+    await expect(page.locator('.flash-head')).not.toContainText('새 단어')
     await expect(page.locator('.flash')).toHaveClass(/missed/)
     expect(await spoken(page)).toEqual([])
   })
@@ -342,11 +344,13 @@ test('at 320px the three answer buttons stay on one line each', async ({ page })
   await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
   await expect(page.locator('.flash')).toBeVisible()
   await page.waitForTimeout(400) // let the card's slide-in finish
-  for (const b of await page.locator('.answer-bar .btn').all()) {
-    // the label is the first text node; one client rect = one line
+  const buttons = await page.locator('.answer-bar').getByRole('button').all()
+  expect(buttons.length).toBeGreaterThan(0)
+  for (const b of buttons) {
+    // the visible label; one client rect = one line
     const h = await b.evaluate((el) => {
       const r = document.createRange()
-      r.selectNodeContents(el.firstChild!)
+      r.selectNodeContents(el.querySelector('.grade-label')!)
       return r.getClientRects().length
     })
     expect(h).toBe(1)
@@ -360,7 +364,8 @@ test.describe('two-step answering (05 batch 2)', () => {
     await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
     const bar = page.locator('.answer-bar')
     await expect(bar.getByRole('button')).toHaveText(['모르겠어요', '정답 보기'])
-    await expect(bar.locator('.btn.primary')).toHaveText('정답 보기')
+    // the one primary of the group (Astryx Button reflects its variant as data-variant)
+    await expect(bar.locator('button[data-variant="primary"]')).toHaveText('정답 보기')
     await expect(page.getByRole('button', { name: /^알아요/ })).toHaveCount(0)
     // the grade keys do nothing before the answer is shown
     await page.keyboard.press('2')
@@ -371,10 +376,10 @@ test.describe('two-step answering (05 batch 2)', () => {
     await bar.getByRole('button', { name: '정답 보기' }).click()
     await expect(page.locator('.flash-meaning')).toBeVisible()
     await expect(bar.getByRole('button')).toHaveCount(3)
-    await expect(bar.locator('.btn.primary')).toHaveCount(1)
-    await expect(bar.locator('.btn.primary')).toContainText('알아요')
+    await expect(bar.locator('button[data-variant="primary"]')).toHaveCount(1)
+    await expect(bar.locator('button[data-variant="primary"]')).toContainText('알아요')
     // same height on both steps, so the thumb does not move
-    expect(await bar.locator('.btn').first().evaluate((el) => el.getBoundingClientRect().height)).toBe(60)
+    expect(await bar.getByRole('button').first().evaluate((el) => el.getBoundingClientRect().height)).toBe(60)
   })
 
   test('number keys: Space shows, 2 answers 알아요, 1 on the front is 모르겠어요, 3 answers 쉬워요', async ({ page }) => {
@@ -413,7 +418,7 @@ test.describe('two-step answering (05 batch 2)', () => {
     await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
     const first = await currentWord(page)
     await answer(page, '쉬워요')
-    await page.locator('.undo-chip').click()
+    await page.getByRole('button', { name: '되돌리기', exact: true }).click()
     await expect(page.locator('.flash-word')).toHaveText(first)
     expect(await todayLog(page)).toBeUndefined()
   })

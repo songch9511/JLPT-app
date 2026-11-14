@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
+import { Badge, Button, Card, ChipGroup, Empty, IconButton } from '../components/ui'
 import { WordSheet } from '../components/WordSheet'
 import { inGroup, TypeFilter, TYPE_GROUPS, type TypeGroup } from '../components/TypeFilter'
 import { COUNTS, meaning, useLevel, type Level, type Word } from '../data'
@@ -8,6 +9,11 @@ import { update, useStore } from '../store'
 import { StageBar } from '../components/LevelList'
 
 const PAGE = 100
+
+/** A word's memory stage in words, with its stage colour as a small mark (never colour alone, 05 §2.5). */
+function StageTag({ stage }: { stage: Stage }) {
+  return <span className={`tag stage-tag ${stage}`}>{STAGE_LABEL[stage]}</span>
+}
 const FILTERS: ('all' | Stage)[] = ['all', 'learning', 'young', 'mature', 'new']
 
 export function LevelScreen({ level }: { level: Level }) {
@@ -33,23 +39,19 @@ export function LevelScreen({ level }: { level: Level }) {
   return (
     <>
       <header className="top">
-        <a className="icon-btn" href="#/words" aria-label="뒤로">
-          <Icon name="back" />
-        </a>
+        <IconButton label="뒤로" href="#/words" icon={<Icon name="back" />} />
         <div className="grow">
           <h1>JLPT N{level}</h1>
-          <p className="muted">단어 {COUNTS[level].toLocaleString()}개</p>
+          <p className="subtitle">단어 {COUNTS[level].toLocaleString()}개</p>
         </div>
         {isTarget ? (
-          <span className="chip accent">목표 급수</span>
+          <Badge variant="blue" label="목표 급수" />
         ) : (
-          <button className="btn ghost" onClick={() => update((d) => void (d.settings.target = level))}>
-            목표로 설정
-          </button>
+          <Button label="목표로 설정" size="sm" onClick={() => update((d) => void (d.settings.target = level))} />
         )}
       </header>
 
-      <section className="card">
+      <Card>
         {words && (
           <p className="fast-count">
             {s.settings.fastTrack ? (
@@ -71,23 +73,17 @@ export function LevelScreen({ level }: { level: Level }) {
             </div>
           ))}
         </div>
-      </section>
+      </Card>
 
-      <div className="seg scroll">
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            className={filter === f ? 'on' : ''}
-            aria-pressed={filter === f}
-            onClick={() => {
-              setFilter(f)
-              setShown(PAGE)
-            }}
-          >
-            {f === 'all' ? '전체' : STAGE_LABEL[f]}
-          </button>
-        ))}
-      </div>
+      <ChipGroup
+        label="기억 단계"
+        value={filter}
+        options={FILTERS.map((f) => [f, f === 'all' ? '전체' : STAGE_LABEL[f]])}
+        onChange={(f) => {
+          setFilter(f)
+          setShown(PAGE)
+        }}
+      />
 
       <TypeFilter
         value={type}
@@ -107,17 +103,13 @@ export function LevelScreen({ level }: { level: Level }) {
               {w.r && <span lang="ja">{w.r}</span>}
             </span>
             <span className="word-meaning">{meaning(w)}</span>
-            <span className={`dot ${wordStage(s, w.id)}`} />
+            <StageTag stage={wordStage(s, w.id)} />
           </button>
         ))}
       </div>
-      {words && list.length === 0 && <p className="empty">여기에 해당하는 단어가 아직 없어요.</p>}
-      {list.length > shown && (
-        <button className="btn ghost" onClick={() => setShown(shown + PAGE)}>
-          더 보기 ({list.length - shown}개 남음)
-        </button>
-      )}
-      {open && <WordSheet word={open} onClose={() => setOpen(null)} />}
+      {words && list.length === 0 && <Empty title="여기에 해당하는 단어가 아직 없어요." description="다른 기억 단계나 단어 유형을 골라 보세요." />}
+      {list.length > shown && <Button label={`더 보기 (${list.length - shown}개 남음)`} width="100%" onClick={() => setShown(shown + PAGE)} />}
+      <WordSheet word={open} onClose={() => setOpen(null)} />
     </>
   )
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Ruma } from '../components/Ruma'
+import { Button, ChipGroup, Choice, Switch } from '../components/ui'
 import { LEVELS, type Level } from '../data'
 import { update } from '../store'
 import { formatDay, upcomingExams } from '../util'
@@ -32,56 +33,40 @@ export function Onboarding() {
       </ol>
 
       <div className="form">
-        <label>목표 급수</label>
-        <div className="seg">
-          {LEVELS.map((l) => (
-            <button key={l} className={target === l ? 'on' : ''} aria-pressed={target === l} onClick={() => setTarget(l)}>
-              N{l}
-            </button>
-          ))}
-        </div>
+        <p className="field-label">목표 급수</p>
+        <Choice label="목표 급수" value={target} options={LEVELS.map((l) => [l, `N${l}`])} onChange={setTarget} />
         {target < 5 && (
-          <label className="switch">
-            <span>
-              아래 급수 단어도 함께 (N{LEVELS.filter((l) => l > target).join('·N')})
-              <small className="muted">시험은 아래 급수 단어를 안다고 보고 나와요. 쉬운 급수부터 새 단어가 나와요.</small>
-            </span>
-            <input type="checkbox" checked={lower} onChange={(e) => setLower(e.target.checked)} />
-          </label>
+          <Switch
+            label={`아래 급수 단어도 함께 (N${LEVELS.filter((l) => l > target).join('·N')})`}
+            description="시험은 아래 급수 단어를 안다고 보고 나와요. 쉬운 급수부터 새 단어가 나와요."
+            value={lower}
+            onChange={setLower}
+          />
         )}
-        <label>하루 새 단어</label>
-        <div className="seg">
-          {[10, 20, 30].map((n) => (
-            <button key={n} className={daily === n ? 'on' : ''} aria-pressed={daily === n} onClick={() => setDaily(n)}>
-              {n}개
-            </button>
-          ))}
-        </div>
-        <label>시험일</label>
-        <div className="chips">
-          {exams.map((d) => (
-            <button key={d} className={`chip-btn ${exam === d ? 'on' : ''}`} aria-pressed={exam === d} onClick={() => setExam(d)}>
-              {formatDay(d)}
-            </button>
-          ))}
-        </div>
+        <p className="field-label">하루 새 단어</p>
+        <Choice label="하루 새 단어" value={daily} options={[10, 20, 30].map((n) => [n, `${n}개`])} onChange={setDaily} />
+        <p className="field-label">시험일</p>
+        <ChipGroup label="시험일" value={exam} options={exams.map((d) => [d, formatDay(d)])} onChange={setExam} />
       </div>
 
-      <button
-        className="btn primary big"
-        onClick={() =>
-          update((d) => {
-            d.settings.target = target
-            d.settings.examDate = exam
-            d.settings.dailyNew = daily
-            d.settings.includeLower = lower
-            d.onboarded = true
-          })
-        }
-      >
-        시작하기
-      </button>
-      <p className="onboard-note">JLPT 주최 기관(JF·JEES)과 관계없는 비공식 학습 앱이에요.</p>
+      <div className="onboard-action">
+        <Button
+          label="시작하기"
+          variant="primary"
+          size="lg"
+          width="100%"
+          onClick={() =>
+            update((d) => {
+              d.settings.target = target
+              d.settings.examDate = exam
+              d.settings.dailyNew = daily
+              d.settings.includeLower = lower
+              d.onboarded = true
+            })
+          }
+        />
+        <p className="onboard-note">JLPT 주최 기관(JF·JEES)과 관계없는 비공식 학습 앱이에요.</p>
+      </div>
     </div>
   )
 }

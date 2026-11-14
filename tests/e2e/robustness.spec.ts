@@ -68,7 +68,7 @@ test.describe('saving fails', () => {
       }
     }, KEY)
     await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
-    const warning = page.locator('.save-warning')
+    const warning = page.getByRole('alert')
     await failSaves(page, true)
     await answerEasy(page, 4)
     await expect(warning).toBeVisible()
@@ -95,8 +95,8 @@ test.describe('saving fails', () => {
 test.describe('backups', () => {
   test('import can be undone in the same session', async ({ page }) => {
     await open(page, { state: user({}, { xp: 5 }), hash: '/settings' })
-    page.once('dialog', (d) => d.accept())
     await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(user({ target: 3 }, { xp: 999 }))) })
+    await page.getByRole('button', { name: '백업으로 바꾸기' }).click()
     await expect(page.getByText('백업 파일의 기록으로 바꿨어요.')).toBeVisible()
     expect((await saved(page)).xp).toBe(999)
     expect(JSON.parse((await page.evaluate(() => localStorage.getItem('kasane.state.prev')))!).xp).toBe(5)
@@ -104,7 +104,7 @@ test.describe('backups', () => {
     await page.getByRole('button', { name: '가져오기 되돌리기' }).click()
     await expect(page.getByText('백업 파일의 기록으로 바꿨어요.')).toBeHidden()
     expect((await saved(page)).xp).toBe(5)
-    await expect(page.getByRole('button', { name: 'N5' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('radio', { name: 'N5' })).toBeChecked()
   })
 
   test('export is versioned and a versioned file imports; a newer format is refused', async ({ page }) => {
@@ -115,14 +115,13 @@ test.describe('backups', () => {
     expect(typeof body.app).toBe('string')
     await expect(page.getByText('마지막 백업: 2026년 11월 13일')).toBeVisible()
 
-    const newer = page.waitForEvent('dialog')
     await page.locator('input[type=file]').setInputFiles({ name: 'n.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, formatVersion: 3, xp: 1 })) })
-    const d = await newer
-    expect(d.message()).toContain('더 새로운 버전')
-    await d.accept()
+    const d = page.getByRole('dialog', { name: '가져오지 못했어요' })
+    await expect(d).toContainText('더 새로운 버전')
+    await d.getByRole('button', { name: '확인' }).click()
 
-    page.once('dialog', (x) => x.accept())
     await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, xp: 78 })) })
+    await page.getByRole('button', { name: '백업으로 바꾸기' }).click()
     await expect.poll(async () => (await saved(page)).xp).toBe(78)
     const s = await saved(page)
     for (const k of ['format', 'formatVersion', 'app', 'exportedAt']) expect(s).not.toHaveProperty(k)

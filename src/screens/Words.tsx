@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Icon } from '../components/Icon'
 import { LevelList } from '../components/LevelList'
+import { Choice, Empty, SearchField } from '../components/ui'
 import { inGroup, TypeFilter, type TypeGroup } from '../components/TypeFilter'
 import { WordSheet } from '../components/WordSheet'
 import { meaning, useAllWords, type Word } from '../data'
@@ -17,7 +17,7 @@ function Row({ w, onOpen, extra }: { w: Word; onOpen: (w: Word) => void; extra?:
         {w.r && <span lang="ja">{w.r}</span>}
       </span>
       <span className="word-meaning">{meaning(w)}</span>
-      <span className="chip">{extra ?? `N${w.level}`}</span>
+      <span className="tag">{extra ?? `N${w.level}`}</span>
     </button>
   )
 }
@@ -59,41 +59,28 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
       <header className="top">
         <h1>단어장</h1>
       </header>
-      <div className="seg">
-        {(
-          [
-            ['search', '검색'],
-            ['marks', `북마크 ${marks.length || ''}`],
-            ['weak', `약한 단어 ${weak.length || ''}`],
-          ] as [Tab, string][]
-        ).map(([k, label]) => (
-          <button key={k} className={tab === k ? 'on' : ''} aria-pressed={tab === k} onClick={() => setTab(k)}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <Choice
+        label="단어 목록"
+        value={tab}
+        options={[
+          ['search', '검색'],
+          ['marks', `북마크 ${marks.length || ''}`.trim()],
+          ['weak', `약한 단어 ${weak.length || ''}`.trim()],
+        ]}
+        onChange={setTab}
+      />
       <TypeFilter value={type} onChange={setType} />
 
       {tab === 'search' && (
         <>
-          <label className="search">
-            <Icon name="search" size={20} />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="일본어, 읽기, 뜻으로 검색"
-              aria-label="단어 검색"
-              autoCapitalize="off"
-              autoCorrect="off"
-            />
-          </label>
+          <SearchField label="단어 검색" value={q} onChange={setQ} placeholder="일본어, 읽기, 뜻으로 검색" />
           <div className="word-list">
             {results.map((w) => (
               <Row key={w.id} w={w} onOpen={setOpen} />
             ))}
           </div>
-          {!q.trim() && type === 'all' && <p className="empty">N5부터 N1까지 8,130개 단어에서 찾아요.</p>}
-          {(q.trim() || type !== 'all') && all && results.length === 0 && <p className="empty">찾는 단어가 없어요.</p>}
+          {!q.trim() && type === 'all' && <p className="hint center">N5부터 N1까지 8,130개 단어에서 찾아요.</p>}
+          {(q.trim() || type !== 'all') && all && results.length === 0 && <Empty title="찾는 단어가 없어요." description="다른 표기나 뜻으로 찾아보세요." />}
         </>
       )}
 
@@ -104,7 +91,7 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
               <Row key={w.id} w={w} onOpen={setOpen} />
             ))}
           </div>
-          {marks.length === 0 && <p className="empty">카드의 북마크 버튼으로 따로 모아 둘 단어를 담아 보세요.</p>}
+          {marks.length === 0 && <Empty title="북마크한 단어가 없어요." description="학습 카드나 단어 정보의 책갈피를 누르면 여기 모여요." />}
         </>
       )}
 
@@ -115,13 +102,13 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
               <Row key={w.id} w={w} onOpen={setOpen} extra={`${wordLapses({ cards, settings: { fastTrack } }, w.id)}번 잊음`} />
             ))}
           </div>
-          {weak.length === 0 && <p className="empty">복습에서 두 번 이상 잊어버린 단어가 여기에 모여요.</p>}
+          {weak.length === 0 && <Empty title="약한 단어가 없어요." description="복습에서 두 번 이상 잊어버린 단어가 여기에 모여요." />}
         </>
       )}
 
       <LevelList all={levels} target={target} />
 
-      {open && <WordSheet word={open} onClose={() => setOpen(null)} />}
+      <WordSheet word={open} onClose={() => setOpen(null)} />
     </>
   )
 }
