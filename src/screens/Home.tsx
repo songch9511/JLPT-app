@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BottomSheet } from '@astryxdesign/core/BottomSheet'
-import { Button } from '@astryxdesign/core/Button'
-import { Card } from '@astryxdesign/core/Card'
-import { IconButton } from '@astryxdesign/core/IconButton'
-import { ProgressBar } from '@astryxdesign/core/ProgressBar'
 import { go } from '../App'
+import { Button, Card, IconButton, ProgressBar, Sheet } from '../components/ui'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
 import { BackupNudge } from '../components/Notices'
@@ -104,11 +100,10 @@ function ReadinessCard({ r, onInfo }: { r: Readiness; onInfo: () => void }) {
       <ProgressBar
         className="ready-bar"
         label="계획대로 했을 때 시험날 기억할 단어"
-        isLabelHidden
         value={plan}
         max={r.total}
-        formatValueLabel={(v, max) => `${max}개 중 ${v}개, 목표 ${r.goalWords}개`}
-        marks={[{ value: r.goalWords, label: `목표 ${r.goalWords.toLocaleString()}개` }]}
+        valueText={`${r.total}개 중 ${plan}개, 목표 ${r.goalWords}개`}
+        mark={r.goalWords}
       />
       <p className="ready-goal muted small">
         목표 {r.goalWords.toLocaleString()} ({Math.round(r.goal * 100)}%)
@@ -131,13 +126,13 @@ function ReadinessCard({ r, onInfo }: { r: Readiness; onInfo: () => void }) {
 /** 03 §7.3: what the number is and what it cannot say. */
 function ReadinessSheet({ r, isOpen, onClose }: { r: Readiness; isOpen: boolean; onClose: () => void }) {
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={(open) => !open && onClose()} label="이 숫자는 무엇인가요?" height="hug">
+    <Sheet isOpen={isOpen} onClose={onClose} label="이 숫자는 무엇인가요?">
       <div className="sheet info-sheet">
         <div className="sheet-head">
           <h2 id="ready-help" className="grow">
             이 숫자는 무엇인가요?
           </h2>
-          <IconButton label="닫기" variant="ghost" icon={<Icon name="close" />} onClick={onClose} />
+          <IconButton label="닫기" icon={<Icon name="close" />} onClick={onClose} />
         </div>
         <ul className="help-list">
           <li>
@@ -155,7 +150,7 @@ function ReadinessSheet({ r, isOpen, onClose }: { r: Readiness; isOpen: boolean;
           <li>목표 {Math.round(r.goal * 100)}%는 합격선에서 나온 숫자가 아니라 앱이 정한 기준이에요. 설정에서 바꿀 수 있어요.</li>
         </ul>
       </div>
-    </BottomSheet>
+    </Sheet>
   )
 }
 

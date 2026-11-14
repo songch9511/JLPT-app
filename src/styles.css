@@ -36,7 +36,6 @@
   .hint { font-size: var(--text-supporting-size); color: var(--color-text-secondary); font-weight: var(--font-weight-normal); line-height: 1.5; }
   .eyebrow { font-size: var(--font-size-base); font-weight: 700; color: var(--color-text-accent); letter-spacing: 0.04em; }
   .error { color: var(--color-text-error); font-size: var(--font-size-base); }
-  .empty { padding: var(--spacing-6) 0; text-wrap: balance; }
 
   /* ── page frame: 16px sides (or the safe area), cards 12px apart, room for the tab bar ── */
   .app, .study, .onboard { max-width: 520px; margin: 0 auto; }
@@ -48,7 +47,9 @@
   .top > div:first-child, .top .grow { flex: 1; min-width: 0; }
   .subtitle { color: var(--color-text-secondary); font-size: var(--font-size-base); }
 
-  /* ── surfaces: Astryx Card (1px line, no shadow); the title row inside ── */
+  /* ── surfaces: a card (ui.tsx Card) is a 1px line, no shadow; 16px inside including the line ── */
+  .card { min-width: 0; background: var(--color-background-card); border: 1px solid var(--color-border); border-radius: var(--radius-container); padding: calc(var(--spacing-4) - 1px); }
+  .card.pad-3 { padding: calc(var(--spacing-3) - 1px); }
   .card-title { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-2); margin-bottom: var(--spacing-3); font-size: var(--text-heading-3-size); font-weight: 700; line-height: 1.4; }
   .card-title .muted { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); }
   .notice { font-size: var(--font-size-base); background: var(--color-background-muted); border-radius: var(--radius-element); padding: 10px var(--spacing-3); }
@@ -64,34 +65,122 @@
   .stage-tag.learning::before { background: var(--ruma-stage-learning); }
   .stage-tag.new::before { background: none; box-shadow: inset 0 0 0 1.5px var(--color-border-emphasized); }
 
-  /* ── pressable controls (Astryx Button / IconButton / ToggleButton): the ruma theme gives them a flat face and a
-     shallow edge; pressing sinks the face onto it. One primary per group. ── */
-  .astryx-button, .astryx-toggle-button { transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard); }
-  .astryx-button:not([data-variant='ghost'], [aria-disabled='true']) { margin-bottom: var(--ruma-depth); }
-  .astryx-button:not([data-variant='ghost'], [aria-disabled='true']):active { transform: translateY(var(--ruma-depth)); box-shadow: 0 0 0 transparent; }
-  .astryx-button[aria-disabled='true'] { box-shadow: none; margin-bottom: var(--ruma-depth); }
-  /* ghost icon buttons are quiet (secondary ink, from the theme); a bookmark that is on turns gold */
-  .astryx-button[data-variant='ghost'].marked { color: var(--ruma-gold-icon); }
-  /* Lucide icons keep the size the app asks for (22 by default, 16–20 beside text); Astryx would draw them at 16 */
-  .astryx-button svg.lucide[width='22'] { width: 22px; height: 22px; }
-  .astryx-button svg.lucide[width='20'] { width: 20px; height: 20px; }
-  .astryx-button svg.lucide[width='18'] { width: 18px; height: 18px; }
-  .astryx-button svg.lucide[width='16'] { width: 16px; height: 16px; }
-  /* a text action ("바꾸기 ›", "되돌리기"): the accent ink, no box, still a 44px target */
-  .astryx-button.text-action { color: var(--color-text-accent); padding-inline: var(--spacing-2); font-size: var(--font-size-base); }
-  /* chips: Astryx ToggleButton as a pill with a hairline; on = the 白藍 tint and 藍 ink. Styled here, not in the theme:
-     a ToggleButton renders as a ghost button, and the theme build's pressed-state selector does not match in 0.7.15 */
-  .astryx-toggle-button.astryx-button {
-    min-height: 40px; padding-inline: 14px; border-radius: var(--radius-full); background: var(--color-background-surface);
-    color: var(--color-text-primary); box-shadow: inset 0 0 0 1px var(--color-border); font-weight: var(--font-weight-medium);
+  /* ── pressable controls (ui.tsx Button / IconButton): a flat face on a shallow 3px edge; pressing sinks the face
+     onto it. One primary per group. Platform screens (src/platform/) use `.btn` / `.btn.primary` on plain buttons. ── */
+  .btn {
+    --face: var(--color-background-surface); --edge: var(--ruma-edge); --ink: var(--color-text-primary); --line: var(--color-border);
+    position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--spacing-2);
+    min-height: var(--size-element-md); padding: var(--spacing-2) var(--spacing-3); margin-bottom: var(--ruma-depth);
+    border-radius: var(--radius-element); background: var(--face); color: var(--ink);
+    font: inherit; font-size: var(--font-size-lg); font-weight: 700; line-height: 1.4; text-align: center; text-decoration: none; cursor: pointer;
+    box-shadow: 0 var(--ruma-depth) 0 var(--edge), inset 0 0 0 1px var(--line);
+    transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
   }
-  .astryx-toggle-button.astryx-button[aria-pressed='true'] {
-    background: var(--color-accent-muted); color: var(--color-text-accent); box-shadow: inset 0 0 0 1px var(--color-accent); font-weight: 700;
+  .btn:active:not([aria-disabled='true']) { transform: translateY(var(--ruma-depth)); box-shadow: 0 0 0 var(--edge), inset 0 0 0 1px var(--line); background-image: linear-gradient(var(--color-overlay-pressed), var(--color-overlay-pressed)); }
+  @media (hover: hover) { .btn:hover:not([aria-disabled='true'], :active) { background-image: linear-gradient(var(--color-overlay-hover), var(--color-overlay-hover)); } }
+  .btn[data-size='sm'] { min-height: var(--size-element-sm); font-size: var(--font-size-base); }
+  .btn[data-size='lg'] { min-height: var(--size-element-lg); }
+  .btn.full { display: flex; width: 100%; }
+  .btn.primary, .btn[data-variant='primary'] { --face: var(--color-accent); --edge: var(--ruma-edge-accent); --ink: var(--color-on-accent); --line: transparent; }
+  /* destructive: a soft vermilion face (朱 on 桜), never the filled primary; still pressable */
+  .btn[data-variant='destructive'] { --face: var(--color-error-muted); --edge: color-mix(in srgb, var(--color-error) 40%, var(--color-error-muted)); --ink: var(--color-text-error); --line: transparent; }
+  .btn[data-variant='ghost'] { --face: transparent; --edge: transparent; --ink: var(--color-icon-secondary); --line: transparent; margin-bottom: 0; }
+  .btn[data-variant='ghost']:active { transform: none; }
+  .btn[aria-disabled='true'] { opacity: 0.5; cursor: default; box-shadow: none; }
+  /* an icon-only button: a 44px square in the quiet ink; a bookmark that is on turns gold */
+  .icon-btn { flex: none; width: var(--size-element-md); padding: 0; }
+  .icon-btn.marked { --ink: var(--ruma-gold-icon); }
+  /* a text action ("바꾸기 ›", "되돌리기", "백업하기"): the accent ink, no box, still a 44px target */
+  .btn.text-action { --ink: var(--color-text-accent); padding-inline: var(--spacing-2); font-size: var(--font-size-base); gap: var(--spacing-1); }
+  /* chips: pills with a hairline; on = the 白藍 tint and 藍 ink. 40px tall, with 2px of invisible target above and below */
+  .chip, .chip-btn {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: var(--spacing-2) 14px;
+    border-radius: var(--radius-full); background: var(--color-background-surface); color: var(--color-text-primary);
+    box-shadow: inset 0 0 0 1px var(--color-border); font: inherit; font-size: var(--font-size-base); font-weight: var(--font-weight-medium); line-height: 1.4;
+    cursor: pointer; white-space: nowrap; transition: background-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
   }
+  .chip::after, .chip-btn::after { content: ''; position: absolute; inset: -2px 0; }
+  .chip[aria-pressed='true'], .chip-btn.on { background: var(--color-accent-muted); color: var(--color-text-accent); box-shadow: inset 0 0 0 1px var(--color-accent); font-weight: 700; }
+  .chip:active { background-image: linear-gradient(var(--color-overlay-pressed), var(--color-overlay-pressed)); }
   .chips { display: flex; flex-wrap: wrap; gap: var(--spacing-2); }
   .chips.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: calc(-1 * var(--spacing-1)) calc(-1 * var(--spacing-4)) 0; padding: var(--spacing-1) var(--spacing-4); }
   .chips.scroll::-webkit-scrollbar { display: none; }
-  .chips.scroll .astryx-toggle-button { flex: none; }
+  .chips.scroll .chip { flex: none; }
+
+  /* a segmented control (ui.tsx Choice): the chosen segment is a raised surface with the accent ink */
+  .segmented { display: flex; gap: 2px; padding: 2px; min-height: var(--size-element-md); border-radius: var(--radius-element); background: var(--color-neutral); }
+  .segmented > button {
+    flex: 1 1 0; min-width: 0; min-height: 40px; padding: 0 var(--spacing-3); border-radius: 10px; color: var(--color-text-secondary);
+    font: inherit; font-size: var(--font-size-base); font-weight: var(--font-weight-medium); line-height: 1.4; cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+  .segmented > button[aria-checked='true'] { background: var(--color-background-surface); color: var(--color-text-accent); font-weight: 700; }
+  .segmented > button:active:not([aria-checked='true']) { background: var(--color-overlay-pressed); }
+
+  /* a switch (ui.tsx Switch): the whole row toggles; off track 3:1 against the card, on = 藍 */
+  .switch-field { display: flex; align-items: center; gap: var(--spacing-2); cursor: pointer; }
+  .switch-label { display: block; font-size: var(--text-label-size); font-weight: var(--font-weight-medium); line-height: 1.4; color: var(--color-text-secondary); }
+  .switch-desc { display: block; font-size: var(--font-size-base); font-weight: var(--font-weight-normal); line-height: 1.5; color: var(--color-text-secondary); }
+  .switch-input, .switch input {
+    flex: none; appearance: none; -webkit-appearance: none; position: relative; width: 40px; height: 24px; margin: 0; border-radius: var(--radius-full);
+    background: var(--color-border-emphasized); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+  .switch-input::after, .switch input::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: var(--radius-full);
+    background: var(--color-background-surface); transition: transform var(--duration-fast) var(--ease-standard);
+  }
+  /* the track is 24px; the target reaches 44px around it (the row's text is a target too) */
+  .switch-input::before { content: ''; position: absolute; inset: -10px -2px; }
+  .switch-input:checked, .switch input:checked { background: var(--color-accent); }
+  .switch-input:checked::after, .switch input:checked::after { transform: translateX(16px); }
+
+  /* the word search (ui.tsx SearchField) */
+  .search-field {
+    display: flex; align-items: center; gap: var(--spacing-2); min-height: var(--size-element-lg); padding: var(--spacing-1) var(--spacing-1) var(--spacing-1) 10px;
+    border: 1px solid var(--color-border-emphasized); border-radius: var(--radius-element); background: var(--color-background-surface); color: var(--color-icon-secondary);
+  }
+  .search-field:focus-within { border-color: var(--color-accent); box-shadow: inset 0 0 0 3px var(--color-accent-muted); }
+  .search-field input {
+    flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; background: none; outline: none; appearance: none; -webkit-appearance: none;
+    font: inherit; color: var(--color-text-primary);
+  }
+  .search-field input::placeholder { color: var(--color-text-secondary); }
+  .search-field input::-webkit-search-cancel-button { display: none; }
+  .search-clear { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-inner); color: var(--color-icon-secondary); cursor: pointer; }
+
+  /* a plain progress bar (ui.tsx ProgressBar): no highlight stripe */
+  .progress { position: relative; height: 8px; border-radius: var(--radius-full); background: var(--color-track); }
+  .progress > i { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); transition: width var(--duration-slow) var(--ease-standard); }
+
+  /* a small static label (ui.tsx Badge) */
+  .badge {
+    display: inline-flex; align-items: center; min-height: 21px; padding: 0 var(--spacing-2); border-radius: var(--radius-full);
+    font-size: var(--font-size-base); font-weight: var(--font-weight-medium); line-height: 1.5; white-space: nowrap;
+    background: var(--color-neutral); color: var(--color-text-primary);
+  }
+  .badge[data-variant='blue'] { background: var(--color-background-blue); color: var(--color-text-blue); }
+  .badge[data-variant='red'] { background: var(--color-background-red); color: var(--color-text-red); }
+
+  /* a lasting notice (ui.tsx Banner) */
+  .banner { border: 1px solid var(--color-border); border-radius: var(--radius-container); background: var(--color-background-surface); overflow: hidden; }
+  .banner-head { display: flex; align-items: flex-start; gap: var(--spacing-2); padding: 10px var(--spacing-1) var(--spacing-3) var(--spacing-4); }
+  .banner-head > svg { flex: none; margin-top: 2px; }
+  .banner-head .icon-btn { margin: calc(-1 * var(--spacing-2)) 0; }
+  .banner[data-status='error'] .banner-head { background: var(--color-error-muted); color: var(--color-text-error); }
+  .banner[data-status='success'] .banner-head { background: var(--color-success-muted); color: var(--color-text-success); }
+  .banner-title { font-size: var(--font-size-base); font-weight: 700; line-height: 1.5; color: inherit; }
+  .banner-desc { font-size: var(--font-size-base); line-height: 1.5; color: inherit; }
+  .banner-actions { display: flex; justify-content: flex-end; padding: var(--spacing-3) var(--spacing-4) var(--spacing-1); }
+  .banner .text-action { margin: calc(-1 * var(--spacing-2)) calc(-1 * var(--spacing-2)) 0 0; }
+
+  /* nothing here yet (ui.tsx Empty) */
+  .empty { display: flex; flex-direction: column; align-items: center; padding: 40px var(--spacing-4); text-align: center; text-wrap: balance; }
+  .empty h2 { font-size: var(--font-size-base); font-weight: 700; line-height: 1.3; }
+  .empty p { font-size: var(--font-size-base); font-weight: var(--font-weight-normal); line-height: 1.5; color: var(--color-text-secondary); }
+
+  /* loading placeholders (ui.tsx Skeleton): a slow pulse, still under reduced motion */
+  .skeleton-block { display: block; border-radius: var(--radius-inner); background: var(--color-skeleton); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.5; } }
 
   /* ── forms ── */
   .form { display: flex; flex-direction: column; gap: 10px; }
@@ -109,6 +198,11 @@
   .credits { display: flex; flex-direction: column; gap: var(--spacing-1); font-size: var(--font-size-base); color: var(--color-text-secondary); }
   .credits li::before { content: '· '; }
   .dialog-body { display: flex; flex-direction: column; gap: var(--spacing-4); padding-top: var(--spacing-2); }
+  /* the Astryx buttons inside the dialogs (overlays.tsx) press like ours: the theme gives the face and edge, the theme
+     build has no :active target */
+  .astryx-button { transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard); }
+  .astryx-button:not([data-variant='ghost'], [aria-disabled='true']) { margin-bottom: var(--ruma-depth); }
+  .astryx-button:not([data-variant='ghost'], [aria-disabled='true']):active { transform: translateY(var(--ruma-depth)); box-shadow: 0 0 0 transparent; }
 
   /* ── home ── */
   .home-head { display: flex; align-items: center; gap: var(--spacing-3); min-height: 44px; }
@@ -128,7 +222,7 @@
   .ready-figure .num { font-size: var(--font-size-3xl); }
   .ready-figure .muted { font-size: var(--font-size-lg); font-variant-numeric: tabular-nums; }
   /* the goal is a mark on the plain fill: a 2px ink tick reaching past the bar */
-  .ready-bar .astryx-progress-bar-mark { top: -4px; bottom: -4px; height: auto; transform: translateX(-50%); background: var(--color-text-primary); border-radius: 1px; }
+  .progress-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; transform: translateX(-50%); background: var(--color-text-primary); border-radius: 1px; }
   .ready-goal { text-align: right; margin-top: -2px; }
   .ready-split { font-size: var(--font-size-base); color: var(--color-text-secondary); }
   .ready-split .num { color: var(--color-text-primary); font-size: var(--font-size-lg); }
@@ -191,13 +285,12 @@
   /* notices: a quiet line on home, a floating error banner when saving fails */
   .nudge { display: flex; align-items: center; gap: 0; margin: calc(-1 * var(--spacing-2)) 0; padding-left: var(--spacing-1); }
   .nudge p { font-size: var(--font-size-base); color: var(--color-text-secondary); }
-  .nudge .astryx-button[data-variant='ghost']:not([aria-label]) { color: var(--color-text-accent); font-size: var(--font-size-base); }
   .save-warning {
     position: fixed; z-index: 20; left: 50%; transform: translateX(-50%);
     top: calc(env(safe-area-inset-top) + var(--spacing-2)); width: calc(100% - 16px); max-width: 504px;
     animation: drop-in var(--duration-medium) var(--ease-standard) both;
   }
-  .save-warning-actions { display: flex; justify-content: flex-end; }
+  .save-warning .banner { box-shadow: var(--shadow-med); }
   @keyframes drop-in { from { opacity: 0; transform: translate(-50%, -8px); } }
 
   /* ── records ── */
@@ -324,14 +417,14 @@
   .skeleton { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-4); background: var(--color-background-surface); border: 1px solid var(--color-border); border-radius: var(--radius-page); }
   .load-error { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-3); text-align: center; color: var(--color-text-secondary); }
   .undo-chip-row { display: flex; justify-content: center; padding: 0 0 var(--spacing-2); animation: fade var(--duration-medium) var(--ease-standard) both; }
-  .undo-chip.astryx-button { border-radius: var(--radius-full); font-weight: var(--font-weight-medium); background: var(--color-background-muted); color: var(--color-text-secondary); font-size: var(--font-size-base); padding-inline: 14px; }
+  .btn.undo-chip { --face: var(--color-background-muted); --ink: var(--color-text-secondary); border-radius: var(--radius-full); font-weight: var(--font-weight-medium); font-size: var(--font-size-base); padding-inline: 14px; gap: var(--spacing-1); }
   @keyframes fade { from { opacity: 0; } }
   /* the bar keeps its height and place between the two steps, so the thumb never moves */
   .answer-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 max(var(--spacing-4), env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + var(--spacing-3)) max(var(--spacing-4), env(safe-area-inset-left)); }
   .answer-bar.front { grid-template-columns: 1fr 2fr; }
   .answer-bar.three { grid-template-columns: 1fr 1.25fr 1fr; gap: var(--spacing-2); }
   .answer-bar .wide { grid-column: 1 / -1; }
-  .answer-bar .grade.astryx-button { height: 60px; min-height: 60px; width: 100%; max-width: none; padding: 0 6px; font-size: calc(var(--font-size-lg) * 0.9375); white-space: nowrap; }
+  .answer-bar .btn.grade { flex-direction: column; gap: 0; height: 60px; min-height: 60px; width: 100%; padding: 0 6px; font-size: calc(var(--font-size-lg) * 0.9375); line-height: 1.4; white-space: nowrap; }
   .grade-label { display: block; line-height: 1.25; }
   .grade small { display: block; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); line-height: 1.25; opacity: 0.8; color: inherit; }
   @media (max-width: 340px) { .answer-bar.three { grid-template-columns: 1fr 1.15fr 1fr; gap: 6px; } }
@@ -429,40 +522,21 @@
 
   /* small phones: keep the plan's start button within the first screen; segment labels keep their words */
   @media (max-width: 360px) {
-    .astryx-segmented-control-item { padding-inline: var(--spacing-1); }
+    .segmented > button { padding-inline: var(--spacing-1); }
     .streak small { display: none; }
     .readiness { gap: var(--spacing-1); }
     .ready-figure .num { font-size: var(--font-size-2xl); }
     .ready-goal { margin-top: -4px; }
   }
 
-  /* ── the iOS app's own settings (src/platform/NativeSettings.tsx, ReminderOffer.tsx) are plain elements; these classes
-     give them the same look as the Astryx controls above ── */
-  .card { background: var(--color-background-card); border: 1px solid var(--color-border); border-radius: var(--radius-container); padding: var(--spacing-4); }
-  .form > label:not(.switch), .form > h3 { font-size: var(--text-label-size); font-weight: 700; }
-  .form > label:not(.switch) { color: var(--color-text-secondary); margin-top: var(--spacing-1); }
+  /* ── the iOS app's own settings (src/platform/NativeSettings.tsx, ReminderOffer.tsx) are plain elements: they share
+     `.card`, `.btn`, `.chip-btn` and the switch track above; these give their labels the same look ── */
+  .form > label:not(.switch, .switch-field), .form > h3 { font-size: var(--text-label-size); font-weight: 700; }
+  .form > label:not(.switch, .switch-field) { color: var(--color-text-secondary); margin-top: var(--spacing-1); }
   .form > h3 { font-size: var(--text-heading-3-size); color: var(--color-text-primary); }
   .note { background: var(--color-accent-muted); border-radius: var(--radius-element); padding: 10px 14px; font-size: var(--font-size-base); }
   .switch { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-3); font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); color: var(--color-text-primary); }
   .switch small { display: block; font-size: var(--font-size-sm); margin-top: 2px; }
-  .switch input {
-    flex: none; appearance: none; -webkit-appearance: none; width: 40px; height: 24px; border-radius: var(--radius-full); margin: 0;
-    background: var(--color-border-emphasized); position: relative; transition: background var(--duration-fast) var(--ease-standard);
-  }
-  .switch input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: var(--radius-full); background: #fff; transition: transform var(--duration-fast) var(--ease-standard); }
-  .switch input:checked { background: var(--color-accent); }
-  .switch input:checked::after { transform: translateX(16px); }
-  .chip-btn { padding: var(--spacing-2) 14px; min-height: 40px; border-radius: var(--radius-full); border: 1px solid var(--color-border); font-size: var(--font-size-base); background: var(--color-background-surface); }
-  .chip-btn.on { border-color: var(--color-accent); background: var(--color-accent-muted); color: var(--color-text-accent); font-weight: 700; }
-  .btn {
-    --face: var(--color-background-surface); --edge: var(--ruma-edge); --ink: var(--color-text-primary);
-    display: inline-flex; align-items: center; justify-content: center; gap: var(--spacing-2); min-height: var(--size-element-md); padding: 0 18px;
-    border-radius: var(--radius-element); font-weight: 700; background: var(--face); color: var(--ink);
-    box-shadow: 0 var(--ruma-depth) 0 var(--edge), inset 0 0 0 1px var(--color-border); margin-bottom: var(--ruma-depth);
-    transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
-  }
-  .btn:active { transform: translateY(var(--ruma-depth)); box-shadow: 0 0 0 var(--edge); }
-  .btn.primary { --face: var(--color-accent); --edge: var(--ruma-edge-accent); --ink: var(--color-on-accent); box-shadow: 0 var(--ruma-depth) 0 var(--edge); }
   /* the licence notice sheet the iOS app builds by hand (showTextSheet in src/platform/native.ts) */
   .sheet-backdrop { position: fixed; inset: 0; z-index: 10; background: var(--color-overlay); display: flex; align-items: flex-end; justify-content: center; animation: fade var(--duration-fast) var(--ease-standard) both; }
   .sheet-backdrop > .sheet {

@@ -1,12 +1,10 @@
 import { useRef } from 'react'
-import { Badge } from '@astryxdesign/core/Badge'
-import { BottomSheet } from '@astryxdesign/core/BottomSheet'
-import { IconButton } from '@astryxdesign/core/IconButton'
 import { meaning, readingId, type Word } from '../data'
 import { formatInterval, STAGE_LABEL, wordCards, wordLapses, wordStage } from '../srs'
 import { toggleMark, useStore } from '../store'
 import { speak } from '../util'
 import { Icon } from './Icon'
+import { Badge, IconButton, Sheet } from './ui'
 import { FalseFriend, SoundHints, TypeLine } from './WordNotes'
 
 /**
@@ -19,9 +17,9 @@ export function WordSheet({ word, onClose }: { word: Word | null; onClose: () =>
   if (word) last.current = word
   const w = last.current
   return (
-    <BottomSheet isOpen={!!word} onOpenChange={(open) => !open && onClose()} label={w ? `${w.w} 단어 정보` : '단어 정보'} height="hug">
+    <Sheet isOpen={!!word} onClose={onClose} label={w ? `${w.w} 단어 정보` : '단어 정보'}>
       {w && <WordDetails word={w} onClose={onClose} />}
-    </BottomSheet>
+    </Sheet>
   )
 }
 
@@ -40,17 +38,17 @@ function WordDetails({ word, onClose }: { word: Word; onClose: () => void }) {
       <div className="sheet-head">
         <Badge label={`N${word.level}`} />
         <span className="grow" />
-        <IconButton label="닫기" variant="ghost" icon={<Icon name="close" />} onClick={onClose} />
+        <IconButton label="닫기" icon={<Icon name="close" />} onClick={onClose} />
       </div>
       <div className="sheet-title">
         <p lang="ja" className="sheet-word">
           {word.w}
         </p>
         <span className="grow" />
-        <IconButton label="발음 듣기" variant="ghost" icon={<Icon name="speaker" />} onClick={() => speak(word.r || word.w)} />
+        <IconButton label="발음 듣기" icon={<Icon name="speaker" />} onClick={() => speak(word.r || word.w)} />
         <IconButton
           label="북마크"
-          variant="ghost"
+         
           className={marked ? 'marked' : undefined}
           aria-pressed={marked}
           icon={<Icon name="mark" fill={marked} />}

@@ -238,6 +238,8 @@ export const rumaTheme = defineTheme({
     '--ruma-font-ja-serif': "'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif",
   },
   icons: rumaIcons,
+  // Only the Astryx components the app still uses are themed here: the buttons inside its dialogs (AlertDialog,
+  // MessageDialog). The app's own controls (src/components/ui.tsx) are styled in styles.css from the same tokens.
   components: {
     // flat faces, one shallow edge that presses down (the press itself is in styles.css: theme targets have no :active)
     button: {
@@ -257,12 +259,5 @@ export const rumaTheme = defineTheme({
         boxShadow: '0 var(--ruma-depth) 0 color-mix(in srgb, var(--color-error) 40%, var(--color-error-muted))',
       },
     },
-    // chips (ToggleButton) are styled in styles.css: they render as ghost buttons, and 0.7.15's theme build writes the
-    // pressed state as [data-is-pressed="isPressed"], which never matches the DOM's "true"
-    // the chosen segment carries the accent ink, like a chip that is on
-    'segmented-control-item': { selected: { color: 'var(--color-text-accent)' } },
-    // the off track must be visible (3:1) against the card, not a faint tint
-    switch: { base: { backgroundColor: 'var(--color-border-emphasized)' }, checked: { backgroundColor: 'var(--color-accent)' } },
-    card: { base: { borderRadius: 'var(--radius-container)', borderWidth: '1px', borderStyle: 'solid', borderColor: 'var(--color-border)' } },
   },
 })

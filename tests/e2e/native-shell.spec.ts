@@ -64,6 +64,11 @@ async function openShell(page: Page, opts: { state?: unknown; files?: Record<str
         StatusBar: { setStyle: () => {} },
         WidgetBridge: { setSnapshot: () => {}, clear: () => {} },
       }
+      // what the iOS runtime also provides: Capacitor tells the platform from this handler. Without it Capacitor thinks
+      // it runs on the web and, before a plugin's first call reaches the bridge, first imports that plugin's web
+      // fallback; on a busy dev server that import could finish after the test had already looked (the first haptic
+      // tap was then missing, about 1 run in 3 of the full suite)
+      w.webkit = { messageHandlers: { bridge: { postMessage: () => {} } } }
       w.Capacitor = {
         isNativePlatform: () => true,
         PluginHeaders: Object.entries(impl).map(([name, m]) => ({

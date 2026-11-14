@@ -1,13 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Badge } from '@astryxdesign/core/Badge'
-import { Button } from '@astryxdesign/core/Button'
-import { IconButton } from '@astryxdesign/core/IconButton'
-import { ProgressBar } from '@astryxdesign/core/ProgressBar'
-import { Skeleton } from '@astryxdesign/core/Skeleton'
 import { go } from '../App'
 import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
+import { Badge, Button, IconButton, ProgressBar, Skeleton } from '../components/ui'
 import { Bridge, FalseFriend, SoundHints, TypeLine } from '../components/WordNotes'
 import { idxOf, isReadingCard, levelOf, meaning, useAllWords, useLevel, useLevels } from '../data'
 import { readingOf, readingQuestion } from '../distractors'
@@ -350,19 +346,12 @@ export function Study() {
   return (
     <div className="study">
       <header className="study-top">
-        <IconButton label="나가기 (진행 상황은 저장돼요)" variant="ghost" icon={<Icon name="close" />} onClick={() => go('/')} />
-        <ProgressBar
-          className="study-bar grow"
-          label="오늘 학습"
-          isLabelHidden
-          value={todayCount}
-          max={dayTotal}
-          formatValueLabel={() => `오늘 ${todayCount}장 봤어요, 남은 ${left}장`}
-        />
+        <IconButton label="나가기 (진행 상황은 저장돼요)" icon={<Icon name="close" />} onClick={() => go('/')} />
+        <ProgressBar className="study-bar grow" label="오늘 학습" value={todayCount} max={dayTotal} valueText={`오늘 ${todayCount}장 봤어요, 남은 ${left}장`} />
         <span className="left-count" aria-hidden="true">
           남은 {left}장
         </span>
-        <IconButton label="방금 선택 되돌리기" variant="ghost" icon={<Icon name="undo" />} isDisabled={!undo.current} onClick={onUndo} />
+        <IconButton label="방금 선택 되돌리기" icon={<Icon name="undo" />} isDisabled={!undo.current} onClick={onUndo} />
       </header>
       <p className="after-note" aria-live="polite">
         {note && (
@@ -381,8 +370,8 @@ export function Study() {
         )}
         {!ready && !error && (
           <div className="skeleton" aria-busy="true" aria-label="단어를 불러오는 중">
-            <Skeleton width={120} height={48} radius={2} />
-            <Skeleton width={160} height={20} radius={2} index={1} />
+            <Skeleton width={120} height={48} />
+            <Skeleton width={160} height={20} />
           </div>
         )}
         {ready && word && next && (
@@ -405,7 +394,6 @@ export function Study() {
               {(!reading || revealed) && (
                 <IconButton
                   label="발음 듣기"
-                  variant="ghost"
                   icon={<Icon name="speaker" />}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -415,7 +403,6 @@ export function Study() {
               )}
               <IconButton
                 label="북마크"
-                variant="ghost"
                 className={marked ? 'marked' : undefined}
                 aria-pressed={marked}
                 icon={<Icon name="mark" fill={marked} />}

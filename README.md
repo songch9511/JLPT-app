@@ -29,7 +29,7 @@ Anki가 쓰는 오픈소스 스케줄러 [FSRS](https://github.com/open-spaced-r
 
 ## 색 · 디자인 시스템
 
-일본 전통색(伝統色)에서 고른 차분한 팔레트를 [Astryx](https://github.com/meta/astryx) 디자인 시스템의 테마 `ruma`로 정의합니다(`src/themes/ruma/rumaTheme.ts`, 빌드 `npm run theme`). 토큰·컴포넌트·규칙은 **[docs/design-system.md](docs/design-system.md)** 에 있습니다. 다크 모드는 먹(墨) 바탕입니다.
+일본 전통색(伝統色)에서 고른 차분한 팔레트를 [Astryx](https://github.com/meta/astryx) 테마 형식의 `ruma`로 정의합니다(`src/themes/ruma/rumaTheme.ts`, 빌드 `npm run theme`). 테마가 색·글자·간격·모서리·움직임의 유일한 출처이고, 결과는 평범한 CSS 변수입니다. 버튼·카드·세그먼트·칩·스위치·검색칸·진행 막대 같은 컨트롤은 그 토큰으로 직접 만든 가벼운 컴포넌트(`src/components/ui.tsx`)이고, Astryx 컴포넌트는 확인·알림 대화상자와 아래 시트에만 쓰며 처음 화면에는 싣지 않고 따로 불러옵니다. 토큰·컴포넌트·규칙·무게는 **[docs/design-system.md](docs/design-system.md)** 에 있습니다. 다크 모드는 먹(墨) 바탕입니다. iOS 앱의 최소 버전은 16.4입니다.
 
 | 역할 | 라이트 | 다크 | 이름 |
 | --- | --- | --- | --- |
@@ -48,7 +48,7 @@ Anki가 쓰는 오픈소스 스케줄러 [FSRS](https://github.com/open-spaced-r
 npm install
 npm run dev      # 개발 서버
 npm run build    # 타입 검사 + 프로덕션 빌드 (dist/)
-npm run theme    # src/themes/ruma/rumaTheme.ts → ruma.css·ruma.js (테마를 고친 뒤)
+npm run theme    # rumaTheme.ts → ruma.css·ruma.js, Astryx CSS에서 쓰는 부분만(astryx-tokens.css·astryx-overlays.css)
 npm run data     # data/raw + data/ko → public/data 재생성
 ```
 

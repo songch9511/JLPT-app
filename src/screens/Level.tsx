@@ -1,10 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Badge } from '@astryxdesign/core/Badge'
-import { Button } from '@astryxdesign/core/Button'
-import { Card } from '@astryxdesign/core/Card'
-import { IconButton } from '@astryxdesign/core/IconButton'
 import { Icon } from '../components/Icon'
-import { ChipGroup, Empty } from '../components/ui'
+import { Badge, Button, Card, ChipGroup, Empty, IconButton } from '../components/ui'
 import { WordSheet } from '../components/WordSheet'
 import { inGroup, TypeFilter, TYPE_GROUPS, type TypeGroup } from '../components/TypeFilter'
 import { COUNTS, meaning, useLevel, type Level, type Word } from '../data'
@@ -43,7 +39,7 @@ export function LevelScreen({ level }: { level: Level }) {
   return (
     <>
       <header className="top">
-        <IconButton label="뒤로" variant="ghost" href="#/words" icon={<Icon name="back" />} />
+        <IconButton label="뒤로" href="#/words" icon={<Icon name="back" />} />
         <div className="grow">
           <h1>JLPT N{level}</h1>
           <p className="subtitle">단어 {COUNTS[level].toLocaleString()}개</p>

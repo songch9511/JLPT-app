@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
-import { Card } from '@astryxdesign/core/Card'
 import { readiness } from '../readiness'
 import { forecast, retention } from '../srs'
 import { update, useStore, type State } from '../store'
 import { addDays, dayKey, daysBetween, useClock } from '../util'
+import { Card } from '../components/ui'
 
 const WEEKS = 15
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']

@@ -1,8 +1,8 @@
 import { Component, useState, type ReactNode } from 'react'
-import { Button } from '@astryxdesign/core/Button'
 import { exportRaw } from '../backup'
 import { platform } from '../platform'
 import { STATE_KEY } from '../store'
+import { Button } from './ui'
 
 /**
  * The recovery screen. It reads and clears storage directly instead of going through the store,

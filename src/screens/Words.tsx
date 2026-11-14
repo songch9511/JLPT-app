@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
-import { TextInput } from '@astryxdesign/core/TextInput'
-import { Search } from 'lucide-react'
 import { LevelList } from '../components/LevelList'
-import { Choice, Empty } from '../components/ui'
+import { Choice, Empty, SearchField } from '../components/ui'
 import { inGroup, TypeFilter, type TypeGroup } from '../components/TypeFilter'
 import { WordSheet } from '../components/WordSheet'
 import { meaning, useAllWords, type Word } from '../data'
@@ -75,22 +73,7 @@ export function Words({ initialTab }: { initialTab?: Tab } = {}) {
 
       {tab === 'search' && (
         <>
-          <TextInput
-            type="search"
-            label="단어 검색"
-            isLabelHidden
-            value={q}
-            onChange={setQ}
-            placeholder="일본어, 읽기, 뜻으로 검색"
-            startIcon={Search}
-            hasClear
-            size="lg"
-            width="100%"
-            autoCapitalize="off"
-            hasAutoCorrect={false}
-            hasSpellCheck={false}
-            enterKeyHint="search"
-          />
+          <SearchField label="단어 검색" value={q} onChange={setQ} placeholder="일본어, 읽기, 뜻으로 검색" />
           <div className="word-list">
             {results.map((w) => (
               <Row key={w.id} w={w} onOpen={setOpen} />

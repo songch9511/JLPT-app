@@ -249,13 +249,8 @@ test.describe('progress bar', () => {
     await expect(bar).toHaveAttribute('aria-valuenow', '3')
     await expect(bar).toHaveAttribute('aria-valuemax', '5')
     await expect(page.locator('.left-count')).toHaveText('남은 2장')
-    // the fill is Astryx ProgressBar's documented theming target; it is drawn full width and slid left, clipped by the
-    // track, so the visible share is where its right edge ends inside the track
-    const fill = await bar.locator('.astryx-progress-bar-fill').evaluate((el) => {
-      const f = el.getBoundingClientRect()
-      const t = el.parentElement!.getBoundingClientRect()
-      return (f.right - t.left) / t.width
-    })
+    // the visible share: the fill's width inside the track
+    const fill = await bar.locator('i').evaluate((el) => el.getBoundingClientRect().width / el.parentElement!.getBoundingClientRect().width)
     expect(fill).toBeCloseTo(0.6, 1)
     // the old three-colour count row is gone
     await expect(page.locator('.study-counts')).toHaveCount(0)

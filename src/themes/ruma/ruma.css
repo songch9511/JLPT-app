@@ -317,26 +317,6 @@
     box-shadow: 0 var(--ruma-depth) 0 color-mix(in srgb, var(--color-error) 40%, var(--color-error-muted));
   }
 
-  :where([data-astryx-theme="ruma"]) .astryx-segmented-control-item[data-selected="selected"] {
-    color: var(--color-text-accent);
-  }
-
-  :where([data-astryx-theme="ruma"]) .astryx-switch {
-    background-color: var(--color-border-emphasized);
-  }
-
-  :where([data-astryx-theme="ruma"]) .astryx-switch[data-checked="checked"] {
-    background-color: var(--color-accent);
-  }
-
-  :where([data-astryx-theme="ruma"]) .astryx-card {
-    border-radius: var(--radius-container);
-    border-width: 1px;
-    border-style: solid;
-    border-color: var(--color-border);
-    --_card-radius: var(--radius-container);
-  }
-
 }
 
 @layer astryx-theme {

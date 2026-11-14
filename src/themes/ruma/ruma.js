@@ -244,27 +244,6 @@ export const rumaTheme = {
         "color": "var(--color-text-error)",
         "boxShadow": "0 var(--ruma-depth) 0 color-mix(in srgb, var(--color-error) 40%, var(--color-error-muted))"
       }
-    },
-    "segmented-control-item": {
-      "selected": {
-        "color": "var(--color-text-accent)"
-      }
-    },
-    "switch": {
-      "base": {
-        "backgroundColor": "var(--color-border-emphasized)"
-      },
-      "checked": {
-        "backgroundColor": "var(--color-accent)"
-      }
-    },
-    "card": {
-      "base": {
-        "borderRadius": "var(--radius-container)",
-        "borderWidth": "1px",
-        "borderStyle": "solid",
-        "borderColor": "var(--color-border)"
-      }
     }
   },
   __onDark: {

@@ -1,26 +1,36 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-// Astryx (docs/design-system.md): reset → components → the ruma theme → the app's own styles, in that layer order
+// docs/design-system.md: reset → Astryx's token defaults → the ruma theme → the app's own styles, in that layer order.
+// The styles of the Astryx overlays (dialogs, sheets) load with them, lazily (src/components/overlays.tsx).
 import '@astryxdesign/core/reset.css'
-import '@astryxdesign/core/astryx.css'
+import './themes/ruma/astryx-tokens.css'
 import './themes/ruma/ruma.css'
 import './styles.css'
-import { Theme } from '@astryxdesign/core/theme'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { preloadOverlays } from './components/ui'
 import { startPlatform } from './platform'
-import { rumaTheme } from './themes/ruma/ruma'
 import { useStore } from './store'
+import { syncTextSize, useThemeMode } from './themeRoot'
 
-/** The one root Theme: it owns `data-theme` on <html> (system / light / dark from settings) and the reader's text size. */
+/** The root: `data-theme` on <html> (system / light / dark from settings) and the reader's text size. */
 function Root() {
-  const mode = useStore((s) => s.settings.theme)
+  useThemeMode(useStore((s) => s.settings.theme))
+  useEffect(() => syncTextSize(), [])
+  // the dialogs and sheets are a separate chunk, kept out of the first load; fetch it once the app is idle, so the
+  // first sheet opens as quickly as later ones (measured at 4× CPU throttle: ~540 ms cold vs ~120 ms loaded)
+  useEffect(() => {
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(preloadOverlays, { timeout: 4000 })
+      return () => cancelIdleCallback(id)
+    }
+    const id = setTimeout(preloadOverlays, 2000)
+    return () => clearTimeout(id)
+  }, [])
   return (
-    <Theme theme={rumaTheme} mode={mode}>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    </Theme>
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   )
 }
 

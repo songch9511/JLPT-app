@@ -1,7 +1,7 @@
-import { Badge } from '@astryxdesign/core/Badge'
 import { COUNTS, LEVELS, type Level } from '../data'
 import type { Breakdown } from '../srs'
 import { Icon } from './Icon'
+import { Badge } from './ui'
 
 export function StageBar({ b, total }: { b: Breakdown; total: number }) {
   return (

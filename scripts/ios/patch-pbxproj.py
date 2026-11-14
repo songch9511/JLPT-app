@@ -4,7 +4,8 @@
 Adds, without Xcode (this repository is developed on Linux; docs/plan/10-ios-build.md):
 - to the App target: MainViewController.swift, WidgetBridgePlugin.swift, PrivacyInfo.xcprivacy,
   App.entitlements (App Group), iPhone only, the RUMA_APP_GROUP build setting;
-- a WidgetKit app-extension target "RumaWidget" (ios/App/RumaWidget), embedded in the app.
+- a WidgetKit app-extension target "RumaWidget" (ios/App/RumaWidget), embedded in the app;
+- the minimum iOS raised from Capacitor's 15.0 to 16.4 everywhere (app, widget, project).
 
 Idempotent: running it on an already patched project changes nothing. Kept in the repository as the record
 of how the project was changed; it is not part of any build. The first compile of the result happens in CI
@@ -288,6 +289,10 @@ before('/* End XCConfigurationList section */', f'''\t\t{ID['w_cfglist']} /* Bui
 # Korean as the development language (the app is Korean only)
 sub('\t\t\tdevelopmentRegion = en;', '\t\t\tdevelopmentRegion = ko;')
 sub('\t\t\tknownRegions = (\n\t\t\t\ten,\n\t\t\t\tBase,\n\t\t\t);', '\t\t\tknownRegions = (\n\t\t\t\ten,\n\t\t\t\tko,\n\t\t\t\tBase,\n\t\t\t);')
+
+# minimum iOS 16.4 for the app and the widget (Capacitor generates 15.0): the web layer's styles need Safari 16.4
+# (docs/design-system.md §8). `npm run ios:sync` reads this to write CapApp-SPM/Package.swift's platform (.v16).
+s = s.replace('IPHONEOS_DEPLOYMENT_TARGET = 15.0;', 'IPHONEOS_DEPLOYMENT_TARGET = 16.4;')
 
 PBX.write_text(s)
 print('patched', PBX)

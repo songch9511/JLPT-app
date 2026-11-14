@@ -1,12 +1,7 @@
 import { lazy, Suspense, useRef, useState } from 'react'
-import { AlertDialog } from '@astryxdesign/core/AlertDialog'
-import { Banner } from '@astryxdesign/core/Banner'
-import { Button } from '@astryxdesign/core/Button'
-import { Card } from '@astryxdesign/core/Card'
-import { Switch } from '@astryxdesign/core/Switch'
 import { exportBackup, readBackup, useMeta } from '../backup'
 import { TITLE, UNOFFICIAL_NOTICE } from '../brand'
-import { ChipGroup, Choice, MessageDialog } from '../components/ui'
+import { Banner, Button, Card, ChipGroup, Choice, ConfirmDialog, MessageDialog, Switch } from '../components/ui'
 import { LEVELS } from '../data'
 import { canUndoImport, GOALS, importState, MAX_DAILY_NEW, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
@@ -64,9 +59,6 @@ export function Settings() {
             description="시험은 아래 급수 단어를 안다고 보고 나와요. 켜면 쉬운 급수부터 새 단어가 나오고, 시험 준비도에도 함께 세요."
             value={st.includeLower}
             onChange={(includeLower) => set({ includeLower })}
-            labelPosition="start"
-            labelSpacing="spread"
-            width="100%"
           />
         )}
         <p className="field-label">하루 새 단어</p>
@@ -92,9 +84,6 @@ export function Settings() {
           description="한국어 한자어와 뜻이 같은 단어(産業 = 산업)는 뜻 대신 읽기를 4지선다로 물어요. 끄면 모든 단어를 뜻 카드로 배우고, 읽기로만 배운 단어도 뜻 카드로 새로 나와요. 다시 켜면 읽기 카드가 이어서 나와요."
           value={st.fastTrack}
           onChange={(fastTrack) => set({ fastTrack })}
-          labelPosition="start"
-          labelSpacing="spread"
-          width="100%"
         />
       </Card>
 
@@ -115,9 +104,6 @@ export function Settings() {
           label="카드가 나올 때 발음 자동 재생"
           value={st.autoSpeak}
           onChange={(autoSpeak) => set({ autoSpeak })}
-          labelPosition="start"
-          labelSpacing="spread"
-          width="100%"
         />
       </Card>
 
@@ -140,7 +126,7 @@ export function Settings() {
             <Banner
               status="success"
               title="백업 파일의 기록으로 바꿨어요."
-              endContent={<Button label="가져오기 되돌리기" variant="ghost" size="sm" onClick={() => undoImport()} />}
+              action={<Button label="가져오기 되돌리기" variant="ghost" className="text-action" onClick={() => undoImport()} />}
             />
           </div>
         )}
@@ -225,26 +211,24 @@ export function Settings() {
         </ul>
       </Card>
 
-      <AlertDialog
+      <ConfirmDialog
         isOpen={confirmReset}
-        onOpenChange={setConfirmReset}
+        onClose={() => setConfirmReset(false)}
         title="모든 기록을 지울까요?"
         description="이 기기의 학습 기록과 설정을 모두 지우고 처음부터 시작해요. 되돌릴 수 없어요."
         actionLabel="모두 지우기"
-        cancelLabel="취소"
         onAction={() => {
           setConfirmReset(false)
           resetAll()
         }}
       />
-      <AlertDialog
+      <ConfirmDialog
         isOpen={pending !== null}
-        onOpenChange={(open) => !open && setPending(null)}
+        onClose={() => setPending(null)}
         title="백업으로 바꿀까요?"
         description="지금 기록을 백업 파일의 내용으로 바꿔요. 바꾼 뒤 이 화면에서 바로 되돌릴 수 있어요."
         actionLabel="백업으로 바꾸기"
         actionVariant="primary"
-        cancelLabel="취소"
         onAction={() => {
           if (pending) importState(pending)
           setPending(null)

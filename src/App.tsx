@@ -54,7 +54,7 @@ export default function App() {
     return () => removeEventListener('hashchange', on)
   }, [])
 
-  // <Theme> in main.tsx sets data-theme; the browser chrome (status bar, PWA title bar) follows the ground colour
+  // Root in main.tsx sets data-theme; the browser chrome (status bar, PWA title bar) follows the ground colour
   useEffect(() => {
     const bg = getComputedStyle(document.body).backgroundColor
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)

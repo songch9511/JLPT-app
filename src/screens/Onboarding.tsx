@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import { Button } from '@astryxdesign/core/Button'
-import { Switch } from '@astryxdesign/core/Switch'
 import { Ruma } from '../components/Ruma'
-import { ChipGroup, Choice } from '../components/ui'
+import { Button, ChipGroup, Choice, Switch } from '../components/ui'
 import { LEVELS, type Level } from '../data'
 import { update } from '../store'
 import { formatDay, upcomingExams } from '../util'
@@ -43,9 +41,6 @@ export function Onboarding() {
             description="시험은 아래 급수 단어를 안다고 보고 나와요. 쉬운 급수부터 새 단어가 나와요."
             value={lower}
             onChange={setLower}
-            labelPosition="start"
-            labelSpacing="spread"
-            width="100%"
           />
         )}
         <p className="field-label">하루 새 단어</p>

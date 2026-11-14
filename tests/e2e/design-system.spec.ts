@@ -81,9 +81,9 @@ test('the readiness sheet closes with its close button and returns focus to ⓘ'
   await expect(info).toBeFocused()
 })
 
-test('theme modes reach the Astryx components: light, dark and system (following the OS)', async ({ page }) => {
+test('theme modes reach the controls: light, dark and system (following the OS)', async ({ page }) => {
   await open(page, { state: user({ theme: 'light' }), hash: '/settings' })
-  const card = '.astryx-card'
+  const card = '.card'
   const segment = '[role="radio"][aria-checked="true"]'
   // 胡粉 card, 藍 ink on the chosen segment
   expect(await bg(page, card)).toBe('rgb(255, 254, 251)')
@@ -131,5 +131,7 @@ test('touch targets: every button and link on home and in study is at least 44px
   expect(await small()).toEqual([])
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   await expect(page.locator('.flash')).toBeVisible()
+  // measured after the card's entry motion (a translate): mid-motion the transformed boxes read 43.99999px
+  await page.locator('.flash').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))
   expect(await small()).toEqual([])
 })
