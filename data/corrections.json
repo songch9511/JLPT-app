@@ -1,0 +1,7 @@
+{
+"format": 1,
+"about": "Corrections to columns of data/raw/n{l}.csv that the stable-id registry does not cover, keyed by word id. Applied by scripts/build-data.mjs (loadWords) on every build; docs/plan/08-word-data.md §7.2. Each entry names the field, the corrected value, the source value it replaces ('was', checked: the build stops if the source no longer says that) and why. Headword/reading typos are not corrected here: they are fixed in the CSV and the registry entry together (§7.2).",
+"words": {
+"w41j": {"en": "subordinate, junior, inferior", "was": {"en": "at present, now"}, "why": "2026-11-14: the source gives 目下 めした the gloss of 目下 もっか (N1 w60u, correctly); JMdict 1535320 めした: subordinate; subordinates; inferior; inferiors; junior. docs/plan/12 §6"}
+}
+}

@@ -1,0 +1,6 @@
+{
+"about": "Introduction-order pins read by scripts/enrich/freq.py: the word is ordered as if its frequency were order_f; its shipped f stays the measured value. docs/plan/08 §2.4, §7.2.",
+"pins": {
+"w4db": {"order_f": 46, "why": "2026-11-14: headword corrected 副 → とりわけ (source error, docs/plan/12 §6). f is now とりわけ's own (42, was 副's 46); the word keeps the place it had since the order was made (154 of N1) so that no other N1 word's position moves for learners who have started."}
+}
+}

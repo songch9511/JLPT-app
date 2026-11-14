@@ -231,7 +231,7 @@
 "w4d8":{"core":"年号","hk":1,"auto":"","sk":["연호"],"rt":"on","hint":"S"},
 "w4d9":{"core":"熱意","hk":1,"auto":"","sk":["열의"],"rt":"on","hint":"S"},
 "w4da":{"core":"ニュー","hk":0,"auto":"L","sk":[],"rt":"","hint":"L"},
-"w4db":{"core":"副","hk":1,"auto":"","sk":["부","복"],"rt":"irr","hint":"M"},
+"w4db":{"core":"とりわけ","hk":0,"auto":"K","sk":[],"rt":"","hint":"K"},
 "w4dc":{"core":"快い","hk":1,"auto":"","sk":["쾌"],"rt":"kun","hint":"N"},
 "w4dd":{"core":"乱す","hk":1,"auto":"","sk":["난"],"rt":"kun","hint":"N"},
 "w4de":{"core":"戸籍","hk":1,"auto":"","sk":["호적"],"rt":"on","hint":"S"},

@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 // @ts-expect-error plain JS build helpers
 import * as ids from '../../scripts/word-ids.mjs'
 // @ts-expect-error plain JS build helpers
-import { idModule, loadInputs, loadWords } from '../../scripts/build-data.mjs'
+import { applyCorrections, idModule, loadInputs, loadWords } from '../../scripts/build-data.mjs'
 
 const LEVELS = [5, 4, 3, 2, 1] as const
 const COUNTS: Record<number, number> = { 5: 718, 4: 668, 3: 2140, 2: 1905, 1: 2699 }
@@ -35,8 +35,23 @@ const FROZEN: Record<number, string> = {
  * sha256 over every registry entry (id, level, headword, reading, positional id, tombstone) in file order. It may
  * only change together with an intended registry edit (new ids, a correction, a retirement) — and the tests below
  * then still prove no existing id moved to another word.
+ * 2026-11-14: w4db's headword corrected 副 → とりわけ (source error, docs/plan/12 §6, 08 §7.2).
  */
-const REGISTRY_SHA = '147ec7049bb768993710948a90771398d7ce8dcad69009fa5a3a4cff9305ef5f'
+const REGISTRY_SHA = '05a8110fa2478fb63957ceb51dec2fc784dff555ada6bf54fde17e19ce95de88'
+
+/**
+ * Source errors corrected after the positional files froze (docs/plan/12 §6, 08 §7.2), by id: each column that may
+ * now differ from the frozen file, with the value the frozen file has and the value shipped now. Headword/reading
+ * fixes are registry edits (the id stays); `en` comes from data/corrections.json; `f` is re-measured for the new
+ * headword (the introduction order `o` is pinned by data/freq/order-pins.json, so no other word's place moves).
+ * Columns are those of the frozen row [w, r, ko, en, o, f, …tags]; tags are covered by TAGS_CORRECTED.
+ */
+const SOURCE_CORRECTED: Record<string, { level: number; cols: Record<number, [unknown, unknown]> }> = {
+  // 副 とりわけ → とりわけ (kana headword, reading column '' as for every kana word), f 46 (副's) → 42
+  w4db: { level: 1, cols: { 0: ['副', 'とりわけ'], 1: ['とりわけ', ''], 5: [46, 42] } },
+  // 目下 めした had もっか's gloss
+  w41j: { level: 2, cols: { 3: ['at present, now', 'subordinate, junior, inferior'] } },
+}
 
 function rng(seed: number) {
   let a = seed
@@ -88,7 +103,10 @@ describe('the id registry (data/ids.json)', () => {
         const e = byLegacy.get(`${l}-${idx}`)!
         expect(e, `${l}-${idx}`).toBeDefined()
         expect(e.l).toBe(l)
-        expect(e.w).toBe(w)
+        const fix = SOURCE_CORRECTED[e.id]?.cols[0]
+        // a corrected headword: the frozen file has the old one, the registry the new one (same id)
+        if (fix) expect([w, e.w]).toEqual(fix)
+        else expect(e.w).toBe(w)
         // the positional files wrote '' for a reading equal to the headword
         expect(r === '' ? [e.w, ''] : [r]).toContain(e.r)
       })
@@ -128,8 +146,43 @@ const TAGS_CORRECTED: Record<number, string[]> = {
   4: ['w0xf'],
   3: ['w1i9', 'w1m9', 'w2gy', 'w2ll', 'w2om'],
   2: ['w326', 'w36f', 'w3hc', 'w3qa', 'w3qu', 'w3ry', 'w3sz', 'w40u'],
-  1: ['w4x3', 'w4xx', 'w5at', 'w5fw', 'w5q2', 'w5sv'],
+  // w4db: its corrected kana headword とりわけ makes it K (was M, rt irr, derived from the wrong headword 副)
+  1: ['w4db', 'w4x3', 'w4xx', 'w5at', 'w5fw', 'w5q2', 'w5sv'],
 }
+
+describe('data/corrections.json (source columns the registry does not cover)', () => {
+  const resolved = () => ids.resolve(sources(), registry()).levels as Record<number, { id: string; w: string; r: string; en: string }[]>
+  const find = (levels: ReturnType<typeof resolved>, id: string) => LEVELS.flatMap((l) => levels[l]).find((x) => x.id === id)!
+
+  it('the build applies it: w41j (目下 めした) gets its own gloss, nothing else changes', () => {
+    const raw = resolved()
+    const built = loadWords()
+    expect(find(raw, 'w41j').en).toBe('at present, now')
+    expect(find(built, 'w41j').en).toBe('subordinate, junior, inferior')
+    for (const l of LEVELS)
+      built[l].forEach((x: { id: string; en: string }, i: number) => x.id === 'w41j' || expect(x.en).toBe(raw[l][i].en))
+  })
+
+  it('refuses a stale, unknown, empty or out-of-scope correction and then applies none', () => {
+    const fix = (words: object) => {
+      const levels = resolved()
+      return { problems: applyCorrections(levels, { format: 1, words }) as string[], en: find(levels, 'w41j').en }
+    }
+    const ok = { en: 'subordinate', was: { en: 'at present, now' }, why: 'test' }
+    expect(fix({ w41j: ok })).toEqual({ problems: [], en: 'subordinate' })
+    const bad = (words: object, re: RegExp) => {
+      const { problems, en } = fix({ w41j: ok, ...words })
+      expect(problems.join('\n')).toMatch(re)
+      expect(en).toBe('at present, now')
+    }
+    bad({ w41j: { ...ok, was: { en: 'now' } } }, /source changed/)
+    bad({ wzzz: ok }, /not a live word id/)
+    bad({ w4db: { w: '取り分け', was: { w: 'とりわけ' }, why: 'x' } }, /"w" cannot be corrected here/)
+    bad({ w4db: { en: 'especially, above all', was: { en: 'especially, above all' }, why: 'x' } }, /already/)
+    bad({ w4db: { why: 'x' } }, /corrects nothing/)
+    bad({ w4db: { en: 'x', was: { en: 'especially, above all' } } }, /needs "why"/)
+  })
+})
 
 describe('public/data', () => {
   for (const l of LEVELS)
@@ -139,13 +192,28 @@ describe('public/data', () => {
       expect(r).toHaveLength(COUNTS[l])
       const reg = registry()
       const corrected: string[] = []
+      const sourceFixed: string[] = []
       r.forEach((row, i) => {
-        // id, w, r, ko, en, o, f never change; the tag columns only for the listed corrections
-        expect(row.slice(1, 7)).toEqual(old[i].slice(0, 6))
-        if (JSON.stringify(row.slice(1)) !== JSON.stringify(old[i])) corrected.push(row[0] as string)
+        // id, w, r, ko, en, o, f never change, except the listed columns of the source corrections; the tag columns
+        // only for the listed tag corrections
+        const fix = SOURCE_CORRECTED[row[0] as string]
+        const was = old[i].slice()
+        const now = row.slice(1)
+        if (fix) {
+          expect(fix.level).toBe(l)
+          sourceFixed.push(row[0] as string)
+          for (const [c, [before, after]] of Object.entries(fix.cols)) {
+            expect(was[+c], `${row[0]} column ${c} in the frozen file`).toEqual(before)
+            expect(now[+c], `${row[0]} column ${c} now`).toEqual(after)
+            was[+c] = now[+c]
+          }
+        }
+        expect(now.slice(0, 6)).toEqual(was.slice(0, 6))
+        if (JSON.stringify(now) !== JSON.stringify(was)) corrected.push(row[0] as string)
         expect(reg.ids[row[0] as string].legacy).toBe(`${l}-${i}`)
       })
       expect(corrected.sort()).toEqual(TAGS_CORRECTED[l])
+      expect(sourceFixed.sort()).toEqual(Object.keys(SOURCE_CORRECTED).filter((id) => SOURCE_CORRECTED[id].level === l).sort())
       const o = r.map((row) => row[5] as number)
       expect([...o].sort((a, b) => a - b)).toEqual(o.map((_, i) => i))
       for (const row of r) {
