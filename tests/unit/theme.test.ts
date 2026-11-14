@@ -29,9 +29,18 @@ const PAIRS: [string, string, number][] = [
   ['--color-text-accent', '--color-background-surface', 4.5],
   ['--color-text-accent', '--color-accent-muted', 4.5],
   ['--color-on-accent', '--color-accent', 4.5],
+  // the primary button's label on its face: 藍 in light, a deeper 藍 in dark (docs/design-system.md §2)
+  ['--ruma-on-primary', '--ruma-primary', 4.5],
   ['--color-text-error', '--color-background-surface', 4.5],
   ['--color-text-error', '--color-error-muted', 4.5],
   ['--color-text-success', '--color-success-muted', 4.5],
+  // an answer's result line on the card (✓ 맞았어요 · ✕ 틀렸어요 · ↻ 10분 뒤 다시 나와요) and the struck wrong pick
+  ['--color-text-success', '--color-background-surface', 4.5],
+  ['--color-text-error', '--color-background-body', 4.5],
+  // a grade given earlier, pressed: 藍 ink on the 白藍 tint (already above) with its 藍 line around it
+  ['--color-accent', '--color-accent-muted', 3],
+  // the target level and other 藍 words on the ground
+  ['--color-text-accent', '--color-background-body', 4.5],
   ['--color-text-warning', '--color-warning-muted', 4.5],
   ['--color-text-blue', '--color-background-blue', 4.5],
   ['--color-text-red', '--color-background-red', 4.5],
@@ -94,6 +103,13 @@ describe('ruma theme', () => {
     expect(tokens['--color-success'][0]).toBe('#47885e')
     expect(tokens['--color-error'][0]).toBe('#c4553b')
     expect(tokens['--color-warning'][0]).toBe('#c89932')
+  })
+
+  it('gives dark mode a deeper 藍 for the primary face than the bright 藍 ink, and keeps light mode’s 藍', () => {
+    expect(tokens['--ruma-primary'][0]).toBe(tokens['--color-accent'][0])
+    expect(lum(tokens['--ruma-primary'][1])).toBeLessThan(lum(tokens['--color-accent'][1]))
+    // the pressed edge under it is darker still
+    expect(lum(tokens['--ruma-edge-accent'][1])).toBeLessThan(lum(tokens['--ruma-primary'][1]))
   })
 
   it('has no @scope left (Safari < 17.4 would drop every token) and loads no web fonts', () => {

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useRef, useState } from 'react'
 import { exportBackup, readBackup, useMeta } from '../backup'
 import { APP_VERSION, TITLE, UNOFFICIAL_NOTICE } from '../brand'
-import { Banner, Button, Card, Choice, ConfirmDialog, MessageDialog, RowLink, Switch } from '../components/ui'
+import { Banner, Button, Choice, ConfirmDialog, Field, Group, MessageDialog, RowLink, Switch } from '../components/ui'
 import { BackupNudge } from '../components/Notices'
 import { LEVELS } from '../data'
 import { replayTips } from '../guide'
@@ -62,10 +62,11 @@ export function Settings() {
         <h1>설정</h1>
       </header>
 
-      <Card className="form" role="region" aria-labelledby="learn-title">
-        <h2 className="card-title" id="learn-title">학습 계획</h2>
-        <p className="field-label">목표 급수</p>
-        <Choice label="목표 급수" value={st.target} options={LEVELS.map((l) => [l, `N${l}`])} onChange={(target) => set({ target })} />
+      {/* groups on the ground: a heading, then rows divided by hairlines (docs/design-system.md §4 "표면") */}
+      <Group title="학습 계획" id="learn-title">
+        <Field label="목표 급수">
+          <Choice label="목표 급수" value={st.target} options={LEVELS.map((l) => [l, `N${l}`])} onChange={(target) => set({ target })} />
+        </Field>
         {st.target < 5 && (
           <Switch
             label={`아래 급수 단어도 함께 (N${LEVELS.filter((l) => l > st.target).join('·N')})`}
@@ -74,13 +75,12 @@ export function Settings() {
             onChange={(includeLower) => set({ includeLower })}
           />
         )}
-        <p className="field-label">하루 새 단어</p>
-        <Choice label="하루 새 단어" value={st.dailyNew} options={[5, 10, 20, 30, MAX_DAILY_NEW].map((n) => [n, String(n)])} onChange={(dailyNew) => set({ dailyNew })} />
-        <p className="hint">새 단어가 많을수록 며칠 뒤 복습이 늘어나요.</p>
-      </Card>
+        <Field label="하루 새 단어" description="새 단어가 많을수록 며칠 뒤 복습이 늘어나요.">
+          <Choice label="하루 새 단어" value={st.dailyNew} options={[5, 10, 20, 30, MAX_DAILY_NEW].map((n) => [n, String(n)])} onChange={(dailyNew) => set({ dailyNew })} />
+        </Field>
+      </Group>
 
-      <Card className="form" role="region" aria-labelledby="method-title">
-        <h2 className="card-title" id="method-title">학습 방식</h2>
+      <Group title="학습 방식" id="method-title">
         <Switch
           label="한자어 빠른 통과"
           description="뜻 같은 한자어(産業 = 산업)는 읽기만 물어요. 끄면 모든 단어를 뜻 카드로 배워요."
@@ -105,27 +105,27 @@ export function Settings() {
             )}
           </p>
         )}
-      </Card>
+      </Group>
 
-      <Card className="form" role="region" aria-labelledby="display-title">
-        <h2 className="card-title" id="display-title">화면 · 소리</h2>
-        <p className="field-label">테마</p>
-        <Choice
-          label="테마"
-          value={st.theme}
-          options={[
-            ['system', '시스템'],
-            ['light', '라이트'],
-            ['dark', '다크'],
-          ]}
-          onChange={(theme) => set({ theme })}
-        />
+      <Group title="화면 · 소리" id="display-title">
+        <Field label="테마">
+          <Choice
+            label="테마"
+            value={st.theme}
+            options={[
+              ['system', '시스템'],
+              ['light', '라이트'],
+              ['dark', '다크'],
+            ]}
+            onChange={(theme) => set({ theme })}
+          />
+        </Field>
         <Switch
           label="발음 자동 재생"
           value={st.autoSpeak}
           onChange={(autoSpeak) => set({ autoSpeak })}
         />
-      </Card>
+      </Group>
 
       {NativeSettings && platform.native && (
         <Suspense fallback={null}>
@@ -133,20 +133,21 @@ export function Settings() {
         </Suspense>
       )}
 
-      <Card className="form" role="region" aria-labelledby="data-title">
-        <h2 className="card-title" id="data-title">데이터</h2>
-        <p className="hint">
-          {platform.native
-            ? '학습 기록은 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'
-            : '학습 기록은 이 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'}
-        </p>
-        <p className="small last-backup">{meta.lastExport ? `마지막 백업 ${formatDay(meta.lastExport)}` : '백업한 적이 없어요.'}</p>
-        {/* the backup reminder, moved off Home (the 설정 tab carries a dot while it is due, App.tsx) */}
-        <BackupNudge today={new Date()} />
-        {orphans > 0 && (
-          // records whose words this version does not know (store.ts `orphans`): kept, exported, never shown
-          <p className="small muted orphans-note">이 버전에 없는 단어의 기록 {orphans.toLocaleString()}개도 보관하고 백업에 담아요.</p>
-        )}
+      <Group title="데이터" id="data-title">
+        <div className="data-facts">
+          <p className="last-backup">{meta.lastExport ? `마지막 백업 ${formatDay(meta.lastExport)}` : '백업한 적이 없어요.'}</p>
+          <p className="field-desc">
+            {platform.native
+              ? '학습 기록은 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'
+              : '학습 기록은 이 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'}
+          </p>
+          {orphans > 0 && (
+            // records whose words this version does not know (store.ts `orphans`): kept, exported, never shown
+            <p className="field-desc orphans-note">이 버전에 없는 단어의 기록 {orphans.toLocaleString()}개도 보관하고 백업에 담아요.</p>
+          )}
+          {/* the backup reminder, moved off Home (the 설정 tab carries a dot while it is due, App.tsx) */}
+          <BackupNudge today={new Date()} />
+        </div>
         {canUndoImport() && (
           <div role="status">
             <Banner
@@ -156,7 +157,7 @@ export function Settings() {
             />
           </div>
         )}
-        <div className="row">
+        <div className="row data-actions">
           <Button label="백업 내보내기" onClick={exportBackup} />
           <Button
             label="백업 가져오기"
@@ -174,21 +175,21 @@ export function Settings() {
             }}
           />
         </div>
-        <Button label="모든 기록 초기화" variant="destructive" onClick={() => setConfirmReset(true)} />
-      </Card>
+        <div className="data-reset">
+          <Button label="모든 기록 초기화" variant="destructive" onClick={() => setConfirmReset(true)} />
+        </div>
+      </Group>
 
-      <Card className="about" role="region" aria-labelledby="about-title">
-        <h2 className="card-title" id="about-title">정보</h2>
-        <p>
-          <b>{TITLE}</b>
-          <br />
-          <span className="small muted">버전 {APP_VERSION}</span>
+      <Group title="정보" id="about-title" className="about">
+        <p className="about-app">
+          <b>{TITLE}</b> <span className="field-desc">버전 {APP_VERSION}</span>
         </p>
         <nav className="about-links" aria-label="개인정보 처리방침과 도움말">
           <DocLink doc="privacy" label="개인정보 처리방침" />
           <DocLink doc="support" label="도움말 · 문의" />
         </nav>
-        <p className="notice">{UNOFFICIAL_NOTICE}</p>
+        <div className="about-notes">
+        <p className="unofficial">{UNOFFICIAL_NOTICE}</p>
         <ul className="credits">
           <li>단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반). JLPT는 공식 어휘 목록을 공개하지 않아 비공식 목록이에요.</li>
           <li>한국어 뜻은 기계 번역이라 틀린 곳이 있을 수 있어요.</li>
@@ -241,7 +242,8 @@ export function Settings() {
             ).
           </li>
         </ul>
-      </Card>
+        </div>
+      </Group>
 
       <ConfirmDialog
         isOpen={confirmReset}

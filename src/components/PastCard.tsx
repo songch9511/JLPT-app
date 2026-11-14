@@ -2,7 +2,8 @@
 // the answer shown, the grade given marked in the bar, which changes it.
 import { useMemo } from 'react'
 import { Icon } from './Icon'
-import { Badge, Button, IconButton } from './ui'
+import { Button, IconButton, Meta } from './ui'
+import { ReadingChoice } from './Choices'
 import { Bridge, FalseFriend, SoundHints, TypeLine } from './WordNotes'
 import { isReadingCard, meaning, type Word } from '../data'
 import { readingOf } from '../distractors'
@@ -19,10 +20,11 @@ export function PastCard({ entry, index, total, word, marked, onMark }: { entry:
   if (!word) return <div className="flash open past" />
   return (
     <div className={`flash open past ${entry.grade === Rating.Again ? 'missed' : ''} ${reading ? 'reading-card' : ''}`}>
+      {/* the card itself is unchanged by its grade: the grade given is the pressed button below */}
       <div className="flash-head">
-        <Badge label={pastLabel(index, total)} />
-        {reading && <Badge label="읽기" />}
-        <span className="grow" />
+        <span className="flash-status grow">
+          <Meta className="flash-meta" items={[pastLabel(index, total), reading && '읽기']} />
+        </span>
         <IconButton label="발음 듣기" icon={<Icon name="speaker" />} onClick={() => speak(word.r || word.w)} />
         <IconButton label="북마크" className={marked ? 'marked' : undefined} aria-pressed={marked} icon={<Icon name="mark" fill={marked} />} onClick={onMark} />
       </div>
@@ -36,16 +38,7 @@ export function PastCard({ entry, index, total, word, marked, onMark }: { entry:
             <div className="choices" role="group" aria-label="읽기 선택지">
               {quiz.choices.map((c, i) => {
                 const state = i === quiz.answer ? 'right' : i === quiz.picked ? 'wrong' : 'dim'
-                return (
-                  <button key={c} type="button" lang="ja" className={`choice ${state}`} disabled aria-label={state === 'right' ? `${c}, 정답` : state === 'wrong' ? `${c}, 고른 답, 오답` : c}>
-                    {state !== 'dim' && (
-                      <span className="choice-mark">
-                        <Icon name={state === 'right' ? 'check' : 'close'} size={18} />
-                      </span>
-                    )}
-                    {c}
-                  </button>
-                )
+                return <ReadingChoice key={c} text={c} state={state} disabled />
               })}
             </div>
             <div className="flash-answer-slot">
@@ -80,7 +73,8 @@ const LABEL: Partial<Record<Grade, string>> = { [Rating.Again]: '모르겠어요
 /**
  * The grades of a card answered earlier: the same buttons as when it was answered (a reading card asked with choices
  * has 모르겠어요 · 알아요, as its choice counted), each with the interval it gives from the time of that answer. The
- * grade given is pressed (filled, with a check and `aria-pressed`); another one changes the answer.
+ * grade given looks pressed — sunk onto its edge, the 白藍 tint and 藍 ink, a ✓ and `aria-pressed` — never a second
+ * filled primary; another one changes the answer.
  */
 export function PastBar({ entry, onGrade }: { entry: Entry; onGrade: (g: Grade) => void }) {
   const intervals = useMemo(() => previewFrom(entry.before, new Date(entry.at)), [entry])
@@ -94,7 +88,7 @@ export function PastBar({ entry, onGrade }: { entry: Entry; onGrade: (g: Grade) 
           <Button
             key={g}
             label={`${LABEL[g]}, ${after} 다시`}
-            variant={on ? 'primary' : 'secondary'}
+            variant="secondary"
             size="lg"
             className="grade"
             aria-pressed={on}

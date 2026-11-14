@@ -13,7 +13,8 @@ const reviews = (n = 5) => Object.fromEntries(Array.from({ length: n }, (_, i) =
 const stage = (page: Page) => page.locator('.card-stage')
 /** The card on screen (slot 0). */
 const shown = (page: Page) => page.locator('.card-slot:not([data-away]):not([inert]) .flash-word')
-const pastBadge = (page: Page) => page.locator('.flash.past .badge').first()
+/** The earlier card's facts line ("이전 3/12"): plain text, not a pill (docs/design-system.md §4 "라벨"). */
+const pastBadge = (page: Page) => page.locator('.flash.past .flash-meta').first()
 const pressed = (page: Page) => page.locator('.past-bar button[aria-pressed="true"]')
 
 /**
@@ -431,7 +432,7 @@ test.describe('undo, keyboard, screen readers, motion, sizes', () => {
       }
       return performance.now() - t
     })
-    await expect(page.locator('.flash.past .badge').first()).toHaveText('이전 1/3')
+    await expect(pastBadge(page)).toHaveText('이전 1/3')
     expect(ms).toBeLessThan(1500)
     const t0 = Date.now()
     await page.waitForTimeout(READ_MS)

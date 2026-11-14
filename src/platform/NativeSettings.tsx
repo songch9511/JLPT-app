@@ -19,8 +19,12 @@ export default function NativeSettings() {
   }, [])
 
   return (
-    <section className="card form" aria-labelledby="native-title">
-      <h3 id="native-title">알림 · 진동 · 발음</h3>
+    // a group on the ground like the others in 설정 (styles.css `.group`): a heading, rows divided by hairlines
+    <section className="group form native-settings" aria-labelledby="native-title">
+      <h2 className="group-title" id="native-title">
+        알림 · 진동 · 발음
+      </h2>
+      <div className="native-row">
       <label className="switch">
         <span>
           복습 알림
@@ -42,7 +46,7 @@ export default function NativeSettings() {
       )}
       {r.enabled && (
         <>
-          <label htmlFor="remind-time">알림 시각</label>
+          <label className="native-label" htmlFor="remind-time">알림 시각</label>
           <input
             id="remind-time"
             type="time"
@@ -52,7 +56,7 @@ export default function NativeSettings() {
               if (Number.isInteger(h) && Number.isInteger(m)) setReminderPrefs({ hour: h, minute: m })
             }}
           />
-          <label>쉬는 요일</label>
+          <label className="native-label">쉬는 요일</label>
           <div className="chips">
             {DAY_NAMES.map((name, i) => {
               const quiet = r.quietDays.includes(i)
@@ -70,6 +74,7 @@ export default function NativeSettings() {
           </div>
         </>
       )}
+      </div>
 
       <label className="switch">
         <span>
@@ -79,7 +84,8 @@ export default function NativeSettings() {
         <input type="checkbox" checked={p.haptics} onChange={(e) => setPrefs({ haptics: e.target.checked })} />
       </label>
 
-      <label htmlFor="voice">일본어 음성</label>
+      <div className="native-row">
+      <label className="native-label" htmlFor="voice">일본어 음성</label>
       {voices && voices.length === 0 ? (
         <p className="muted small">
           일본어 음성이 없어요. iPhone 설정 › 손쉬운 사용 › 읽기 및 말하기 › 음성에서 받을 수 있어요.
@@ -94,9 +100,10 @@ export default function NativeSettings() {
           ))}
         </select>
       )}
-      <button className="btn ghost" onClick={() => speak('おはようございます')}>
+      <button className="btn text-action" data-variant="ghost" onClick={() => speak('おはようございます')}>
         들어 보기
       </button>
+      </div>
     </section>
   )
 }

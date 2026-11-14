@@ -1,7 +1,6 @@
 // After the first finished day in the iOS app: explain reminders first, ask iOS for permission only on "알림 받기".
 // Never shown on first launch, and only once (either answer is remembered; settings can still turn it on).
 import { useEffect, useState } from 'react'
-import { Icon } from '../components/Icon'
 import { enableReminders, reminderPermission } from './native'
 import './native.css'
 import { getPrefs, setPrefs, usePrefs } from './prefs'
@@ -30,14 +29,12 @@ export default function ReminderOffer() {
     )
   if (!show) return null
   return (
-    <section className="card reminder-offer" aria-labelledby="offer-title">
-      <h2 id="offer-title">
-        <Icon name="info" size={18} /> 복습할 날 알려 드릴까요?
-      </h2>
+    <section className="reminder-offer" aria-labelledby="offer-title">
+      <h2 id="offer-title">복습할 날 알려 드릴까요?</h2>
       <p className="muted small">복습할 단어가 있는 날에만 저녁 8시에 한 번 알려 드려요. 시각과 쉬는 요일은 설정에서 바꿔요.</p>
       <div className="row">
         <button
-          className="btn ghost"
+          className="btn"
           onClick={() => {
             setPrefs({ reminderAsked: true })
             setShow(false)

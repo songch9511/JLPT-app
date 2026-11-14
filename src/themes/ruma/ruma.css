@@ -255,9 +255,9 @@
     --text-display-1-size: var(--font-size-3xl);
     --text-display-1-weight: var(--font-weight-bold);
     --text-display-1-leading: 1.2;
-    --radius-inner: 8px;
+    --radius-inner: 12px;
     --radius-element: 12px;
-    --radius-container: 16px;
+    --radius-container: 24px;
     --radius-page: 24px;
     --radius-chat: 24px;
     --size-element-sm: 36px;
@@ -286,7 +286,9 @@
     --ruma-seal: light-dark(#9c3b26, #e08c74);
     --ruma-depth: 3px;
     --ruma-edge: light-dark(#e3ded2, #403c36);
-    --ruma-edge-accent: light-dark(#0f3f5c, #5c86aa);
+    --ruma-edge-accent: light-dark(#0f3f5c, #173a54);
+    --ruma-primary: light-dark(#165e83, #2b5878);
+    --ruma-on-primary: light-dark(#ffffff, #ece7db);
     --ruma-font-ja: 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif;
     --ruma-font-ja-serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif;
   }
@@ -313,6 +315,8 @@
   }
 
   :where([data-astryx-theme="ruma"]) .astryx-button[data-variant="primary"] {
+    background-color: var(--ruma-primary);
+    color: var(--ruma-on-primary);
     box-shadow: 0 var(--ruma-depth) 0 var(--ruma-edge-accent);
   }
 

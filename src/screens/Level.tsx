@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '../components/Icon'
-import { Badge, Button, Card, ChipGroup, Empty, IconButton } from '../components/ui'
+import { Button, ChipGroup, Empty, IconButton } from '../components/ui'
 import { WordSheet } from '../components/WordSheet'
 import { inGroup, TypeFilter, TYPE_GROUPS, type TypeGroup } from '../components/TypeFilter'
 import { COUNTS, meaning, useLevel, type Level, type Word } from '../data'
@@ -10,9 +10,9 @@ import { StageBar } from '../components/LevelList'
 
 const PAGE = 100
 
-/** A word's memory stage in words, with its stage colour as a small mark (never colour alone, 05 §2.5). */
+/** A word's memory stage as plain text at the row's right, its stage colour only as a small dot (never colour alone). */
 function StageTag({ stage }: { stage: Stage }) {
-  return <span className={`tag stage-tag ${stage}`}>{STAGE_LABEL[stage]}</span>
+  return <span className={`word-aside stage-dot ${stage}`}>{STAGE_LABEL[stage]}</span>
 }
 const FILTERS: ('all' | Stage)[] = ['all', 'learning', 'young', 'mature', 'new']
 
@@ -45,13 +45,14 @@ export function LevelScreen({ level }: { level: Level }) {
           <p className="subtitle">단어 {COUNTS[level].toLocaleString()}개</p>
         </div>
         {isTarget ? (
-          <Badge variant="blue" label="목표 급수" />
+          <span className="level-target">목표 급수</span>
         ) : (
           <Button label="목표로 설정" size="sm" onClick={() => update((d) => void (d.settings.target = level))} />
         )}
       </header>
 
-      <Card>
+      {/* the level's memory on the ground: one line, the stage bar, four figures in the body ink */}
+      <section className="level-summary" aria-label={`N${level} 기억 상태`}>
         {words && (
           <p className="fast-count">
             {s.settings.fastTrack ? (
@@ -67,14 +68,15 @@ export function LevelScreen({ level }: { level: Level }) {
         <div className="breakdown">
           {(['mature', 'young', 'learning', 'new'] as Stage[]).map((k) => (
             <div key={k} className={k}>
-              <b>{b[k].toLocaleString()}</b>
-              <span>{STAGE_LABEL[k]}</span>
+              <b className="num">{b[k].toLocaleString()}</b>
+              <span className="stage-dot">{STAGE_LABEL[k]}</span>
             </div>
           ))}
         </div>
-      </Card>
+      </section>
 
       <ChipGroup
+        scroll
         label="기억 단계"
         value={filter}
         options={FILTERS.map((f) => [f, f === 'all' ? '전체' : STAGE_LABEL[f]])}

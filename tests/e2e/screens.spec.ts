@@ -225,15 +225,16 @@ test('settings: daily new words stop at 40; lower levels can be set; no exam dat
   await expect(page.locator('input[type="date"]')).toHaveCount(0)
   await expect(page.getByText(/시험일|시험날|준비도/)).toHaveCount(0)
   expect((await saved(page)).settings).not.toHaveProperty('goal')
-  await expect(page.locator('.about .notice')).toContainText('관계없는 비공식 학습 앱')
-  await expect(page.locator('.about .notice')).toContainText('승인하거나 후원하지 않아요')
+  await expect(page.locator('.about .unofficial')).toContainText('관계없는 비공식 학습 앱')
+  await expect(page.locator('.about .unofficial')).toContainText('승인하거나 후원하지 않아요')
 })
 
 test('P4: with lower levels included an N3 learner meets N5 words first, and the card says which level', async ({ page }) => {
   await open(page, { state: user({ target: 3, includeLower: true }) })
   await expect(page.getByRole('link', { name: /^N5~N3 단어 3,526개 중 0개 만남/ })).toBeVisible()
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
-  await expect(page.locator('.flash-head').getByText('N5', { exact: true })).toBeVisible()
+  // the card's facts line names the level, as plain text joined by " · "
+  await expect(page.locator('.flash-head .flash-meta')).toHaveText(/(^| · )N5$/)
 })
 
 test.describe('home: Ruma, today’s plan, then the words met', () => {

@@ -4,7 +4,7 @@ import { formatInterval, STAGE_LABEL, wordCards, wordLapses, wordStage } from '.
 import { toggleMark, useStore } from '../store'
 import { speak } from '../util'
 import { Icon } from './Icon'
-import { Badge, IconButton, Sheet } from './ui'
+import { IconButton, Meta, Sheet } from './ui'
 import { FalseFriend, SoundHints, TypeLine } from './WordNotes'
 
 /**
@@ -35,9 +35,17 @@ function WordDetails({ word, onClose }: { word: Word; onClose: () => void }) {
 
   return (
     <div className="sheet">
+      {/* the word's facts as one plain line: level · stage · next review · lapses */}
       <div className="sheet-head">
-        <Badge label={`N${word.level}`} />
-        <span className="grow" />
+        <Meta
+          className="sheet-status grow"
+          items={[
+            `N${word.level}`,
+            STAGE_LABEL[stage],
+            next && `${next.id === readingId(word.id) ? '읽기 ' : ''}다음 복습 ${next.card.due <= Date.now() ? '지금' : formatInterval(next.card.due - Date.now()) + ' 뒤'}`,
+            lapses > 0 && `${lapses}번 잊음`,
+          ]}
+        />
         <IconButton label="닫기" icon={<Icon name="close" />} onClick={onClose} />
       </div>
       <div className="sheet-title">
@@ -48,7 +56,7 @@ function WordDetails({ word, onClose }: { word: Word; onClose: () => void }) {
         <IconButton label="발음 듣기" icon={<Icon name="speaker" />} onClick={() => speak(word.r || word.w)} />
         <IconButton
           label="북마크"
-         
+
           className={marked ? 'marked' : undefined}
           aria-pressed={marked}
           icon={<Icon name="mark" fill={marked} />}
@@ -61,12 +69,7 @@ function WordDetails({ word, onClose }: { word: Word; onClose: () => void }) {
         </p>
       )}
       <p className="sheet-meaning">{meaning(word)}</p>
-      {word.ko && <p className="hint">{word.en}</p>}
-      <p className="sheet-status">
-        {STAGE_LABEL[stage]}
-        {next && ` · ${next.id === readingId(word.id) ? '읽기 ' : ''}다음 복습 ${next.card.due <= Date.now() ? '지금' : formatInterval(next.card.due - Date.now()) + ' 뒤'}`}
-        {lapses > 0 && ` · ${lapses}번 잊음`}
-      </p>
+      {word.ko && <p className="sheet-gloss">{word.en}</p>}
       <div className="sheet-notes">
         <FalseFriend word={word} />
         <TypeLine word={word} />

@@ -16,7 +16,11 @@ const c = {
   sumi: ['#2d2a26', '#ece7db'], // 墨 text
   rikyu: ['#6b665d', '#a39d90'], // 利休鼠 secondary text
   ai: ['#165e83', '#86aecf'], // 藍 accent
-  kon: ['#0f3f5c', '#5c86aa'], // 紺 the primary button's pressed edge
+  // 藍 as a surface: the primary button's face. In light it is the 藍 ink itself; in dark a deeper 藍 (the bright ink as
+  // a face was the brightest slab on the screen), with 生成り-white text on it (6.1:1)
+  aiFace: ['#165e83', '#2b5878'],
+  onAiFace: ['#ffffff', '#ece7db'],
+  kon: ['#0f3f5c', '#173a54'], // 紺 the primary button's pressed edge
   shiraai: ['#e1ecf1', '#24323f'], // 白藍 accent tint
   onAi: ['#ffffff', '#10171d'],
   rokusho: ['#47885e', '#7fb996'], // 緑青 success / long-term memory
@@ -213,10 +217,12 @@ export const rumaTheme = defineTheme({
     '--text-display-1-weight': 'var(--font-weight-bold)',
     '--text-display-1-leading': '1.2',
     // ── spacing: Astryx's 4px steps are the app's (page sides 4, card inside 4, between cards 3, sections 6) ──
-    // ── shape: 8 chips · 12 controls · 16 cards · 24 the study card and sheet tops ──
-    '--radius-inner': '8px',
+    // ── shape: three radii. 12 for controls (buttons, inputs, segments, choices), 24 for what you hold (the study card,
+    // sheets, dialogs), full for pills (chips, the tab indicator, Home's start). `inner` and `container` are kept as
+    // names Astryx's dialogs read, set to the same two values. ──
+    '--radius-inner': '12px',
     '--radius-element': '12px',
-    '--radius-container': '16px',
+    '--radius-container': '24px',
     '--radius-page': '24px',
     '--radius-chat': '24px',
     // ── control heights: every target at least 44px ──
@@ -256,6 +262,9 @@ export const rumaTheme = defineTheme({
     '--ruma-depth': '3px',
     '--ruma-edge': pair(c.kaihaku),
     '--ruma-edge-accent': pair(c.kon),
+    // the primary button's face and label (docs/design-system.md §2): 藍, a deeper 藍 in dark
+    '--ruma-primary': pair(c.aiFace),
+    '--ruma-on-primary': pair(c.onAiFace),
     // Japanese text: gothic for readings and choices, mincho for headwords
     '--ruma-font-ja': "'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif",
     '--ruma-font-ja-serif': "'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif",
@@ -273,7 +282,7 @@ export const rumaTheme = defineTheme({
         backgroundColor: 'var(--color-background-surface)',
         boxShadow: '0 var(--ruma-depth) 0 var(--ruma-edge), inset 0 0 0 1px var(--color-border)',
       },
-      'variant:primary': { boxShadow: '0 var(--ruma-depth) 0 var(--ruma-edge-accent)' },
+      'variant:primary': { backgroundColor: 'var(--ruma-primary)', color: 'var(--ruma-on-primary)', boxShadow: '0 var(--ruma-depth) 0 var(--ruma-edge-accent)' },
       'variant:ghost': { boxShadow: 'none', color: 'var(--color-icon-secondary)' },
       // destructive: a soft vermilion face (朱 on 桜), never the filled primary; still pressable
       'variant:destructive': {

@@ -69,29 +69,39 @@ test('the word sheet traps focus, closes on Escape and gives focus back to the r
   await expect(row).toBeFocused()
 })
 
-test('theme modes reach the controls: light, dark and system (following the OS)', async ({ page }) => {
+test('theme modes reach the controls: light, dark and system (following the OS); groups sit on the ground', async ({ page }) => {
   await open(page, { state: user({ theme: 'light' }), hash: '/settings' })
-  const card = '.card'
+  const group = '.group'
+  // the chosen segment is the one raised surface in a group: 胡粉 (墨 in dark)
   const segment = '[role="radio"][aria-checked="true"]'
-  // 胡粉 card, 藍 ink on the chosen segment
-  expect(await bg(page, card)).toBe('rgb(255, 254, 251)')
+  const ground = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+  // a group is not a card: no surface of its own, no line around it; the page's ground shows through (生成り)
+  expect(await bg(page, group)).toBe('rgba(0, 0, 0, 0)')
+  expect(await page.locator(group).first().evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('0px')
+  expect(await ground()).toBe('rgb(251, 250, 245)')
+  expect(await bg(page, segment)).toBe('rgb(255, 254, 251)')
   expect(await page.locator(segment).first().evaluate((el) => getComputedStyle(el).color)).toBe('rgb(22, 94, 131)')
   await page.getByRole('radio', { name: '다크' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  // 墨 card, light 藍 ink
-  await expect.poll(() => bg(page, card)).toBe('rgb(37, 35, 33)')
+  // 墨 ground and surface, light 藍 ink
+  await expect.poll(ground).toBe('rgb(27, 26, 24)')
+  await expect.poll(() => bg(page, segment)).toBe('rgb(37, 35, 33)')
+  expect(await bg(page, group)).toBe('rgba(0, 0, 0, 0)')
   expect(await page.locator(segment).first().evaluate((el) => getComputedStyle(el).color)).toBe('rgb(134, 174, 207)')
   // system follows the OS setting
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.getByRole('radio', { name: '시스템' }).click()
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
-  expect(await bg(page, card)).toBe('rgb(37, 35, 33)')
-  await page.emulateMedia({ colorScheme: 'light' })
-  await expect.poll(() => bg(page, card)).toBe('rgb(255, 254, 251)')
-  // the primary button on home: 藍 face in light mode
+  expect(await ground()).toBe('rgb(27, 26, 24)')
+  // the primary button on home in dark: a deeper 藍 face, not the bright 藍 ink as a slab
   await page.getByRole('link', { name: '홈' }).click()
   await homeShown(page)
+  await expect.poll(() => bg(page, 'button[data-variant="primary"]')).toBe('rgb(43, 88, 120)')
+  await page.emulateMedia({ colorScheme: 'light' })
+  // in light: the 藍 face
   await expect.poll(() => bg(page, 'button[data-variant="primary"]')).toBe('rgb(22, 94, 131)')
+  await page.getByRole('link', { name: '설정' }).click()
+  await expect.poll(ground).toBe('rgb(251, 250, 245)')
 })
 
 test('with reduced motion nothing slides or fades: card entry, answer reveal and button press are instant', async ({ page }) => {
@@ -129,7 +139,7 @@ for (const [xp, shown] of [
   [999_999, '999,999'],
   [1_234_567, '123만'],
 ] as const)
-  test(`records: XP ${shown} stays on one line inside its tile from 320 to 430px, never below the 16px step`, async ({ page }) => {
+  test(`records: XP ${shown} stays on one line inside its column from 320 to 430px, never below the 16px step`, async ({ page }) => {
     await open(page, { state: user({}, { xp }), hash: '/stats' })
     for (const width of [320, 360, 390, 402, 430]) {
       await page.setViewportSize({ width, height: 844 })
@@ -144,8 +154,8 @@ for (const [xp, shown] of [
       })
       expect(m.height, `${width}px: one line`).toBeLessThan(m.size * 1.6)
       expect(m.size, `${width}px`).toBeGreaterThanOrEqual(16)
-      expect(m.left, `${width}px: inside the tile`).toBeGreaterThanOrEqual(0)
-      expect(m.right, `${width}px: inside the tile`).toBeGreaterThanOrEqual(0)
+      expect(m.left, `${width}px: inside its column`).toBeGreaterThanOrEqual(0)
+      expect(m.right, `${width}px: inside its column`).toBeGreaterThanOrEqual(0)
     }
     // the short form's name is the whole number
     if (xp >= 1_000_000) await expect(page.locator('.stat b', { hasText: '123만' })).toHaveAttribute('aria-label', '1,234,567')

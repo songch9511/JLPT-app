@@ -5,6 +5,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { go, syncThemeColor } from '../App'
 import { Announce, Button } from '../components/ui'
 import { Ruma } from '../components/Ruma'
+import { Waves } from '../components/Waves'
 import { Icon } from '../components/Icon'
 import { askLevelAgain, homeTip, markDone, phase as guidePhase, type Phase, type Tip } from '../guide'
 import { LevelAnswers, QUESTION, TIPS, TipLine } from './HomeGuide'
@@ -89,38 +90,6 @@ function WeekSeals({ s, today }: { s: State; today: Date }) {
         </span>
       ))}
     </div>
-  )
-}
-
-/**
- * Seigaiha along the foot of the sky, like a horizon: one pattern tile filled with a single rect, in the sky's own
- * colours (so it cross-fades with them). No filters; vector, so it stays crisp at any pixel ratio.
- */
-function Waves() {
-  const id = useId()
-  return (
-    <svg className="waves" aria-hidden="true" focusable="false">
-      <defs>
-        <pattern id={`${id}w`} width="40" height="20" patternUnits="userSpaceOnUse">
-          {[
-            [0, 0],
-            [40, 0],
-            [20, 10],
-            [0, 20],
-            [40, 20],
-          ].map(([x, y]) => (
-            <g key={`${x},${y}`}>
-              <circle cx={x} cy={y} r="19.5" className="wave-fill" />
-              <circle cx={x} cy={y} r="19.5" className="wave-line" />
-              <circle cx={x} cy={y} r="14.5" className="wave-line" />
-              <circle cx={x} cy={y} r="9.5" className="wave-line" />
-              <circle cx={x} cy={y} r="4.5" className="wave-line" />
-            </g>
-          ))}
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill={`url(#${id}w)`} />
-    </svg>
   )
 }
 
@@ -394,13 +363,12 @@ export function Home() {
           ) : (
             <>
               <div className="plan-figure">
-                <div>
-                  {cleared && <p className="plan-eyebrow">오늘 끝</p>}
-                  <p className="big">
-                    <b className="num">{f(cleared ? (todayLog?.c ?? 0) : 0)}</b>
-                    <span className="unit">장</span>
-                  </p>
-                </div>
+                {/* the day's count with its name beside it, on the figure's baseline */}
+                <p className="big">
+                  <b className="num">{f(cleared ? (todayLog?.c ?? 0) : 0)}</b>
+                  <span className="unit">장</span>
+                  {cleared && <span className="plan-eyebrow">오늘 끝</span>}
+                </p>
                 <p className="plan-side">
                   {cleared && (todayLog?.ms ?? 0) >= 30_000 && (
                     <span className="plan-time" role="img" aria-label={`${Math.round(todayLog!.ms! / 60_000)}분 걸림`}>

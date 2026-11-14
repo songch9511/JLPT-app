@@ -11,6 +11,7 @@ import {
   Flame,
   House,
   Info,
+  RotateCcw,
   Search,
   Settings,
   TriangleAlert,
@@ -37,6 +38,7 @@ const ICONS = {
   circle: Circle,
   chart: ChartColumn,
   alert: TriangleAlert,
+  again: RotateCcw,
   error: CircleX,
   success: CircleCheck,
 } satisfies Record<string, LucideIcon>

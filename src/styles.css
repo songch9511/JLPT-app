@@ -31,13 +31,13 @@
   .grow { flex: 1; min-width: 0; }
   .muted { color: var(--color-text-secondary); }
   .small { font-size: var(--font-size-base); }
-  .center { text-align: center; }
-  /* secondary explanatory text: 14px, secondary colour, regular weight (long text reads lighter) */
+  /* secondary explanatory text: the 14px label role, secondary colour, regular weight (long text reads lighter) */
   .hint { font-size: var(--text-supporting-size); color: var(--color-text-secondary); font-weight: var(--font-weight-normal); line-height: 1.5; }
-  .eyebrow { font-size: var(--font-size-base); font-weight: 700; color: var(--color-text-accent); letter-spacing: 0.04em; }
   .error { color: var(--color-text-error); font-size: var(--font-size-base); }
 
-  /* ── page frame: 16px sides (or the safe area), cards 12px apart, room for the tab bar ── */
+  /* ── page frame: 16px sides (or the safe area), 12px between the parts of a group, 32px between groups (.group), room
+     for the tab bar. Type has four roles: 24/20 bold (titles, figures), 16 body, 14 label; 12 only for units and chart
+     ticks. Radii are three: 12 controls, 24 what you hold, full pills. ── */
   .app, .study { max-width: 520px; margin: 0 auto; }
   .page {
     padding: calc(env(safe-area-inset-top) + var(--spacing-3)) max(var(--spacing-4), env(safe-area-inset-right)) calc(var(--tabbar-h, calc(env(safe-area-inset-bottom) + 64px)) + 40px) max(var(--spacing-4), env(safe-area-inset-left));
@@ -47,23 +47,38 @@
   .top > div:first-child, .top .grow { flex: 1; min-width: 0; }
   .subtitle { color: var(--color-text-secondary); font-size: var(--font-size-base); }
 
-  /* ── surfaces: a card (ui.tsx Card) is a 1px line, no shadow; 16px inside including the line ── */
-  .card { min-width: 0; background: var(--color-background-card); border: 1px solid var(--color-border); border-radius: var(--radius-container); padding: calc(var(--spacing-4) - 1px); }
-  .card.pad-3 { padding: calc(var(--spacing-3) - 1px); }
-  .card-title { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-2); margin-bottom: var(--spacing-3); font-size: var(--text-heading-3-size); font-weight: 700; line-height: 1.4; }
-  .card-title .muted { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); }
-  .notice { font-size: var(--font-size-base); background: var(--color-background-muted); border-radius: var(--radius-element); padding: 10px var(--spacing-3); }
-
-  /* a small static label: stage, level, "3번 잊음" (not pressable, so no edge) */
-  .tag {
-    display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: var(--radius-full);
-    font-size: var(--font-size-sm); font-weight: 700; background: var(--color-background-muted); color: var(--color-text-secondary); white-space: nowrap;
+  /* ── surfaces (docs/design-system.md §4 "표면"): only what you hold has a surface — the study card, sheets, dialogs.
+     Groups sit on the ground: a heading, then rows divided by hairlines (ui.tsx Group, Field). No card in a card, no
+     edge stripes. ── */
+  .group { display: flex; flex-direction: column; min-width: 0; }
+  .page > .group:not(:first-child), .page > .stat-grid { margin-top: calc(var(--spacing-8) - var(--spacing-3)); }
+  .group-title {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--spacing-2); padding: 0 0 var(--spacing-1);
+    font-size: var(--text-label-size); font-weight: 700; line-height: 1.4; color: var(--color-text-secondary);
   }
-  .stage-tag::before { content: ''; width: 7px; height: 7px; border-radius: var(--radius-full); background: var(--color-border-emphasized); }
-  .stage-tag.mature::before { background: var(--ruma-stage-mature); }
-  .stage-tag.young::before { background: var(--ruma-stage-young); }
-  .stage-tag.learning::before { background: var(--ruma-stage-learning); }
-  .stage-tag.new::before { background: none; box-shadow: inset 0 0 0 1.5px var(--color-border-emphasized); }
+  .group-aside { font-weight: var(--font-weight-medium); }
+  /* the rows: 12px above and below, a hairline between */
+  .group > :not(.group-title) { padding-block: var(--spacing-3); }
+  .group > :not(.group-title) + :not(.group-title) { border-top: 1px solid var(--color-border); }
+  .field { display: flex; flex-direction: column; gap: 2px; }
+  .field-name { font-size: var(--text-body-size); line-height: 1.4; }
+  .field-desc { font-size: var(--text-supporting-size); font-weight: var(--font-weight-normal); line-height: 1.5; color: var(--color-text-secondary); }
+  .field > .segmented { margin-top: var(--spacing-2); }
+
+  /* static facts: plain text joined by " · " (ui.tsx Meta); a pill only ever means "you can press this" */
+  .meta { font-size: var(--text-label-size); font-weight: var(--font-weight-medium); line-height: 1.4; color: var(--color-text-secondary); }
+  /* an answer's result: one line, a mark in front, the colour on the text only (ui.tsx Result) */
+  .result { display: inline-flex; align-items: flex-start; gap: 5px; font-weight: 700; line-height: 1.4; text-align: left; }
+  /* the mark sits on the first line when the words wrap (the largest text sizes) */
+  .result > svg { flex: none; margin-top: calc((1.4em - 16px) / 2); }
+  .result[data-tone='right'] { color: var(--color-text-success); }
+  .result[data-tone='wrong'], .result[data-tone='again'] { color: var(--color-text-error); }
+  /* a memory stage as text with its colour as a small dot (never colour alone) */
+  .stage-dot::before { content: ''; display: inline-block; flex: none; width: 8px; height: 8px; margin-right: 6px; border-radius: var(--radius-full); background: var(--color-border-emphasized); vertical-align: 1px; }
+  .stage-dot.mature::before, .mature > .stage-dot::before { background: var(--ruma-stage-mature); }
+  .stage-dot.young::before, .young > .stage-dot::before { background: var(--ruma-stage-young); }
+  .stage-dot.learning::before, .learning > .stage-dot::before { background: var(--ruma-stage-learning); }
+  .stage-dot.new::before, .new > .stage-dot::before { background: none; box-shadow: inset 0 0 0 1.5px var(--color-border-emphasized); }
 
   /* ── pressable controls (ui.tsx Button / IconButton): a flat face on a shallow 3px edge; pressing sinks the face
      onto it. One primary per group. Platform screens (src/platform/) use `.btn` / `.btn.primary` on plain buttons. ── */
@@ -81,7 +96,13 @@
   .btn[data-size='sm'] { min-height: var(--size-element-sm); font-size: var(--font-size-base); }
   .btn[data-size='lg'] { min-height: var(--size-element-lg); }
   .btn.full { display: flex; width: 100%; }
-  .btn.primary, .btn[data-variant='primary'] { --face: var(--color-accent); --edge: var(--ruma-edge-accent); --ink: var(--color-on-accent); --line: transparent; }
+  .btn.primary, .btn[data-variant='primary'] { --face: var(--ruma-primary); --edge: var(--ruma-edge-accent); --ink: var(--ruma-on-primary); --line: transparent; }
+  /* the chosen one of a few (aria-pressed: the grade given to a card answered earlier): sunk onto its edge, the 白藍
+     tint and 藍 ink, a ✓ inside — never a second filled primary */
+  .btn[aria-pressed='true']:not([data-variant='ghost']) {
+    --face: var(--color-accent-muted); --ink: var(--color-text-accent); --line: var(--color-accent);
+    transform: translateY(var(--ruma-depth)); box-shadow: inset 0 0 0 1px var(--line);
+  }
   /* destructive: a soft vermilion face (朱 on 桜), never the filled primary; still pressable */
   .btn[data-variant='destructive'] { --face: var(--color-error-muted); --edge: color-mix(in srgb, var(--color-error) 40%, var(--color-error-muted)); --ink: var(--color-text-error); --line: transparent; }
   .btn[data-variant='ghost'] { --face: transparent; --edge: transparent; --ink: var(--color-icon-secondary); --line: transparent; margin-bottom: 0; }
@@ -110,7 +131,7 @@
   /* a segmented control (ui.tsx Choice): the chosen segment is a raised surface with the accent ink */
   .segmented { display: flex; gap: 2px; padding: 2px; min-height: var(--size-element-md); border-radius: var(--radius-element); background: var(--color-neutral); }
   .segmented > button {
-    flex: 1 1 0; min-width: 0; min-height: 40px; padding: 0 var(--spacing-3); border-radius: 10px; color: var(--color-text-secondary);
+    flex: 1 1 0; min-width: 0; min-height: 40px; padding: 0 var(--spacing-3); border-radius: calc(var(--radius-element) - 2px); color: var(--color-text-secondary);
     font: inherit; font-size: var(--font-size-base); font-weight: var(--font-weight-medium); line-height: 1.4; cursor: pointer;
     transition: background-color var(--duration-fast) var(--ease-standard);
   }
@@ -119,7 +140,7 @@
 
   /* a switch (ui.tsx Switch): the whole row toggles; off track 3:1 against the card, on = 藍 */
   .switch-field { display: flex; align-items: center; gap: var(--spacing-2); cursor: pointer; }
-  .switch-label { display: block; font-size: var(--text-label-size); font-weight: var(--font-weight-medium); line-height: 1.4; color: var(--color-text-secondary); }
+  .switch-label { display: block; font-size: var(--text-body-size); font-weight: var(--font-weight-medium); line-height: 1.4; color: var(--color-text-primary); }
   .switch-desc { display: block; font-size: var(--font-size-base); font-weight: var(--font-weight-normal); line-height: 1.5; color: var(--color-text-secondary); }
   .switch-input, .switch input {
     flex: none; appearance: none; -webkit-appearance: none; position: relative; width: 40px; height: 24px; margin: 0; border-radius: var(--radius-full);
@@ -152,17 +173,8 @@
   .progress { position: relative; height: 8px; border-radius: var(--radius-full); background: var(--color-track); }
   .progress > i { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); transition: width var(--duration-slow) var(--ease-standard); }
 
-  /* a small static label (ui.tsx Badge) */
-  .badge {
-    display: inline-flex; align-items: center; min-height: 21px; padding: 0 var(--spacing-2); border-radius: var(--radius-full);
-    font-size: var(--font-size-base); font-weight: var(--font-weight-medium); line-height: 1.5; white-space: nowrap;
-    background: var(--color-neutral); color: var(--color-text-primary);
-  }
-  .badge[data-variant='blue'] { background: var(--color-background-blue); color: var(--color-text-blue); }
-  .badge[data-variant='red'] { background: var(--color-background-red); color: var(--color-text-red); }
-
   /* a lasting notice (ui.tsx Banner) */
-  .banner { border: 1px solid var(--color-border); border-radius: var(--radius-container); background: var(--color-background-surface); overflow: hidden; }
+  .banner { border: 1px solid var(--color-border); border-radius: var(--radius-element); background: var(--color-background-surface); overflow: hidden; }
   .banner-head { display: flex; align-items: flex-start; gap: var(--spacing-2); padding: 10px var(--spacing-1) var(--spacing-3) var(--spacing-4); }
   .banner-head > svg { flex: none; margin-top: 2px; }
   .banner-head .icon-btn { margin: calc(-1 * var(--spacing-2)) 0; }
@@ -179,23 +191,27 @@
   .empty p { font-size: var(--font-size-base); font-weight: var(--font-weight-normal); line-height: 1.5; color: var(--color-text-secondary); }
 
   /* loading placeholders (ui.tsx Skeleton): a slow pulse, still under reduced motion */
-  .skeleton-block { display: block; border-radius: var(--radius-inner); background: var(--color-skeleton); animation: pulse 1.6s ease-in-out infinite; }
+  .skeleton-block { display: block; border-radius: var(--radius-element); background: var(--color-skeleton); animation: pulse 1.6s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: 0.5; } }
 
-  /* ── forms ── */
-  .form { display: flex; flex-direction: column; gap: 10px; }
-  .form .card-title { margin-bottom: 0; }
-  .field-label { font-size: var(--text-label-size); font-weight: 700; color: var(--color-text-secondary); margin-top: var(--spacing-1); }
+  /* ── 설정: rows of a group ── */
   .row { display: flex; gap: var(--spacing-2); }
   .row > * { flex: 1; }
-  .last-backup { color: var(--color-text-primary); }
-  .replay-tips { min-height: 44px; display: flex; align-items: center; font-size: var(--font-size-base); color: var(--color-text-secondary); margin: 0 0 calc(-1 * var(--spacing-2)) calc(-1 * var(--spacing-2)); }
+  .data-facts { display: flex; flex-direction: column; gap: 2px; }
+  .last-backup { font-size: var(--text-body-size); }
+  .group > .replay-tips { padding-block: var(--spacing-1); }
+  .replay-tips { min-height: 44px; display: flex; align-items: center; font-size: var(--font-size-base); color: var(--color-text-secondary); margin-left: calc(-1 * var(--spacing-2)); }
   .replay-done { padding-inline: var(--spacing-2); }
-  .about { display: flex; flex-direction: column; gap: var(--spacing-2); }
-  .about .card-title { margin-bottom: 0; }
-  .credits { display: flex; flex-direction: column; gap: var(--spacing-1); font-size: var(--font-size-base); color: var(--color-text-secondary); }
+  .data-reset { display: flex; }
+  .about-app { font-size: var(--text-body-size); }
+  /* the two page links are rows of their own: their hairlines are the group's */
+  .group > .about-links { padding-block: 0; }
+  .about-links { display: flex; flex-direction: column; }
+  .about-links .row-link:last-child { border-bottom: 0; }
+  .about-notes { display: flex; flex-direction: column; gap: var(--spacing-2); }
+  .about-notes > * { font-size: var(--text-supporting-size); font-weight: var(--font-weight-normal); line-height: 1.5; color: var(--color-text-secondary); text-wrap: pretty; }
+  .credits { display: flex; flex-direction: column; gap: var(--spacing-1); }
   .credits li::before { content: '· '; }
-  .about-links { display: flex; flex-direction: column; border-top: 1px solid var(--color-border); }
 
   /* the privacy and support pages shown in place in the iOS app (screens/Doc.tsx): the text of public/privacy, support */
   .doc { font-size: var(--font-size-base); line-height: 1.6; font-weight: var(--font-weight-normal); }
@@ -208,14 +224,14 @@
   .doc li > ul { margin: var(--spacing-1) 0 0; }
   .doc a, .credits a { text-decoration: underline; text-underline-offset: 2px; }
   .doc .alt { font-weight: 700; }
-  .doc code { font-family: var(--font-family-code); font-size: var(--font-size-sm); background: var(--color-background-muted); border-radius: 4px; padding: 1px 4px; overflow-wrap: anywhere; }
+  .doc code { font-family: var(--font-family-code); font-size: 0.9em; overflow-wrap: anywhere; }
   .doc hr { border: 0; border-top: 1px solid var(--color-border); margin: var(--spacing-4) 0; }
-  .doc .table { overflow-x: auto; margin: 0 0 var(--spacing-4); border: 1px solid var(--color-border); border-radius: var(--radius-element); background: var(--color-background-surface); }
+  .doc .table { overflow-x: auto; margin: 0 0 var(--spacing-4); border-top: 1px solid var(--color-border); }
   .doc table { border-collapse: collapse; min-width: 100%; line-height: 1.5; }
   .doc th, .doc td { text-align: left; vertical-align: top; padding: var(--spacing-2) var(--spacing-3); border-bottom: 1px solid var(--color-border); min-width: 7.5em; }
-  .doc tr:last-child td { border-bottom: 0; }
-  .doc th { background: var(--color-background-muted); font-weight: 700; }
-  .doc .placeholder { background: var(--color-warning-muted); color: var(--color-text-warning); border-radius: 4px; padding: 0 3px; font-weight: 700; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+  .doc th:first-child, .doc td:first-child { padding-left: 0; }
+  .doc th { font-weight: 700; }
+  .doc .placeholder { background: var(--color-warning-muted); color: var(--color-text-warning); border-radius: 2px; padding: 0 3px; font-weight: 700; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .doc-loading { display: flex; flex-direction: column; gap: var(--spacing-2); }
   .dialog-body { display: flex; flex-direction: column; gap: var(--spacing-4); padding-top: var(--spacing-2); }
   /* the Astryx buttons inside the dialogs (overlays.tsx) press like ours: the theme gives the face and edge, the theme
@@ -285,7 +301,8 @@
   }
   .home-sheet.ask { gap: var(--spacing-5); padding-top: var(--spacing-5); }
   .plan-figure { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--spacing-2) var(--spacing-4); }
-  .plan-eyebrow { font-size: var(--font-size-base); font-weight: 700; color: var(--color-text-secondary); line-height: 1.4; margin-bottom: var(--spacing-1); }
+  /* "오늘 끝" on the figure's baseline, beside it (not a label above it) */
+  .big .plan-eyebrow { margin-left: var(--spacing-2); font-size: var(--font-size-lg); font-weight: 700; color: var(--color-text-secondary); }
   .big { display: flex; align-items: baseline; gap: 3px; white-space: nowrap; }
   .big .num { font-size: min(var(--font-size-4xl), 12.5vw); line-height: 1; letter-spacing: -0.02em; }
   .big .unit { font-size: var(--font-size-xl); font-weight: 700; }
@@ -367,7 +384,7 @@
 
   /* the reading-card tip on the study screen: a small Ruma and its bubble above the card */
   .bubble {
-    position: relative; flex: 1; background: var(--color-background-muted); border-radius: var(--radius-container);
+    position: relative; flex: 1; background: var(--color-background-muted); border-radius: var(--radius-element);
     padding: 10px var(--spacing-3); font-size: var(--font-size-base); line-height: 1.45; text-wrap: pretty;
   }
   .bubble::before {
@@ -387,8 +404,8 @@
   .row-link svg { color: var(--color-icon-secondary); }
 
   /* notices: the backup reminder (a quiet line in 설정 › 데이터), a floating error banner when saving fails */
-  .nudge { display: flex; align-items: center; gap: 0; margin: calc(-1 * var(--spacing-2)) 0; }
-  .nudge p { font-size: var(--font-size-base); color: var(--color-text-secondary); }
+  .nudge { display: flex; align-items: center; gap: 0; margin: 0 calc(-1 * var(--spacing-2)) calc(-1 * var(--spacing-2)) 0; }
+  .nudge p { font-size: var(--font-size-base); color: var(--color-text-primary); }
   .save-warning {
     position: fixed; z-index: 20; left: 50%; transform: translateX(-50%);
     top: calc(env(safe-area-inset-top) + var(--spacing-2)); width: calc(100% - 16px); max-width: 504px;
@@ -407,12 +424,15 @@
   .stamps .done span { border: 1.5px solid var(--color-error); transform: rotate(-8deg); }
   .stamps .now span { border-color: var(--color-accent); border-style: solid; }
   .stamps small { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
-  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-2); }
-  .stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; container-type: inline-size; }
-  .stat-label { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
-  /* one line: 24px where it fits, else the tile's width ÷ the text's width in em (Stats.tsx StatNumber), not below 16px */
-  .stat b { font-size: clamp(var(--font-size-lg), calc(100cqi / (var(--ems, 3) * 1.04)), var(--font-size-2xl)); white-space: nowrap; }
-  .stat small { font-size: var(--font-size-sm); }
+  /* the three figures as one line on the ground, each named under it (no tiles) */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-3); margin: 0; }
+  .stat { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0; container-type: inline-size; }
+  .stat dd { margin: 0; }
+  .stat-note { font-size: var(--text-label-size); color: var(--color-text-secondary); line-height: 1.4; }
+  .stat-label { display: block; color: var(--color-text-primary); }
+  .stat-period { display: block; }
+  /* one line: 24px where it fits, else the column's width ÷ the text's width in em (Stats.tsx StatNumber), not below 16px */
+  .stat b { display: block; font-size: clamp(var(--font-size-lg), calc(100cqi / (var(--ems, 3) * 1.04)), var(--font-size-2xl)); white-space: nowrap; }
   .forecast-chart { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--spacing-2); height: 120px; margin-bottom: var(--spacing-2); }
   .forecast-chart div { display: grid; grid-template-rows: 18px 1fr 18px; justify-items: center; align-items: end; min-height: 0; }
   .forecast-chart span { font-size: var(--font-size-sm); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -428,23 +448,24 @@
   .heat.h3 { background: var(--ruma-stage-mature); }
 
   /* ── levels (단어장) ── */
-  .section-title { margin: var(--spacing-3) var(--spacing-1) var(--spacing-2); font-size: var(--text-heading-3-size); }
-  .legend { display: flex; gap: var(--spacing-3); margin: 0 var(--spacing-1) var(--spacing-2); font-size: var(--font-size-sm); color: var(--color-text-secondary); }
-  .legend span::before { content: ''; display: inline-block; width: 9px; height: 9px; border-radius: var(--radius-full); margin-right: 5px; }
-  .levels { display: flex; flex-direction: column; gap: var(--spacing-2); }
-  /* a level row is pressable: the same shallow edge as a button, 2px */
+  .legend { display: flex; flex-wrap: wrap; gap: 0 var(--spacing-3); font-size: var(--text-label-size); color: var(--color-text-secondary); }
+  .group > .legend { padding-block: 0 var(--spacing-1); }
+  .legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-full); margin-right: 6px; vertical-align: 1px; }
+  .group > .levels { padding-block: 0; }
+  .levels { display: flex; flex-direction: column; }
+  /* a level row: a row on the ground with a hairline below, like a word row; the whole row goes to the level */
   .level-row {
     display: grid; grid-template-columns: 1fr auto auto; grid-template-areas: 'name count chev' 'bar bar chev';
-    align-items: center; gap: 6px 10px; min-height: 56px; padding: 10px 12px 10px var(--spacing-4); color: var(--color-text-primary);
-    background: var(--color-background-surface); border: 1px solid var(--color-border); border-radius: var(--radius-container);
-    box-shadow: 0 2px 0 var(--ruma-edge); margin-bottom: 2px;
-    transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+    align-items: center; gap: 6px 10px; min-height: 56px; padding: var(--spacing-3) var(--spacing-1); color: var(--color-text-primary);
+    text-decoration: none; border-bottom: 1px solid var(--color-border); transition: background var(--duration-fast) var(--ease-standard);
   }
-  .level-row:active { transform: translateY(2px); box-shadow: 0 0 0 transparent; }
-  .level-row.target { border-color: var(--color-accent); }
-  .level-name { grid-area: name; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .level-row:first-child { border-top: 1px solid var(--color-border); }
+  .level-row:active { background: var(--color-overlay-hover); }
+  .level-name { grid-area: name; display: flex; align-items: baseline; gap: var(--spacing-2); flex-wrap: wrap; }
   .level-name b { font-size: var(--font-size-lg); }
-  .level-count { grid-area: count; font-size: var(--font-size-sm); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+  /* the target level, as words in the 藍 ink (current position), not a pill or a border */
+  .level-target { font-size: var(--text-label-size); font-weight: 700; color: var(--color-text-accent); white-space: nowrap; }
+  .level-count { grid-area: count; font-size: var(--text-label-size); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
   .level-row .bar { grid-area: bar; height: 6px; }
   .level-row > svg { grid-area: chev; color: var(--color-icon-secondary); }
   /* the stage bar: plain fills in the three stage colours */
@@ -454,15 +475,18 @@
   .stagebar .mature, .legend .mature::before { background: var(--ruma-stage-mature); }
   .stagebar .young, .legend .young::before { background: var(--ruma-stage-young); }
   .stagebar .learning, .legend .learning::before { background: var(--ruma-stage-learning); }
-  .fast-count { font-size: var(--font-size-base); color: var(--color-text-secondary); margin-bottom: var(--spacing-3); }
+  /* a level's memory on the ground: one line, the stage bar, four figures in the body ink named with their dot */
+  .level-summary { display: flex; flex-direction: column; gap: var(--spacing-3); padding-block: var(--spacing-1) var(--spacing-3); }
+  .fast-count { font-size: var(--text-supporting-size); color: var(--color-text-secondary); }
   .fast-count b { color: var(--color-text-primary); }
-  .breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: var(--spacing-3); text-align: center; }
-  .breakdown div { display: flex; flex-direction: column; }
-  .breakdown b { font-size: var(--font-size-2xl); font-variant-numeric: tabular-nums; }
-  .breakdown span { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
-  .breakdown .mature b { color: var(--color-text-success); }
-  .breakdown .young b { color: var(--ruma-stage-young); }
-  .breakdown .learning b { color: var(--color-text-warning); }
+  .breakdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--spacing-2); }
+  .breakdown div { display: flex; flex-direction: column; min-width: 0; }
+  .breakdown b { font-size: var(--font-size-xl); }
+  .breakdown span { font-size: var(--text-label-size); color: var(--color-text-secondary); line-height: 1.4; }
+  /* small phones and the accessibility text sizes: two by two, so a stage's name never breaks */
+  @media (max-width: 360px) { .breakdown { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--spacing-3); } }
+  :root[data-text-size='large'] .breakdown { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--spacing-3); }
+  .breakdown span { white-space: nowrap; }
 
   /* ── words: bespoke rows (headword in mincho, reading, meaning, one tag) ── */
   .word-list { display: flex; flex-direction: column; }
@@ -476,7 +500,8 @@
   .word-main b { font-size: var(--font-size-xl); font-family: var(--ruma-font-ja-serif); font-weight: 600; }
   .word-main span { font-size: var(--font-size-base); color: var(--color-text-accent); }
   .word-meaning { grid-area: mean; font-size: var(--font-size-base); color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .word-row .tag { grid-area: tag; }
+  /* the row's one fact at the right — level, stage, "3번 잊음" — as plain text */
+  .word-aside { grid-area: tag; font-size: var(--text-label-size); color: var(--color-text-secondary); white-space: nowrap; }
 
   /* ── tab bar: bespoke (Astryx has no bottom tab bar; MobileNav is a drawer) ── */
   .tabbar {
@@ -499,20 +524,20 @@
   .study { height: 100dvh; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
   .study-top { display: flex; align-items: center; gap: var(--spacing-2); padding: var(--spacing-2) max(var(--spacing-2), env(safe-area-inset-right)) 0 max(var(--spacing-2), env(safe-area-inset-left)); }
   .left-count { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .after-note { height: 20px; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .after-note { height: 20px; text-align: center; font-size: var(--text-label-size); line-height: 20px; color: var(--color-text-secondary); }
   .after-note span { display: inline-block; animation: note 0.9s var(--ease-standard) both; }
   @keyframes note { 0% { opacity: 0; } 15%, 75% { opacity: 1; } 100% { opacity: 0; } }
   .card-area { flex: 1; min-height: 0; padding: var(--spacing-1) max(var(--spacing-4), env(safe-area-inset-right)) var(--spacing-3) max(var(--spacing-4), env(safe-area-inset-left)); display: flex; }
   .flash {
     flex: 1; display: flex; flex-direction: column; background: var(--color-background-surface);
     border: 1px solid var(--color-border); border-radius: var(--radius-page);
-    padding: var(--spacing-3); overflow-y: auto; cursor: pointer; animation: card-in 160ms ease-out both;
+    padding: var(--spacing-3); overflow-y: auto; cursor: pointer; animation: card-in var(--duration-medium) var(--ease-standard) both;
   }
   .flash.open { cursor: default; }
-  /* a forgotten card: a vermilion top edge, nothing louder */
-  .flash.missed { border-top: 3px solid var(--color-error); }
+  /* the card's surface never changes with the answer (`.missed` is a state hook, not a style): the result is one line */
   @keyframes card-in { from { opacity: 0; transform: translateY(8px); } }
   .flash-head { display: flex; align-items: center; gap: var(--spacing-1); padding-left: var(--spacing-2); min-height: 44px; }
+  .flash-status { display: flex; align-items: center; min-width: 0; font-size: var(--text-label-size); }
   .flash-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-3); padding: var(--spacing-2) var(--spacing-3) var(--spacing-8); text-align: center; }
   /* the headword: the one size outside the scale */
   .flash-word { font-family: var(--ruma-font-ja-serif); font-size: clamp(44px, 16vw, 76px); line-height: 1.2; font-weight: 600; overflow-wrap: anywhere; }
@@ -534,7 +559,8 @@
   .answer-bar .wide { grid-column: 1 / -1; }
   .answer-bar .btn.grade { flex-direction: column; gap: 0; height: 60px; min-height: 60px; width: 100%; padding: 0 6px; font-size: calc(var(--font-size-lg) * 0.9375); line-height: 1.4; white-space: nowrap; }
   .grade-label { display: block; line-height: 1.25; }
-  .grade small { display: block; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); line-height: 1.25; opacity: 0.8; color: inherit; }
+  /* the interval under a grade ("10분"): a unit, the one 12px use on the card */
+  .grade small { display: block; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); line-height: 1.25; color: inherit; }
   @media (max-width: 340px) { .answer-bar.three { grid-template-columns: 1fr 1.15fr 1fr; gap: 6px; } }
   /* swiping between the session's cards (Study.tsx, useSwipe.ts): the cards sit side by side, one card width plus a gap
      apart (`--slot`), and move together through `--drag` — transforms only. The screen clips them at its sides. */
@@ -546,38 +572,43 @@
   .card-stage .flash { touch-action: pan-y; }
   .card-stage.dragging { user-select: none; -webkit-user-select: none; }
   .card-stage.dragging .card-slot { will-change: transform; }
-  .card-stage.settling .card-slot { transition: transform 220ms var(--ease-standard); }
+  .card-stage.settling .card-slot { transition: transform var(--duration-medium) var(--ease-standard); }
   /* an earlier card is already known: no entry motion */
   .flash.past, .flash.past .flash-answer { animation: none; }
-  .past-bar .grade-label { display: inline-flex; align-items: center; justify-content: center; gap: 2px; }
+  .past-bar .grade-label { display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
   /* previous / next card for the keyboard and screen readers: out of sight until focused */
   .study-nav { position: absolute; z-index: 2; left: 50%; top: calc(env(safe-area-inset-top) + 60px); transform: translateX(-50%); display: flex; gap: var(--spacing-2); padding: var(--spacing-1); border-radius: var(--radius-full); background: var(--color-background-surface); box-shadow: var(--shadow-high); }
   .study-nav:not(:focus-within) { width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; box-shadow: none; }
   .study:has(.study-nav) { position: relative; }
 
-  .done-screen {
-    min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; gap: var(--spacing-3);
-    padding: calc(env(safe-area-inset-top) + var(--spacing-8)) max(var(--spacing-6), env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + var(--spacing-8)) max(var(--spacing-6), env(safe-area-inset-left));
-  }
-  .done-screen { position: relative; text-align: center; align-items: center; height: auto; overflow: hidden; }
-  .done-screen h1 { font-size: var(--font-size-3xl); }
-  .done-text { color: var(--color-text-secondary); }
-  .done-mascot { position: relative; }
-  /* one vermilion seal stamped once when the day is done */
+  /* 오늘 끝 / 쉬어 가요: Home's language — Ruma under its sky, the result on a sheet rising over it (Study.tsx) */
+  .study.done-screen { height: auto; min-height: 100dvh; padding-top: 0; }
+  .home-sky.done-sky { flex: 1; display: flex; justify-content: center; padding-bottom: calc(var(--spacing-8) + 28px); }
+  .home-sky.done-sky .sky-ruma { position: relative; width: clamp(104px, 20dvh, 156px); margin: var(--spacing-4) 0 0; }
+  /* the sheet holds the result and the buttons at the thumb; the sky above takes the rest of the height */
+  .done-sheet { flex: none; padding-bottom: calc(env(safe-area-inset-bottom) + var(--spacing-6)); gap: var(--spacing-2); }
+  .done-sheet h1 { font-size: var(--text-heading-1-size); }
+  .done-text { color: var(--color-text-secondary); font-size: var(--text-supporting-size); }
+  /* the day in one line of figures: "본 카드 20장 · 연속 학습 3일 · 오늘 XP 250" */
+  .done-figures { display: flex; flex-wrap: wrap; margin: 0; color: var(--color-text-secondary); }
+  .done-figures > div { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+  /* the separator ends a line rather than starting the next when the line wraps (320px) */
+  .done-figures > div:not(:last-child)::after { content: '·'; margin: 0 var(--spacing-2) 0 3px; }
+  .done-figures dd { margin: 0; }
+  .done-figures b { color: var(--color-text-primary); font-size: var(--font-size-lg); line-height: 1.5; }
+  /* one vermilion seal stamped when the day is done: it fades in, it does not scale */
   .seal {
-    position: absolute; right: -18px; bottom: 6px; display: grid; place-items: center; width: 48px; height: 48px;
-    border-radius: var(--radius-full); border: 2px solid var(--color-error); color: var(--color-error); background: color-mix(in srgb, var(--color-background-body) 70%, transparent);
-    font-family: var(--ruma-font-ja-serif); font-size: var(--font-size-xl); transform: rotate(-8deg); animation: stamp var(--duration-slow) var(--ease-standard) both;
+    position: absolute; right: -14px; bottom: 6px; display: grid; place-items: center; width: 48px; height: 48px;
+    border-radius: var(--radius-full); border: 2px solid var(--ruma-seal); color: var(--ruma-seal); background: color-mix(in srgb, var(--ruma-seal) 6%, var(--sky));
+    font-family: var(--ruma-font-ja-serif); font-size: var(--font-size-xl); transform: rotate(-8deg); animation: fade var(--duration-slow) var(--ease-standard) both;
   }
-  @keyframes stamp { from { opacity: 0; transform: rotate(-8deg) scale(1.6); } }
-  .done-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: var(--spacing-3); }
-  .result-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin: var(--spacing-2) 0 0; }
-  .result-tiles > div { display: flex; flex-direction: column; gap: 2px; padding: var(--spacing-3) 6px; border-radius: var(--radius-container); background: var(--color-background-surface); border: 1px solid var(--color-border); }
-  .result-tiles dt { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
-  .result-tiles dd { margin: 0; }
-  .result-tiles b { display: flex; align-items: center; justify-content: center; gap: var(--spacing-1); color: var(--color-text-primary); font-size: var(--font-size-2xl); line-height: 1.2; font-variant-numeric: tabular-nums; }
-  .t-streak svg { color: var(--ruma-flame); }
-
+  .done-actions { display: flex; flex-direction: column; gap: var(--spacing-3); width: 100%; margin-top: var(--spacing-5); }
+  @media (max-height: 700px) {
+    .home-sky.done-sky { padding-bottom: calc(var(--spacing-4) + 28px); }
+    .home-sky.done-sky .sky-ruma { width: 96px; margin-top: var(--spacing-3); }
+  }
+  :root[data-text-size='large'] .home-sky.done-sky { display: flex; padding-bottom: calc(var(--spacing-4) + 28px); }
+  :root[data-text-size='large'] .home-sky.done-sky .sky-ruma { width: 88px; margin-top: var(--spacing-3); }
 
   /* error recovery */
   .recovery {
@@ -597,26 +628,28 @@
   .sheet-word { font-family: var(--ruma-font-ja-serif); font-size: var(--font-size-4xl); font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; min-width: 0; }
   .sheet-reading { font-size: var(--font-size-xl); color: var(--color-text-accent); font-weight: var(--font-weight-medium); }
   .sheet-meaning { font-size: var(--font-size-xl); font-weight: 700; }
-  .sheet-status { font-size: var(--font-size-base); color: var(--color-text-secondary); padding-top: var(--spacing-1); }
-  .info-sheet h2 { font-size: var(--text-heading-2-size); }
-  .help-list { display: flex; flex-direction: column; gap: var(--spacing-2); font-size: var(--font-size-base); font-weight: var(--font-weight-normal); padding: var(--spacing-2) 0 0; }
-  .help-list li { padding-left: 14px; position: relative; }
-  .help-list li::before { content: ''; position: absolute; left: 2px; top: 0.65em; width: 5px; height: 5px; border-radius: var(--radius-full); background: var(--color-text-secondary); }
-  .sheet-notes { display: flex; flex-direction: column; gap: var(--spacing-2); padding-top: var(--spacing-1); }
+  .sheet-gloss { font-size: var(--text-supporting-size); font-weight: var(--font-weight-normal); color: var(--color-text-secondary); }
+  /* below a hairline: the type line, the false-friend warning, the sound correspondences */
+  .sheet-notes { display: flex; flex-direction: column; gap: var(--spacing-2); margin-top: var(--spacing-2); padding-top: var(--spacing-3); border-top: 1px solid var(--color-border); }
+  .sheet-notes:empty { display: none; }
+  .sheet-notes .false-friend { border-top: 0; padding-top: 0; margin-top: 0; }
 
   /* ── word types: cognate fast-track (reading cards), false friends, hanja readings ── */
-  .type-line { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .type-line { font-size: var(--text-label-size); color: var(--color-text-secondary); }
+  /* the false-friend warning: below a hairline, one 弁柄 line with its mark, then the note — no tinted box */
   .false-friend {
-    display: flex; flex-direction: column; gap: 2px; text-align: left; max-width: 100%;
-    padding: 10px var(--spacing-3); border-radius: var(--radius-element); background: var(--color-error-muted); color: var(--color-text-primary); font-size: var(--font-size-base);
+    display: flex; flex-direction: column; align-items: center; gap: 2px; max-width: 100%; margin-top: var(--spacing-2); padding-top: var(--spacing-3);
+    border-top: 1px solid var(--color-border); color: var(--color-text-primary); font-size: var(--text-supporting-size); line-height: 1.5;
   }
   .false-friend b { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-error); }
+  .sheet .false-friend { align-items: flex-start; text-align: left; }
   .bridge { font-size: var(--font-size-lg); color: var(--color-text-secondary); }
   .bridge b { color: var(--color-text-primary); }
   .bridge-ja { color: var(--color-text-accent); font-weight: 700; }
-  .sound-hints { display: flex; flex-direction: column; gap: 2px; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
-  .sound-hints small { margin-left: 6px; font-size: var(--font-size-sm); color: inherit; }
-  .reading-prompt { color: var(--color-text-secondary); font-size: var(--font-size-base); }
+  .sound-hints { display: flex; flex-direction: column; gap: 2px; font-size: var(--text-label-size); color: var(--color-text-secondary); }
+  .sound-hints small { margin-left: 6px; font-size: inherit; color: inherit; }
+  /* the question's line; once answered, the result in its place (one line, the same height) */
+  .reading-prompt { display: flex; align-items: center; justify-content: center; min-height: 24px; color: var(--color-text-secondary); font-size: var(--text-body-size); }
   /* the reading choices are pressable: the same flat face and shallow edge as a secondary button */
   .choices { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-2); width: 100%; max-width: 420px; }
   .choice {
@@ -627,10 +660,13 @@
     transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
   }
   .choice:active:not(:disabled) { transform: translateY(var(--ruma-depth)); box-shadow: 0 0 0 var(--edge), inset 0 0 0 1px var(--color-border); }
-  .choice:disabled { cursor: default; opacity: 1; }
-  .choice.right { --face: var(--color-success-muted); --edge: var(--color-success); --ink: var(--color-text-success); box-shadow: 0 0 0 var(--edge), inset 0 0 0 2px var(--color-success); }
-  .choice.wrong { --face: var(--color-error-muted); --edge: var(--color-error); --ink: var(--color-text-error); box-shadow: 0 0 0 var(--edge), inset 0 0 0 2px var(--color-error); }
-  .choice.dim { opacity: 0.55; box-shadow: inset 0 0 0 1px var(--color-border); }
+  /* answered: nothing is pressable any more, so every choice settles onto its edge and keeps only its hairline; the
+     right one is a soft 緑青 tint with ✓, the one picked wrong ✕ and struck through in 弁柄, the others step back */
+  .choice:disabled { cursor: default; opacity: 1; transform: translateY(var(--ruma-depth)); box-shadow: inset 0 0 0 1px var(--color-border); }
+  .choice.right { --face: var(--color-success-muted); --ink: var(--color-text-success); font-weight: 700; box-shadow: none; }
+  .choice.wrong { --ink: var(--color-text-error); }
+  .choice.wrong .choice-text { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .choice.dim { --ink: var(--color-text-secondary); }
   .choice-mark { display: inline-flex; vertical-align: -3px; margin-right: 4px; }
 
   /* small phones: keep the plan's start button within the first screen; segment labels keep their words */
@@ -640,12 +676,15 @@
 
   /* ── the iOS app's own settings (src/platform/NativeSettings.tsx, ReminderOffer.tsx) are plain elements: they share
      `.card`, `.btn`, `.chip-btn` and the switch track above; these give their labels the same look ── */
-  .form > label:not(.switch, .switch-field), .form > h3 { font-size: var(--text-label-size); font-weight: 700; }
-  .form > label:not(.switch, .switch-field) { color: var(--color-text-secondary); margin-top: var(--spacing-1); }
-  .form > h3 { font-size: var(--text-heading-3-size); color: var(--color-text-primary); }
-  .note { background: var(--color-accent-muted); border-radius: var(--radius-element); padding: 10px 14px; font-size: var(--font-size-base); }
+  .native-row { display: flex; flex-direction: column; gap: var(--spacing-2); }
+  .native-label { font-size: var(--text-body-size); color: var(--color-text-primary); }
+  .native-row .text-action { align-self: flex-start; margin-left: calc(-1 * var(--spacing-2)); }
+  /* a short result in place of the offer or under a setting: plain small text, no tinted box */
+  .note { font-size: var(--text-supporting-size); color: var(--color-text-secondary); }
   .switch { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-3); font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); color: var(--color-text-primary); }
-  .switch small { display: block; font-size: var(--font-size-sm); margin-top: 2px; }
+  .switch small { display: block; font-size: var(--text-supporting-size); font-weight: var(--font-weight-normal); margin-top: 2px; }
+  /* the reminder offer on the done sheet: below a hairline, not a card */
+  .reminder-offer { border-top: 1px solid var(--color-border); padding-top: var(--spacing-4); }
   /* the licence notice sheet the iOS app builds by hand (showTextSheet in src/platform/native.ts) */
   .sheet-backdrop { position: fixed; inset: 0; z-index: 10; background: var(--color-overlay); display: flex; align-items: flex-end; justify-content: center; animation: fade var(--duration-fast) var(--ease-standard) both; }
   .sheet-backdrop > .sheet {

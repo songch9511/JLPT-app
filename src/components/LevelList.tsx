@@ -1,7 +1,7 @@
 import { COUNTS, LEVELS, type Level } from '../data'
 import type { Breakdown } from '../srs'
 import { Icon } from './Icon'
-import { Badge } from './ui'
+import { Group } from './ui'
 
 export function StageBar({ b, total }: { b: Breakdown; total: number }) {
   return (
@@ -13,13 +13,10 @@ export function StageBar({ b, total }: { b: Breakdown; total: number }) {
   )
 }
 
-/** One row per level with its memory stages; the target level is marked. */
+/** One row per level with its memory stages, on the ground with a hairline below; the target level says "목표". */
 export function LevelList({ all, target }: { all: Record<Level, Breakdown>; target: Level }) {
   return (
-    <section aria-labelledby="levels-title">
-      <h2 className="section-title" id="levels-title">
-        급수별 기억 상태
-      </h2>
+    <Group title="급수별 기억 상태" id="levels-title" className="level-group">
       <div className="legend" aria-hidden="true">
         <span className="mature">장기 기억</span>
         <span className="young">다지는 중</span>
@@ -35,7 +32,7 @@ export function LevelList({ all, target }: { all: Record<Level, Breakdown>; targ
           >
             <div className="level-name">
               <b>N{l}</b>
-              {l === target && <Badge variant="blue" label="목표" />}
+              {l === target && <span className="level-target">목표</span>}
             </div>
             <StageBar b={all[l]} total={COUNTS[l]} />
             <span className="level-count">
@@ -45,6 +42,6 @@ export function LevelList({ all, target }: { all: Record<Level, Breakdown>; targ
           </a>
         ))}
       </div>
-    </section>
+    </Group>
   )
 }

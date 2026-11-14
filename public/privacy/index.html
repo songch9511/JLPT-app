@@ -29,11 +29,11 @@ a{color:var(--accent);text-underline-offset:2px}
 strong{font-weight:700}
 code{font:14px ui-monospace,Menlo,monospace;background:var(--muted);border-radius:4px;padding:1px 4px;word-break:break-all}
 hr{border:0;border-top:1px solid var(--line);margin:24px 0}
-.table{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 0 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.table{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 0 16px;border-top:1px solid var(--line)}
 table{border-collapse:collapse;font-size:14px;line-height:1.5;min-width:100%}
 th,td{text-align:left;vertical-align:top;padding:8px 12px;border-bottom:1px solid var(--line);min-width:7.5em}
-tr:last-child td{border-bottom:0}
-th{background:var(--muted);font-weight:700}
+th:first-child,td:first-child{padding-left:0}
+th{font-weight:700}
 .placeholder{background:var(--mark);color:var(--mark-text);border-radius:4px;padding:0 3px;font-weight:700;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 footer{margin-top:40px;padding-top:12px;border-top:1px solid var(--line);font-size:14px;color:var(--text2)}
 </style>
