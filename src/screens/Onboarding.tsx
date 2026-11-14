@@ -13,7 +13,7 @@ export function Onboarding() {
   const [lower, setLower] = useState(true)
 
   return (
-    <div className="onboard">
+    <main className="onboard">
       <Ruma progress={1} size={120} />
       <p className="eyebrow">JLPT 루마</p>
       <h1>잊기 전에 한 겹 더, JLPT 단어</h1>
@@ -67,6 +67,6 @@ export function Onboarding() {
         />
         <p className="onboard-note">JLPT 주최 기관(JF·JEES)과 관계없는 비공식 학습 앱이에요.</p>
       </div>
-    </div>
+    </main>
   )
 }

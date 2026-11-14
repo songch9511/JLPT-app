@@ -3,10 +3,10 @@ import { exportBackup, readBackup, useMeta } from '../backup'
 import { APP_VERSION, TITLE, UNOFFICIAL_NOTICE } from '../brand'
 import { Banner, Button, Card, ChipGroup, Choice, ConfirmDialog, MessageDialog, RowLink, Switch } from '../components/ui'
 import { LEVELS } from '../data'
-import { canUndoImport, GOALS, importState, MAX_DAILY_NEW, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
+import { canUndoImport, examDateOk, GOALS, importState, MAX_DAILY_NEW, MAX_EXAM_DAYS, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
 import { docHref, type DocName } from './Doc'
-import { formatDay, upcomingExams } from '../util'
+import { addDays, dayKey, formatDay, upcomingExams } from '../util'
 
 // reminders, haptics and voice: only in the iOS app (not even in the web bundle, see src/platform/index.ts)
 const NativeSettings = import.meta.env.MODE === 'native' ? lazy(() => import('../platform/NativeSettings')) : null
@@ -84,7 +84,15 @@ export function Settings() {
           시험일
         </label>
         <ChipGroup label="시험일" value={st.examDate} options={exams.map((d) => [d, formatDay(d)])} onChange={(examDate) => set({ examDate })} />
-        <input id="exam" className="date-input" type="date" value={st.examDate} onChange={(e) => e.target.value && set({ examDate: e.target.value })} />
+        <input
+          id="exam"
+          className="date-input"
+          type="date"
+          value={st.examDate}
+          max={dayKey(addDays(new Date(), MAX_EXAM_DAYS))}
+          // a date beyond what the plan can be worked out for (a mistyped year) is not taken
+          onChange={(e) => examDateOk(e.target.value) && set({ examDate: e.target.value })}
+        />
       </Card>
 
       <Card className="form" role="region" aria-labelledby="method-title">

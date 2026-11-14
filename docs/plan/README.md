@@ -49,6 +49,7 @@
 | [09-explanations.md](09-explanations.md) | 8,130단어 설명 배치 생성 파이프라인 | 코드·테스트만. 실제 호출·검수 안 함 |
 | [10-ios-build.md](10-ios-build.md) | Capacitor iOS 빌드, 네이티브 기능, 소유자 경로, 기기 체크리스트 | 코드 완료, iOS 기기·TestFlight 미실행. 번들 ID는 소유자 결정(결정 1) |
 | [11-distractors.md](11-distractors.md) | 읽기 카드 오답 보기 측정과 개선 | 완료 |
+| [13-qa-round2.md](13-qa-round2.md) | 출시 후보 QA 2차: 탐색 테스트, 숫자 일치 표, 접근성·성능 수치, 기기 점검 20분 체크리스트 | 완료. major 3개·minor 7개 수정, 남은 minor는 문서 끝 결정 |
 | [../design-system.md](../design-system.md) | 테마 토큰, 컴포넌트, 규칙, 무게, iOS 16.4 | 현행 기준 문서 |
 | [../store/](../store/) | App Store 제출 자료 | 아래 표 |
 

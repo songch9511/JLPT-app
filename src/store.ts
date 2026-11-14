@@ -134,7 +134,18 @@ export type StoredState = Omit<State, 'v' | 'settings'> & { v: 2 | 3 | 4; settin
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x)
 const isNum = (x: unknown) => typeof x === 'number' && Number.isFinite(x)
-const isCard = (c: unknown): c is SCard => isObj(c) && isNum(c.due) && isNum(c.state)
+/**
+ * A card the scheduler and the readiness model can read: every FSRS number there, a known state, and a last review
+ * for any card already studied (ts-fsrs throws on a studied card without one, and that happened while rendering
+ * Home: an imported file with such a card opened the recovery screen on every launch). Every card this app has saved
+ * since it moved to FSRS has all of these.
+ */
+const CARD_NUMS = ['due', 'stability', 'difficulty', 'elapsed_days', 'scheduled_days', 'learning_steps', 'reps', 'lapses'] as const
+const isCard = (c: unknown): c is SCard =>
+  isObj(c) &&
+  CARD_NUMS.every((k) => isNum(c[k])) &&
+  (c.state === 0 || c.state === 1 || c.state === 2 || c.state === 3) &&
+  (c.state === 0 ? c.last_review === undefined || isNum(c.last_review) : isNum(c.last_review))
 const lastReview = (c: SCard) => (isNum(c.last_review) ? (c.last_review as number) : 0)
 /** Of two cards of the same id, whether `a` holds the later learning (later last review, then more reviews). */
 const later = (a: SCard, b: SCard) => lastReview(a) > lastReview(b) || (lastReview(a) === lastReview(b) && (a.reps ?? 0) > (b.reps ?? 0))
@@ -220,6 +231,24 @@ export function migrate(s: StoredState): State {
   return normalize({ ...rest, cards, marks, ...(orphans ? { orphans } : {}), v: STATE_VERSION } as State)
 }
 
+/** How far ahead an exam date may be: the readiness projection's work grows with the days left (03 §4.3). */
+export const MAX_EXAM_DAYS = 3 * 366
+
+/**
+ * Whether `d` is an exam date the app can plan for: a calendar day (yyyy-mm-dd) no more than MAX_EXAM_DAYS ahead. A
+ * date in the past is fine (Home asks for the next one). A far date — a mistyped year in the date field, or a file —
+ * made the projection run for many seconds on every Home render (a year 9999 ran out of memory), and a date that is
+ * not a text crashed it.
+ */
+export function examDateOk(d: unknown, now = new Date()): d is string {
+  if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false
+  const [y, m, day] = d.split('-').map(Number)
+  const t = new Date(y, m - 1, day)
+  if (Number.isNaN(t.getTime())) return false
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.round((t.getTime() - today.getTime()) / 86_400_000) <= MAX_EXAM_DAYS
+}
+
 function normalize(s: State): State {
   const base = initial()
   const { apiKey: _apiKey, ...settings } = { ...base.settings, ...s.settings } as State['settings'] & { apiKey?: unknown }
@@ -229,6 +258,7 @@ function normalize(s: State): State {
   if (!GOALS.includes(settings.goal as (typeof GOALS)[number])) settings.goal = base.settings.goal
   settings.includeLower = settings.includeLower === true
   settings.fastTrack = settings.fastTrack !== false
+  if (!examDateOk(settings.examDate)) settings.examDate = base.settings.examDate
   return { ...base, ...s, v: STATE_VERSION, settings }
 }
 
@@ -585,7 +615,8 @@ export function isBackup(x: unknown): x is StoredState {
     }
     if (!isCard(c)) return false
   }
-  if (x.log !== undefined && (!isObj(x.log) || !Object.values(x.log).every((l) => isObj(l)))) return false
+  // every field of a day's log is a count (a text there showed "NaN" on Home)
+  if (x.log !== undefined && (!isObj(x.log) || !Object.values(x.log).every((l) => isObj(l) && Object.values(l).every(isNum)))) return false
   if (x.marks !== undefined && !Array.isArray(x.marks)) return false
   if (x.xp !== undefined && !isNum(x.xp)) return false
   if (x.orphans !== undefined) {

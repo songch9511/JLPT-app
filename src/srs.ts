@@ -433,7 +433,17 @@ export const snapshot = (): Snapshot => ({ cards: getState().cards, log: getStat
 export function restore(s: Snapshot) {
   update((d) => {
     d.cards = s.cards
-    d.log = s.log
+    // "더 하기" (x, xr) unlocked since the snapshot is not part of the answer being undone: it stays. (Undoing the
+    // last card of the day after "복습 50장 더 하기" on the done screen took the 50 back.)
+    const log = { ...s.log }
+    for (const [day, cur] of Object.entries(d.log)) {
+      if (cur.x === undefined && cur.xr === undefined) continue
+      const was: DayLog = { ...(log[day] ?? emptyLog()) }
+      if (cur.x !== undefined) was.x = cur.x
+      if (cur.xr !== undefined) was.xr = cur.xr
+      log[day] = was
+    }
+    d.log = log
     d.xp = s.xp
   })
 }
