@@ -18,7 +18,7 @@ test.describe('error screen', () => {
 
   test('a render error shows the recovery screen, which can export what is stored', async ({ page }) => {
     await open(page, { state: broken() })
-    await expect(page.getByRole('heading', { name: '화면을 여는 중에 문제가 생겼어요' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '화면을 열지 못했어요' })).toBeVisible()
     await expect(page.getByRole('button', { name: '다시 불러오기' })).toBeVisible()
     const { name, body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
     expect(name).toBe('jlpt-ruma-backup-2026-11-13.json')
@@ -30,10 +30,10 @@ test.describe('error screen', () => {
 
   test('reset asks first, then starts over', async ({ page }) => {
     await open(page, { state: broken() })
-    await page.getByRole('button', { name: /모든 기록 지우고/ }).click()
+    await page.getByRole('button', { name: '모든 기록 초기화' }).click()
     await page.getByRole('button', { name: '취소' }).click()
     expect((await saved(page)).xp).toBe(33)
-    await page.getByRole('button', { name: /모든 기록 지우고/ }).click()
+    await page.getByRole('button', { name: '모든 기록 초기화' }).click()
     await expect(page.getByText('되돌릴 수 없어요.')).toBeVisible()
     await page.getByRole('button', { name: '모두 지우기' }).click()
     await expect(page.getByRole('group', { name: /어느 급수를 준비해요/ })).toBeVisible()
@@ -42,7 +42,7 @@ test.describe('error screen', () => {
 
   test('reload brings the app back once the cause is gone', async ({ page }) => {
     await open(page, { state: broken() })
-    await expect(page.getByRole('heading', { name: '화면을 여는 중에 문제가 생겼어요' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '화면을 열지 못했어요' })).toBeVisible()
     // the stored (migrated) state is repaired
     await page.evaluate(([k, v]) => localStorage.setItem(k, v), [KEY, JSON.stringify({ ...user(), v: 4 })])
     await page.getByRole('button', { name: '다시 불러오기' }).click()
@@ -58,7 +58,7 @@ test.describe('saving fails', () => {
     await page.waitForTimeout(READ_MS)
     await page.locator('.flash').click()
     await page.getByRole('button', { name: /^쉬워요/ }).click()
-    await expect(page.locator('.left-count')).toHaveText(`남은 ${left}장`)
+    await expect(page.locator('.left-count')).toHaveText(`${left}장 남음`)
   }
 
   test('warns once, offers a backup, and warns again only after a save has worked', async ({ page }) => {
@@ -111,16 +111,16 @@ test.describe('backups', () => {
 
   test('export is versioned and a versioned file imports; a newer format is refused', async ({ page }) => {
     await open(page, { state: user({}, { xp: 77 }), hash: '/settings' })
-    await expect(page.getByText('아직 백업한 적이 없어요.')).toBeVisible()
+    await expect(page.getByText('백업한 적이 없어요.')).toBeVisible()
     const { body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
     expect(body).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 3, v: 4, xp: 77 })
     expect(typeof body.app).toBe('string')
-    await expect(page.getByText('마지막 백업: 2026년 11월 13일')).toBeVisible()
+    await expect(page.getByText('마지막 백업 2026년 11월 13일')).toBeVisible()
 
     await page.locator('input[type=file]').setInputFiles({ name: 'n.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, formatVersion: 4, xp: 1 })) })
     const d = page.getByRole('dialog', { name: '가져오지 못했어요' })
-    await expect(d).toContainText('더 새로운 버전')
-    await d.getByRole('button', { name: '확인' }).click()
+    await expect(d).toContainText('새 버전의 앱에서 만든 백업이에요. 앱을 새로고침한 뒤 가져와 주세요.')
+    await d.getByRole('button', { name: '알겠어요' }).click()
 
     await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, xp: 78 })) })
     await page.getByRole('button', { name: '백업으로 바꾸기' }).click()
@@ -137,7 +137,7 @@ test.describe('backups', () => {
     await expect(tab.locator('.tab-dot')).toBeVisible()
     await tab.click()
     const nudge = page.locator('.nudge')
-    await expect(nudge).toContainText('백업해 두세요')
+    await expect(nudge).toContainText('백업할 때예요.')
     await nudge.getByRole('button', { name: '백업 알림 닫기' }).click()
     await expect(nudge).toBeHidden()
     await expect(page.locator('.tab-dot')).toHaveCount(0)
@@ -176,7 +176,7 @@ test.describe('backups', () => {
       await page.getByRole('button', { name: /^쉬워요/ }).click()
       if (left) expect(await calls()).toBe(0)
     }
-    await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
     await expect.poll(calls).toBe(1)
   })
 })

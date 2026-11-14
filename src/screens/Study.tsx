@@ -1,7 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { go } from '../App'
 import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
+import { PastBar, PastCard } from '../components/PastCard'
+import { useSwipe } from '../components/useSwipe'
+import { Session, type Entry } from '../session'
 import { Icon } from '../components/Icon'
 import { Announce, Badge, Button, IconButton, ProgressBar, Skeleton } from '../components/ui'
 import { done as guideDone, markDone } from '../guide'
@@ -10,14 +13,12 @@ import { isReadingCard, levelOf, meaning, useAllWords, useLevel, useLevels, word
 import { legacySeed } from '../ids'
 import { readingOf, readingQuestion } from '../distractors'
 import {
-  answer,
   breakdowns,
   buildQueue,
   gradeReading,
+  formatInterval,
   previewIntervals,
   Rating,
-  restore,
-  snapshot,
   MORE_REVIEWS,
   streak,
   studyLevels,
@@ -25,10 +26,9 @@ import {
   unlockMoreReviews,
   type Grade,
   type Queue,
-  type Snapshot,
 } from '../srs'
 import { platform } from '../platform'
-import { toggleMark, useStore } from '../store'
+import { getState, toggleMark, useStore } from '../store'
 import { dayKey, speak, useClock } from '../util'
 
 // the iOS app's offer to turn on review reminders, after a finished day (not in the web bundle)
@@ -88,16 +88,24 @@ const mayPlayAudio = () => (navigator as Navigator & { userActivation?: { hasBee
  * Time the current card has been on screen while the page was visible: what DayLog.ms records (03 §5.1).
  * Restarted for every card; a hidden page (another app, a locked phone) does not count.
  */
-function useActiveTime(cardKey: string) {
+function useActiveTime(cardKey: string, paused = false) {
   const t = useRef({ acc: 0, since: null as number | null })
+  // looking at an earlier card of the session is not time on this one
+  const off = useRef(paused)
+  off.current = paused
   useEffect(() => {
-    t.current = { acc: 0, since: document.hidden ? null : Date.now() }
+    t.current = { acc: 0, since: document.hidden || off.current ? null : Date.now() }
   }, [cardKey])
+  useEffect(() => {
+    const c = t.current
+    if (paused && c.since !== null) t.current = { acc: c.acc + Date.now() - c.since, since: null }
+    else if (!paused && c.since === null && !document.hidden) t.current = { acc: c.acc, since: Date.now() }
+  }, [paused])
   useEffect(() => {
     const on = () => {
       const c = t.current
       if (document.hidden && c.since !== null) t.current = { acc: c.acc + Date.now() - c.since, since: null }
-      else if (!document.hidden && c.since === null) t.current = { acc: c.acc, since: Date.now() }
+      else if (!document.hidden && c.since === null && !off.current) t.current = { acc: c.acc, since: Date.now() }
     }
     document.addEventListener('visibilitychange', on)
     return () => document.removeEventListener('visibilitychange', on)
@@ -114,7 +122,13 @@ export function Study() {
   /** "26일 뒤" after an answer: when the card answered comes back */
   const [note, setNote] = useState<{ key: number; text: string } | null>(null)
   const [undoChip, setUndoChip] = useState(0)
-  const undo = useRef<{ snap: Snapshot; card: NonNullable<Queue['next']> } | null>(null)
+  const undo = useRef<{ entry: Entry; card: NonNullable<Queue['next']> } | null>(null)
+  /** this opening of the study screen's answers, to swipe back to (src/session.ts); gone when the screen is left */
+  const [session] = useState(() => new Session())
+  /** the earlier card on screen (its index in the session), or null: the card to answer */
+  const [view, setView] = useState<number | null>(null)
+  /** what a screen reader is told after moving between cards */
+  const [navSaid, setNavSaid] = useState('')
   /** after an undo, the card that was undone is shown again whatever the queue would pick now */
   const [redo, setRedo] = useState<Queue['next']>(null)
   /** answers are ignored until this time, so a double tap can't answer a card that was never seen */
@@ -159,7 +173,7 @@ export function Study() {
   const ready = !!word && (!reading || !!all)
   const intervals = useMemo(() => (id ? previewIntervals(s, id, now) : null), [s, id, now])
   const cardKey = `${id}:${answered}`
-  const activeMs = useActiveTime(cardKey)
+  const activeMs = useActiveTime(cardKey, view !== null)
 
   // Ruma's tip on the first reading card of a learner who started with the first-run guide (src/guide.ts): shown with
   // that card only, counted as shown at once so it never comes back
@@ -216,9 +230,9 @@ export function Study() {
     (grade: Grade) => {
       if (!q.next || !revealed || Date.now() < lockUntil.current) return
       lockUntil.current = Date.now() + DOUBLE_TAP_MS
-      undo.current = { snap: snapshot(), card: q.next }
+      const record = quiz && question && picked !== null ? { choices: question.choices, answer: question.answer, picked } : undefined
+      undo.current = { entry: session.answer({ id: q.next.id, kind: q.next.kind, grade, at: Date.now(), ms: activeMs(), quiz: record }), card: q.next }
       setRedo(null)
-      answer(q.next.id, grade, new Date(), activeMs())
       platform.haptic('answer')
       const interval = intervals?.[grade]
       setNote(interval ? { key: Date.now(), text: afterText(interval) } : null)
@@ -226,7 +240,7 @@ export function Study() {
       setLast(q.next.id)
       setAnswered((n) => n + 1)
     },
-    [q.next, revealed, intervals, activeMs],
+    [q.next, revealed, intervals, activeMs, quiz, question, picked, session],
   )
 
   const autoSpeak = s.settings.autoSpeak
@@ -254,9 +268,17 @@ export function Study() {
     [question, picked, autoSpeak, word],
   )
 
+  // undo takes back the last answer while the card to answer is on screen; on an earlier card its grade buttons do
+  const canUndo = !!undo.current && view === null && session.last() === undo.current.entry
   const onUndo = () => {
-    if (!undo.current) return
-    restore(undo.current.snap)
+    if (!undo.current || !canUndo) return
+    if (!session.undoLast()) {
+      // the saved cards changed elsewhere (another tab): nothing here to take back any more
+      undo.current = null
+      session.clear()
+      setUndoChip(0)
+      return
+    }
     setRedo(undo.current.card)
     undo.current = null
     setLast(undefined)
@@ -264,6 +286,48 @@ export function Study() {
     setNote(null)
     setUndoChip(0)
   }
+
+  // ── the session's earlier cards (docs/design-system.md "카드 넘기기"): back one card at a time, forward only as far
+  // as the card to answer. Looking changes nothing; another grade on an earlier card replaces that answer.
+  const total = session.length
+  const at = view ?? total
+  const canPrev = at > 0 && levels.ready
+  const canNext = view !== null
+  const goTo = (v: number | null) => {
+    if (v === view) return
+    // the card to answer stays the one shown, whatever the earlier cards' grades become
+    if (view === null && q.next) setRedo(q.next)
+    setView(v)
+    setNote(null)
+    setNavSaid(v === null ? '지금 카드' : `이전 카드 ${v + 1} / ${total}`)
+    platform.haptic('turn')
+  }
+  const goPrev = () => canPrev && goTo(at - 1)
+  const goNext = () => view !== null && goTo(view + 1 < total ? view + 1 : null)
+  const regrade = (g: Grade) => {
+    const e = view === null ? undefined : session.entries[view]
+    // (no double-tap lock: a second tap on the grade just given changes nothing)
+    if (!e || e.grade === g) return
+    const lastBefore = session.last()
+    const res = session.regrade(view!, g)
+    if (!res) {
+      // the saved cards changed elsewhere (another tab): this history no longer describes them
+      session.clear()
+      undo.current = null
+      setView(null)
+      return
+    }
+    platform.haptic('answer')
+    // undo still takes back the last answer if it is still there (given again, so a new record of it)
+    if (undo.current) undo.current = lastBefore && res.dropped.includes(lastBefore) ? null : { ...undo.current, entry: session.last()! }
+    // the card to answer stays, unless it is this same card back for another step, which the new grade changed
+    if (redo?.id === e.id) setRedo(null)
+    const due = getState().cards[e.id]?.due
+    setNote(due === undefined ? null : { key: Date.now(), text: afterText(formatInterval(Math.max(0, due - Date.now()))) })
+  }
+  useEffect(() => {
+    if (!q.next) setView(null)
+  }, [q.next])
 
   // The control the learner last pressed with a finger or the mouse. It keeps focus, and React reuses the same
   // button for the next card (the first answer button becomes the next card's "모르겠어요"); the browser then counts
@@ -280,11 +344,25 @@ export function Study() {
     }
   }, [])
 
-  // Keys follow the two steps: Space/Enter shows the answer; 1/2/3 (or ←/→/↑) grade once it is shown.
-  // 1 / ← on the front is "모르겠어요", the only other choice there. Registered before paint, so a key pressed
-  // as soon as a card shows is never handled by the previous card's handler.
+  // Keys follow the two steps: Space/Enter shows the answer; 1/2/3 (↑ also 3) grade once it is shown. ←/→ move between
+  // the session's cards (they graded before swiping existed). 1 on the front is "모르겠어요", the only other choice
+  // there. Registered before paint, so a key pressed as soon as a card shows is never handled by the previous card's
+  // handler.
   useLayoutEffect(() => {
     const on = (e: KeyboardEvent) => {
+      // ← / → go through the session's cards, with the same limits as a swipe
+      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        e.preventDefault()
+        if (!e.repeat) void (e.key === 'ArrowLeft' ? goPrev() : goNext())
+        return
+      }
+      // an earlier card: 1–3 (a reading card 1–2) are its grade buttons, left to right
+      if (view !== null) {
+        const past = session.entries[view]
+        const n = Number(e.key)
+        if (past && !e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && n >= 1 && n <= (past.quiz ? 2 : 3)) regrade(([Rating.Again, Rating.Good, Rating.Easy] as Grade[])[n - 1])
+        return
+      }
       if (!ready || !word || e.repeat || e.altKey || e.ctrlKey || e.metaKey) return
       const k = e.key
       if ((k === ' ' || k === 'Enter') && e.target instanceof HTMLElement && e.target.closest('button, a')) {
@@ -296,10 +374,10 @@ export function Study() {
         // browser presses it on Space's keyup whatever the keydown did, which graded the next card "모르겠어요" unseen
         e.target.blur()
       }
-      // reading card: 1–4 pick a choice, 0 or ← is "모르겠어요"; once answered Space/Enter goes on
+      // reading card: 1–4 pick a choice, 0 is "모르겠어요"; once answered Space/Enter goes on
       if (quiz) {
         if (picked === null && /^[1-4]$/.test(k) && Number(k) <= (question?.choices.length ?? 0)) choose(Number(k) - 1)
-        else if (picked === null && (k === '0' || k === 'ArrowLeft')) choose(-1)
+        else if (picked === null && k === '0') choose(-1)
         else if (picked !== null && (k === ' ' || k === 'Enter')) {
           e.preventDefault()
           if (question) submit(gradeReading(picked, question.answer))
@@ -310,13 +388,27 @@ export function Study() {
         e.preventDefault()
         if (!revealed) reveal()
         else if (missed) submit(Rating.Again)
-      } else if (k === '1' || k === 'ArrowLeft') onAgain()
-      else if (revealed && !missed && (k === '2' || k === 'ArrowRight')) submit(Rating.Good)
+      } else if (k === '1') onAgain()
+      else if (revealed && !missed && k === '2') submit(Rating.Good)
       else if (revealed && !missed && (k === '3' || k === 'ArrowUp')) submit(Rating.Easy)
     }
     addEventListener('keydown', on)
     return () => removeEventListener('keydown', on)
-  }, [ready, word, quiz, question, picked, choose, revealed, missed, submit, onAgain, reveal])
+  }, [ready, word, quiz, question, picked, choose, revealed, missed, submit, onAgain, reveal, view, goPrev, goNext, regrade, session])
+
+  const swipe = useSwipe({ canPrev, canNext, onPrev: goPrev, onNext: goNext })
+
+  /** An earlier card at `slot` (0 on screen, ±1 beside it while a swipe is under way). */
+  const pastSlot = (i: number, slot: number) => {
+    const e = session.entries[i]
+    if (!e || (slot !== 0 && !swipe.peek)) return null
+    const w = wordById(e.id)
+    return (
+      <div key={`${e.id}@${e.at}`} className="card-slot" style={{ '--slot': slot } as CSSProperties} inert={slot !== 0} aria-hidden={slot !== 0 || undefined}>
+        <PastCard entry={e} index={i} total={total} word={w} marked={!!w && s.marks.includes(w.id)} onMark={() => w && toggleMark(w.id)} />
+      </div>
+    )
+  }
 
   if (levels.ready && !q.next) {
     const moreNew = breakdowns(s)[s.settings.target].new > 0
@@ -333,14 +425,11 @@ export function Study() {
             </span>
           )}
         </div>
-        <h1>{cleared ? '오늘 목표 달성!' : '잠깐 쉬어 가요'}</h1>
-        <p className="done-text">
-          {cleared
-            ? q.held > 0
-              ? `루마가 두 눈을 다 떴어요. 남은 밀린 복습 ${q.held}장은 내일부터 나눠서 해요.`
-              : '루마가 두 눈을 다 떴어요. 기억이 흐려질 때쯤 다시 가져올게요.'
-            : `${inMin}분 뒤에 익히는 중인 ${q.waiting}장이 돌아와요.`}
-        </p>
+        <h1>{cleared ? '오늘 끝' : '쉬어 가요'}</h1>
+        {/* Ruma's eyes and the seal say the day is done; only what the screen cannot show is said in words */}
+        {(!cleared || q.held > 0) && (
+          <p className="done-text">{cleared ? `밀린 복습 ${q.held.toLocaleString()}장은 내일부터 나눠서 나와요.` : `익히는 중 ${q.waiting}장이 ${inMin}분 뒤에 돌아와요.`}</p>
+        )}
         <dl className="result-tiles">
           <div className="t-cards">
             <dt>본 카드</dt>
@@ -365,18 +454,26 @@ export function Study() {
           </div>
         </dl>
         <div className="done-actions">
-          {!cleared && <Button label={`남은 ${q.waiting}장 지금 마무리`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
+          {!cleared && <Button label={`${q.waiting}장 지금 하기`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
           <Button label="홈으로" variant={cleared ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
           {/* while reviews are held for later days, more reviews rather than more new words (03 §5.1, §5.3) */}
           {cleared && q.held > 0 ? (
+            // the same labels as Home's quiet buttons: short on screen, the whole action as the name
             <Button
-              label={`복습 ${Math.min(MORE_REVIEWS, q.held)}장 더 하기`}
+              label={`밀린 복습 ${Math.min(MORE_REVIEWS, q.held)}장 더 하기`}
               size="lg"
               width="100%"
               onClick={() => unlockMoreReviews(Math.min(MORE_REVIEWS, q.held))}
-            />
+            >
+              {Math.min(MORE_REVIEWS, q.held)}장 더
+            </Button>
           ) : (
-            cleared && moreNew && <Button label="새 단어 10개 더 하기" size="lg" width="100%" onClick={() => unlockMoreNew(10)} />
+            cleared &&
+            moreNew && (
+              <Button label="새 단어 10개 더 하기" size="lg" width="100%" onClick={() => unlockMoreNew(10)}>
+                새 단어 10개 더
+              </Button>
+            )
           )}
         </div>
         {ReminderOffer && platform.native && cleared && (
@@ -399,12 +496,12 @@ export function Study() {
     <main className="study">
       <h1 className="sr-only">학습</h1>
       <header className="study-top">
-        <IconButton label="나가기 (진행 상황은 저장돼요)" icon={<Icon name="close" />} onClick={() => go('/')} />
-        <ProgressBar className="study-bar grow" label="오늘 학습" value={todayCount} max={dayTotal} valueText={`오늘 ${todayCount}장 봤어요, 남은 ${left}장`} />
+        <IconButton label="나가기, 진행 상황은 저장돼요" icon={<Icon name="close" />} onClick={() => go('/')} />
+        <ProgressBar className="study-bar grow" label="오늘 학습" value={todayCount} max={dayTotal} valueText={`오늘 ${todayCount}장 봄, ${left}장 남음`} />
         <span className="left-count" aria-hidden="true">
-          남은 {left}장
+          {left}장 남음
         </span>
-        <IconButton label="방금 선택 되돌리기" icon={<Icon name="undo" />} isDisabled={!undo.current} onClick={onUndo} />
+        <IconButton label="방금 답 되돌리기" icon={<Icon name="undo" />} isDisabled={!canUndo} onClick={onUndo} />
       </header>
       <p className="after-note" aria-live="polite">
         {note && (
@@ -425,7 +522,28 @@ export function Study() {
         </div>
       )}
 
+      {/* previous / next card without swiping: for the keyboard and screen readers, shown when focused */}
+      {total > 0 && (
+        <div className="study-nav" role="group" aria-label="카드 넘기기">
+          <IconButton label="이전 카드" icon={<Icon name="back" />} isDisabled={!canPrev} onClick={goPrev} />
+          <IconButton label="이후 카드" icon={<Icon name="chevron" />} isDisabled={!canNext} onClick={goNext} />
+        </div>
+      )}
+      <Announce text={navSaid} />
+
       <div className="card-area">
+        <div className="card-stage" ref={swipe.ref}>
+          {pastSlot(at - 1, -1)}
+          {view !== null && pastSlot(view, 0)}
+          {view !== null && pastSlot(view + 1, 1)}
+          {/* the card to answer: kept in place (and its state with it) while earlier cards are looked at */}
+          <div
+            className="card-slot"
+            style={{ '--slot': total - at } as CSSProperties}
+            data-away={view !== null && !(swipe.peek && view + 1 === total) ? '' : undefined}
+            inert={view !== null}
+            aria-hidden={view !== null || undefined}
+          >
         {error && (
           <div className="load-error" role="alert">
             <p>{error}</p>
@@ -490,7 +608,7 @@ export function Study() {
               {reading && question ? (
                 <>
                   <p className="reading-prompt" id="reading-prompt">
-                    {picked === null ? '어떻게 읽을까요?' : picked === question.answer ? '맞았어요' : picked < 0 ? '정답을 확인하세요' : '정답은 초록색이에요'}
+                    {picked === null ? '어떻게 읽을까요?' : picked === question.answer ? '맞았어요' : picked < 0 ? '이렇게 읽어요' : '틀렸어요'}
                   </p>
                   <div className="choices" role="group" aria-labelledby="reading-prompt">
                     {question.choices.map((c, i) => {
@@ -534,7 +652,7 @@ export function Study() {
                 </>
               ) : (
                 <div className="flash-answer-slot" aria-live="polite">
-                  {revealed ? (
+                  {revealed && (
                     <div className="flash-answer">
                       {word.r && (
                         <p lang="ja" className="flash-reading">
@@ -545,22 +663,24 @@ export function Study() {
                       <FalseFriend word={word} />
                       <TypeLine word={word} />
                     </div>
-                  ) : (
-                    <p className="flash-hint">떠올려 본 뒤 정답을 확인하세요</p>
                   )}
                 </div>
               )}
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
 
-      {undoChip > 0 && undo.current && (
+      {undoChip > 0 && canUndo && (
         <div className="undo-chip-row">
           <Button label="되돌리기" variant="ghost" className="undo-chip" icon={<Icon name="undo" size={16} />} onClick={onUndo} />
         </div>
       )}
-      {quiz ? (
+      {view !== null && session.entries[view] ? (
+        <PastBar key={view} entry={session.entries[view]} onGrade={regrade} />
+      ) : quiz ? (
         <footer className="answer-bar">
           {picked === null ? (
             <Grade className="wide" label="모르겠어요" onClick={() => choose(-1)} isDisabled={!ready} />
@@ -568,7 +688,7 @@ export function Study() {
             <Grade
               className="wide"
               primary
-              label="확인했어요 · 다음"
+              label="다음"
               interval={intervals?.[Rating.Again]}
               onClick={() => submit(gradeReading(picked, question?.answer ?? 0))}
             />
@@ -584,7 +704,7 @@ export function Study() {
               <Grade primary label="정답 보기" onClick={() => reveal(true)} isDisabled={!ready} />
             </>
           ) : missed ? (
-            <Grade className="wide" primary label="확인했어요 · 다음" onClick={() => submit(Rating.Again)} />
+            <Grade className="wide" primary label="다음" onClick={() => submit(Rating.Again)} />
           ) : (
             <>
               <Grade label="모르겠어요" interval={intervals?.[Rating.Again]} onClick={onAgain} />

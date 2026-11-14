@@ -47,8 +47,8 @@ export function Settings() {
       setProblem(
         read.reason === 'newer'
           ? platform.native
-            ? '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 업데이트한 뒤 다시 가져와 주세요.'
-            : '더 새로운 버전의 앱에서 만든 백업이에요. 앱을 새로고침한 뒤 다시 가져와 주세요.'
+            ? '새 버전의 앱에서 만든 백업이에요. 앱을 업데이트한 뒤 가져와 주세요.'
+            : '새 버전의 앱에서 만든 백업이에요. 앱을 새로고침한 뒤 가져와 주세요.'
           : 'JLPT 루마 백업 파일이 아니에요.',
       )
       return
@@ -69,31 +69,29 @@ export function Settings() {
         {st.target < 5 && (
           <Switch
             label={`아래 급수 단어도 함께 (N${LEVELS.filter((l) => l > st.target).join('·N')})`}
-            description="JLPT의 각 급수는 아래 급수 단어를 안다고 보고 나와요. 켜면 쉬운 급수부터 새 단어가 나와요."
+            description="켜면 새 단어가 쉬운 급수부터 나와요."
             value={st.includeLower}
             onChange={(includeLower) => set({ includeLower })}
           />
         )}
         <p className="field-label">하루 새 단어</p>
         <Choice label="하루 새 단어" value={st.dailyNew} options={[5, 10, 20, 30, MAX_DAILY_NEW].map((n) => [n, String(n)])} onChange={(dailyNew) => set({ dailyNew })} />
-        <p className="hint">
-          지금 {st.dailyNew}개. 새 단어가 많을수록 며칠 뒤 복습도 늘어나요. 복습이 밀리지 않도록 하루 {MAX_DAILY_NEW}개까지만 정할 수
-          있어요.
-        </p>
+        <p className="hint">새 단어가 많을수록 며칠 뒤 복습이 늘어나요.</p>
       </Card>
 
       <Card className="form" role="region" aria-labelledby="method-title">
         <h2 className="card-title" id="method-title">학습 방식</h2>
         <Switch
           label="한자어 빠른 통과"
-          description="한국어 한자어와 뜻이 같은 단어(産業 = 산업)는 뜻 대신 읽기를 4지선다로 물어요. 끄면 모든 단어를 뜻 카드로 배우고, 읽기로만 배운 단어도 뜻 카드로 새로 나와요. 다시 켜면 읽기 카드가 이어서 나와요."
+          description="뜻 같은 한자어(産業 = 산업)는 읽기만 물어요. 끄면 모든 단어를 뜻 카드로 배워요."
           value={st.fastTrack}
           onChange={(fastTrack) => set({ fastTrack })}
         />
         {onboarded && (
           <p className="replay-tips" role="status">
             {replayed ? (
-              '루마가 홈과 학습 화면에서 다시 알려 드릴게요.'
+              // the same inset as the text button it replaces, so the line does not jump left
+              <span className="replay-done">루마의 안내를 다시 켰어요.</span>
             ) : (
               <Button
                 label="루마의 안내 다시 보기"
@@ -123,7 +121,7 @@ export function Settings() {
           onChange={(theme) => set({ theme })}
         />
         <Switch
-          label="카드가 나올 때 발음 자동 재생"
+          label="발음 자동 재생"
           value={st.autoSpeak}
           onChange={(autoSpeak) => set({ autoSpeak })}
         />
@@ -139,15 +137,15 @@ export function Settings() {
         <h2 className="card-title" id="data-title">데이터</h2>
         <p className="hint">
           {platform.native
-            ? '학습 기록은 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업 파일을 내보내 두세요.'
-            : '학습 기록은 이 기기의 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'}
+            ? '학습 기록은 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'
+            : '학습 기록은 이 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'}
         </p>
-        <p className="small last-backup">{meta.lastExport ? `마지막 백업: ${formatDay(meta.lastExport)}` : '아직 백업한 적이 없어요.'}</p>
+        <p className="small last-backup">{meta.lastExport ? `마지막 백업 ${formatDay(meta.lastExport)}` : '백업한 적이 없어요.'}</p>
         {/* the backup reminder, moved off Home (the 설정 tab carries a dot while it is due, App.tsx) */}
         <BackupNudge today={new Date()} />
         {orphans > 0 && (
           // records whose words this version does not know (store.ts `orphans`): kept, exported, never shown
-          <p className="small muted orphans-note">이 버전에 없는 단어의 기록 {orphans.toLocaleString()}개도 지우지 않고 함께 보관하고 있어요. 백업 파일에도 담겨요.</p>
+          <p className="small muted orphans-note">이 버전에 없는 단어의 기록 {orphans.toLocaleString()}개도 보관하고 백업에 담아요.</p>
         )}
         {canUndoImport() && (
           <div role="status">
@@ -192,7 +190,7 @@ export function Settings() {
         </nav>
         <p className="notice">{UNOFFICIAL_NOTICE}</p>
         <ul className="credits">
-          <li>단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반). JLPT는 공식 어휘 목록을 공개하지 않아서 비공식 목록이에요.</li>
+          <li>단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반). JLPT는 공식 어휘 목록을 공개하지 않아 비공식 목록이에요.</li>
           <li>한국어 뜻은 기계 번역이라 틀린 곳이 있을 수 있어요.</li>
           <li>복습 간격: FSRS (ts-fsrs, MIT)</li>
           <li>
@@ -249,7 +247,7 @@ export function Settings() {
         isOpen={confirmReset}
         onClose={() => setConfirmReset(false)}
         title="모든 기록을 지울까요?"
-        description="이 기기의 학습 기록과 설정을 모두 지우고 처음부터 시작해요. 되돌릴 수 없어요."
+        description="이 기기의 학습 기록과 설정을 모두 지워요. 되돌릴 수 없어요."
         actionLabel="모두 지우기"
         onAction={() => {
           setConfirmReset(false)
@@ -260,7 +258,7 @@ export function Settings() {
         isOpen={pending !== null}
         onClose={() => setPending(null)}
         title="백업으로 바꿀까요?"
-        description="지금 기록을 백업 파일의 내용으로 바꿔요. 바꾼 뒤 이 화면에서 바로 되돌릴 수 있어요."
+        description="지금 기록이 백업 파일의 기록으로 바뀌어요. 바꾼 뒤 이 화면에서 되돌릴 수 있어요."
         actionLabel="백업으로 바꾸기"
         actionVariant="primary"
         onAction={() => {

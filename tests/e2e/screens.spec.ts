@@ -20,7 +20,10 @@ const review = (due: number, extra: Record<string, number> = {}) => ({
 test.describe('words', () => {
   test('search, open the word sheet, bookmark, close with Escape', async ({ page }) => {
     await open(page, { state: user(), hash: '/words' })
-    await expect(page.getByText('N5부터 N1까지 8,130개 단어에서 찾아요.')).toBeVisible()
+    // nothing typed: no list and no empty-state message, only the search field
+    await expect(page.getByRole('searchbox', { name: '단어 검색' })).toBeVisible()
+    await expect(page.locator('.word-row')).toHaveCount(0)
+    await expect(page.locator('.empty')).toHaveCount(0)
     const box = page.getByPlaceholder('일본어, 읽기, 뜻으로 검색')
     for (const q of ['学校', 'がっこう', '학교', 'SCHOOL']) {
       await box.fill(q)
@@ -47,7 +50,7 @@ test.describe('words', () => {
     await open(page, { state: user(), hash: '/words' })
     const box = page.getByPlaceholder('일본어, 읽기, 뜻으로 검색')
     await box.fill('zzzzqqq')
-    await expect(page.getByRole('heading', { name: '찾는 단어가 없어요.' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '찾는 단어가 없어요' })).toBeVisible()
     await box.fill('a')
     await expect(page.locator('.word-row')).toHaveCount(60)
   })
@@ -76,7 +79,7 @@ test.describe('level screen', () => {
     await expect(page.locator('.breakdown .learning b')).toHaveText('1')
     await expect(page.locator('.breakdown .new b')).toHaveText('715')
     await expect(page.locator('.word-row')).toHaveCount(100)
-    await page.getByRole('button', { name: /더 보기 \(618개 남음\)/ }).click()
+    await page.getByRole('button', { name: '더 보기 · 618개 남음' }).click()
     await expect(page.locator('.word-row')).toHaveCount(200)
     for (const [label, n] of [['장기 기억', 1], ['다지는 중', 1], ['익히는 중', 1]] as const) {
       await page.getByRole('group', { name: '기억 단계' }).getByRole('button', { name: label }).click()
@@ -89,7 +92,7 @@ test.describe('level screen', () => {
   test('empty filter message and “목표로 설정”', async ({ page }) => {
     await open(page, { state: user(), hash: '/level/3' })
     await page.getByRole('group', { name: '기억 단계' }).getByRole('button', { name: '장기 기억' }).click()
-    await expect(page.getByRole('heading', { name: '여기에 해당하는 단어가 아직 없어요.' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '해당하는 단어가 없어요' })).toBeVisible()
     await page.getByRole('button', { name: '목표로 설정' }).click()
     await expect(page.locator('.top').getByText('목표 급수', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: '목표로 설정' })).toHaveCount(0)
@@ -163,7 +166,7 @@ test.describe('settings', () => {
       const d = page.getByRole('dialog', { name: '가져오지 못했어요' })
       await expect(d, body).toBeVisible()
       await expect(d).toContainText('JLPT 루마 백업 파일이 아니에요.')
-      await d.getByRole('button', { name: '확인' }).click()
+      await d.getByRole('button', { name: '알겠어요' }).click()
       await expect(d).toBeHidden()
     }
     expect((await saved(page)).xp).toBe(5)

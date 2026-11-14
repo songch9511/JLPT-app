@@ -31,7 +31,7 @@ export function LevelList({ all, target }: { all: Record<Level, Breakdown>; targ
             key={l}
             href={`#/level/${l}`}
             className={`level-row ${l === target ? 'target' : ''}`}
-            aria-label={`N${l}${l === target ? ' 목표' : ''}, ${COUNTS[l]}개 중 ${COUNTS[l] - all[l].new}개 만남, 장기 기억 ${all[l].mature}개`}
+            aria-label={`N${l}${l === target ? ' 목표' : ''}, ${COUNTS[l].toLocaleString()}개 중 ${(COUNTS[l] - all[l].new).toLocaleString()}개 만남, 장기 기억 ${all[l].mature.toLocaleString()}개`}
           >
             <div className="level-name">
               <b>N{l}</b>
@@ -39,7 +39,7 @@ export function LevelList({ all, target }: { all: Record<Level, Breakdown>; targ
             </div>
             <StageBar b={all[l]} total={COUNTS[l]} />
             <span className="level-count">
-              {COUNTS[l] - all[l].new} / {COUNTS[l]}
+              {(COUNTS[l] - all[l].new).toLocaleString()} / {COUNTS[l].toLocaleString()}
             </span>
             <Icon name="chevron" size={18} />
           </a>

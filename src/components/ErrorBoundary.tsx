@@ -20,11 +20,9 @@ function Recovery({ error }: { error: Error }) {
   }
   return (
     <div className="recovery" role="alert">
-      <h1>화면을 여는 중에 문제가 생겼어요</h1>
-      <p>
-        앱 안에서 오류가 나서 이 화면을 보여 드려요. 학습 기록은 이 기기에 그대로 있어요. 먼저 다시 불러와 보세요.
-      </p>
-      <p className="hint">계속 이 화면이 나오면 백업을 내보내 두세요. 백업 파일에는 지금 저장된 기록이 그대로 담겨요.</p>
+      <h1>화면을 열지 못했어요</h1>
+      <p>학습 기록은 이 기기에 그대로 있어요. 먼저 다시 불러와 보세요.</p>
+      <p className="hint">이 화면이 계속 나오면 백업을 내보내 두세요.</p>
       <div className="recovery-actions">
         <Button label="다시 불러오기" variant="primary" size="lg" width="100%" onClick={() => location.reload()} />
         <Button label="백업 내보내기" size="lg" width="100%" onClick={() => exportRaw(raw())} />
@@ -35,8 +33,7 @@ function Recovery({ error }: { error: Error }) {
         {confirming ? (
           <>
             <p className="small">
-              이 기기의 학습 기록과 설정을 모두 지우고 처음부터 시작해요. <b>되돌릴 수 없어요.</b> 백업을 먼저 내보냈는지 확인해
-              주세요.
+              이 기기의 학습 기록과 설정을 모두 지워요. <b>되돌릴 수 없어요.</b> 백업을 먼저 내보내 두세요.
             </p>
             <div className="row">
               <Button label="취소" onClick={() => setConfirming(false)} />
@@ -58,7 +55,7 @@ function Recovery({ error }: { error: Error }) {
             </div>
           </>
         ) : (
-          <Button label="모든 기록 지우고 처음부터 시작…" variant="destructive" onClick={() => setConfirming(true)} />
+          <Button label="모든 기록 초기화" variant="destructive" onClick={() => setConfirming(true)} />
         )}
       </section>
 

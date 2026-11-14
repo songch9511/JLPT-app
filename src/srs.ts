@@ -388,33 +388,51 @@ export const MAX_CARD_MS = 60_000
 export function answer(id: string, grade: Grade, now = new Date(), activeMs?: number): number {
   let gained = 0
   update((d) => {
-    const prev = d.cards[id]
-    const at = reviewTime(prev, now)
-    const card = prev ? toCard(prev) : createEmptyCard(now)
-    const { card: next } = scheduler.next(card, at, grade)
-    d.cards = { ...d.cards, [id]: fromCard(next) }
-    const key = dayKey(now)
-    const log = { ...(d.log[key] ?? emptyLog()) }
-    log.c++
-    if (!prev) log.n++
-    if (prev?.state === CardState.Review) {
-      log.r++
-      if (grade !== Rating.Again) log.p++
-    }
-    if (activeMs !== undefined && Number.isFinite(activeMs) && activeMs > 0) log.ms = (log.ms ?? 0) + Math.min(MAX_CARD_MS, Math.round(activeMs))
-    d.log = { ...d.log, [key]: log }
-
-    gained = XP_PER_CARD
-    quests(d, now).forEach((q, i) => {
-      if (q.done && !((log.q ?? 0) & (1 << i))) {
-        log.q = (log.q ?? 0) | (1 << i)
-        gained += q.xp
-      }
-    })
-    log.xp = (log.xp ?? 0) + gained
-    d.xp += gained
+    gained = applyAnswer(d, id, grade, now, activeMs)
   })
   return gained
+}
+
+/**
+ * One answer applied to a state being updated (a draft of `update`, which this replaces the nested objects of): the
+ * card's next schedule, the day's log, XP and the quest. Deterministic: the same card, grade, time and active time
+ * always give the same result (FSRS's fuzz is seeded by the review time and the card), which is what lets the study
+ * session's history (src/session.ts) take answers back and give them again with another grade.
+ */
+export function applyAnswer(d: State, id: string, grade: Grade, now: Date, activeMs?: number): number {
+  const prev = d.cards[id]
+  const at = reviewTime(prev, now)
+  const card = prev ? toCard(prev) : createEmptyCard(now)
+  const { card: next } = scheduler.next(card, at, grade)
+  d.cards = { ...d.cards, [id]: fromCard(next) }
+  const key = dayKey(now)
+  const log = { ...(d.log[key] ?? emptyLog()) }
+  log.c++
+  if (!prev) log.n++
+  if (prev?.state === CardState.Review) {
+    log.r++
+    if (grade !== Rating.Again) log.p++
+  }
+  if (activeMs !== undefined && Number.isFinite(activeMs) && activeMs > 0) log.ms = (log.ms ?? 0) + Math.min(MAX_CARD_MS, Math.round(activeMs))
+  d.log = { ...d.log, [key]: log }
+
+  let gained = XP_PER_CARD
+  quests(d, now).forEach((q, i) => {
+    if (q.done && !((log.q ?? 0) & (1 << i))) {
+      log.q = (log.q ?? 0) | (1 << i)
+      gained += q.xp
+    }
+  })
+  log.xp = (log.xp ?? 0) + gained
+  d.xp += gained
+  return gained
+}
+
+/** The intervals `previewIntervals` shows, for a card as it was (`prev`, undefined when new) at an earlier time. */
+export function previewFrom(prev: SCard | undefined, at: Date): Record<Grade, string> {
+  const rec = scheduler.repeat(prev ? toCard(prev) : createEmptyCard(at), reviewTime(prev, at))
+  const fmt = (g: Grade) => formatInterval(rec[g].card.due.getTime() - at.getTime())
+  return { [Rating.Again]: fmt(Rating.Again), [Rating.Hard]: fmt(Rating.Hard), [Rating.Good]: fmt(Rating.Good), [Rating.Easy]: fmt(Rating.Easy) } as Record<Grade, string>
 }
 
 export type Snapshot = Pick<State, 'cards' | 'log' | 'xp'>

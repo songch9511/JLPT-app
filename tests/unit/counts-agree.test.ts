@@ -133,4 +133,35 @@ describe('counts agree across screens', () => {
     })
     agree(env)
   })
+
+  it('after a study session whose answers were re-graded (swiped back, grade changed)', async () => {
+    const cards: Record<string, SCard> = {}
+    for (let i = 0; i < 40; i++) cards[L(`5-${i}`)] = due((i % 4) - 2, { lapses: i % 3 })
+    const env = await setup({ dailyNew: 10 }, cards)
+    const { Session } = await import('../../src/session')
+    const session = new Session()
+    // follow the queue as the study screen does, answering a mix of grades (reading cards: no 쉬워요)
+    const grades = [3, 1, 4, 3, 3, 1, 3, 4, 3, 1, 3, 3, 4, 1, 3, 3, 3, 4, 1, 3] as const
+    let last: string | undefined
+    for (let i = 0; i < grades.length; i++) {
+      const at = new Date(T - 30 * MIN + i * 40_000)
+      const q = env.srs.buildQueue(env.store.getState(), at, last)
+      if (!q.next) break
+      const g = q.next.id.endsWith(':r') && grades[i] === 4 ? 3 : grades[i]
+      session.answer({ id: q.next.id, kind: q.next.kind, grade: g as 1 | 3 | 4, at: at.getTime(), ms: 4000 })
+      last = q.next.id
+    }
+    agree(env)
+    // change grades in every direction, earliest first and last
+    for (const [k, g] of [[1, 3], [0, 1], [5, 4], [2, 1], [session.length - 1, 1], [3, 3]] as const) {
+      if (k >= session.length) continue
+      const e = session.entries[k]
+      session.regrade(k, (e.id.endsWith(':r') && g === 4 ? 3 : g) as 1 | 3 | 4)
+      agree(env)
+      // the day's log still counts exactly the answers the history holds
+      const log = env.store.getState().log['2026-11-14']
+      expect(log.c).toBe(session.length)
+      expect(log.xp).toBe(env.store.getState().xp)
+    }
+  })
 })

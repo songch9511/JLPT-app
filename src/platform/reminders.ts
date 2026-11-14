@@ -71,7 +71,7 @@ export function workOn(s: State, day: Date, now: Date): { reviews: number; fresh
 export function reminderText(reviews: number, fresh: number): { title: string; body: string } {
   return {
     title: `복습할 단어 ${reviews}개가 돌아왔어요`,
-    body: fresh > 0 ? `새 단어 ${fresh}개도 기다리고 있어요. 잊기 전에 한 겹 더 쌓아요.` : '잊기 전에 한 번 더 보면 오래 남아요.',
+    body: fresh > 0 ? `새 단어 ${fresh}개도 있어요.` : '잊기 전에 복습해요.',
   }
 }
 

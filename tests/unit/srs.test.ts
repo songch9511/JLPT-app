@@ -531,7 +531,7 @@ describe('P7: a session never gets stuck on learning cards that come back in min
     expect(q.next?.kind).toBe('learning')
   })
 
-  it('cards beyond the window wait, and “지금 마무리” (finishNow) shows them right away', async () => {
+  it('cards beyond the window wait, and “지금 하기” (finishNow) shows them right away', async () => {
     const { srs, store } = await withCards({ [L('5-0')]: card({ due: T + 40 * MIN, state: RELEARNING }) }, { dailyNew: 0 })
     expect(srs.buildQueue(store.getState(), at(NOW))).toMatchObject({ next: null, waiting: 1, nextDue: T + 40 * MIN })
     expect(srs.buildQueue(store.getState(), at(NOW), undefined, { finishNow: true })).toMatchObject({ next: { id: L('5-0'), kind: 'learning' }, waiting: 0, nextDue: null })

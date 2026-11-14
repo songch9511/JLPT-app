@@ -114,7 +114,7 @@ export async function shareFile(d: Pick<NativeDeps, 'Filesystem' | 'Share'>, nam
     await d.Share.share({ title: name, files: [uri] })
     return true
   } catch (e) {
-    if (!cancelled(e)) alert('공유 화면을 열지 못했어요. 잠시 뒤 다시 시도해 주세요.')
+    if (!cancelled(e)) alert('공유 화면을 열지 못했어요. 다시 시도해 주세요.')
     return false
   } finally {
     void d.Filesystem.deleteFile({ path: name, directory: DIR_CACHE }).catch(() => {})
@@ -418,7 +418,7 @@ export async function createNativePlatform(d?: NativeDeps, now: () => Date = () 
     speak: (text) => speakNative(deps, text),
     haptic: (kind) => {
       if (!getPrefs().haptics || reducedMotion()) return
-      const p = kind === 'answer' ? deps.Haptics.impact({ style: IMPACT_LIGHT }) : deps.Haptics.notification({ type: NOTIFY_SUCCESS })
+      const p = kind === 'done' ? deps.Haptics.notification({ type: NOTIFY_SUCCESS }) : deps.Haptics.impact({ style: IMPACT_LIGHT })
       void p.catch(() => {})
     },
     saveFile: (name, json) => shareFile(deps, name, json),

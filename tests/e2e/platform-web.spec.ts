@@ -10,7 +10,7 @@ test('no native code or native-only UI on the web', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '설정' })).toBeVisible()
   expect(await page.evaluate(() => 'Capacitor' in window)).toBe(false)
   await expect(page.getByRole('heading', { name: '알림 · 진동 · 발음' })).toHaveCount(0)
-  await expect(page.getByText('학습 기록은 이 기기의 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.')).toBeVisible()
+  await expect(page.getByText('학습 기록은 이 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.')).toBeVisible()
   // only the app's own scripts were loaded: no native chunk
   const scripts = await page.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => /native|capacitor/i.test(n)))
   expect(scripts).toEqual([])
@@ -41,7 +41,7 @@ test('backup is a browser download (without the app-only save counter) and impor
   const backup = JSON.parse(await readFile((await download.path())!, 'utf8'))
   expect(backup).toMatchObject({ format: 'jlpt-luma-backup', xp: 21 })
   expect(backup).not.toHaveProperty('rev')
-  await expect(page.getByText('마지막 백업: 2026년 11월 13일')).toBeVisible()
+  await expect(page.getByText('마지막 백업 2026년 11월 13일')).toBeVisible()
   // “백업 가져오기” opens the browser's file chooser
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.getByRole('button', { name: '백업 가져오기' }).click()])
   expect(chooser.isMultiple()).toBe(false)
@@ -81,7 +81,7 @@ test('finishing the day on the web: no reminder offer', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 1 }) })
   await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
   await answer(page, '쉬워요')
-  await expect(page.getByRole('heading', { name: '오늘 목표 달성!' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
   await page.waitForTimeout(300)
-  await expect(page.getByText('복습할 때가 되면 알려 드릴까요?')).toHaveCount(0)
+  await expect(page.getByText(/알려 드릴까요/)).toHaveCount(0)
 })

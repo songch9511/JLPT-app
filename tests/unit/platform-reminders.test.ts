@@ -92,7 +92,12 @@ describe('planReminders', () => {
 
   it('the message without new words', async () => {
     const { r } = await setup()
-    expect(r.reminderText(3, 0)).toEqual({ title: '복습할 단어 3개가 돌아왔어요', body: '잊기 전에 한 번 더 보면 오래 남아요.' })
+    expect(r.reminderText(3, 0)).toEqual({ title: '복습할 단어 3개가 돌아왔어요', body: '잊기 전에 복습해요.' })
+  })
+
+  it('the message with new words names their count', async () => {
+    const { r } = await setup()
+    expect(r.reminderText(3, 2)).toEqual({ title: '복습할 단어 3개가 돌아왔어요', body: '새 단어 2개도 있어요.' })
   })
 
   it('ids are the day as yyyymmdd', async () => {

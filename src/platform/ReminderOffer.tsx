@@ -19,26 +19,22 @@ export default function ReminderOffer() {
   if (result === 'granted')
     return (
       <p className="note reminder-offer" role="status">
-        좋아요. 복습할 단어가 돌아온 날 {String(p.reminders.hour).padStart(2, '0')}:{String(p.reminders.minute).padStart(2, '0')}에 알려
-        드릴게요. 시각은 설정에서 바꿀 수 있어요.
+        복습할 단어가 있는 날 {String(p.reminders.hour).padStart(2, '0')}:{String(p.reminders.minute).padStart(2, '0')}에 알려 드릴게요.
       </p>
     )
   if (result === 'denied')
     return (
       <p className="note reminder-offer" role="status">
-        알림을 받지 않기로 했어요. 마음이 바뀌면 iPhone의 설정 › 알림 › JLPT 루마에서 켤 수 있어요.
+        알림은 iPhone 설정 › 알림 › JLPT 루마에서 켤 수 있어요.
       </p>
     )
   if (!show) return null
   return (
     <section className="card reminder-offer" aria-labelledby="offer-title">
       <h2 id="offer-title">
-        <Icon name="info" size={18} /> 복습할 때가 되면 알려 드릴까요?
+        <Icon name="info" size={18} /> 복습할 날 알려 드릴까요?
       </h2>
-      <p className="muted small">
-        간격 반복은 잊기 직전에 다시 볼 때 가장 오래 남아요. 복습할 단어가 돌아온 날에만, 저녁 8시에 하루 한 번 개수를 알려 드려요. 시각과
-        쉬는 요일은 설정에서 바꿀 수 있어요.
-      </p>
+      <p className="muted small">복습할 단어가 있는 날에만 저녁 8시에 한 번 알려 드려요. 시각과 쉬는 요일은 설정에서 바꿔요.</p>
       <div className="row">
         <button
           className="btn ghost"

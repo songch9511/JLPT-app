@@ -24,9 +24,7 @@ export default function NativeSettings() {
       <label className="switch">
         <span>
           복습 알림
-          <small className="muted">
-            복습할 단어가 돌아온 날에만 정한 시각에 하루 한 번, 그날의 개수를 알려 드려요. 그날 학습을 끝냈으면 알리지 않아요.
-          </small>
+          <small className="muted">복습할 단어가 있는 날에만 하루 한 번 알려 드려요.</small>
         </span>
         <input
           type="checkbox"
@@ -39,7 +37,7 @@ export default function NativeSettings() {
       </label>
       {perm === 'denied' && (
         <p className="note" role="status">
-          알림이 꺼져 있어요. iPhone의 설정 › 알림 › JLPT 루마에서 알림을 허용하면 받을 수 있어요.
+          알림이 꺼져 있어요. iPhone 설정 › 알림 › JLPT 루마에서 켜 주세요.
         </p>
       )}
       {r.enabled && (
@@ -70,14 +68,13 @@ export default function NativeSettings() {
               )
             })}
           </div>
-          <p className="muted small">고른 요일에는 알림을 보내지 않아요.</p>
         </>
       )}
 
       <label className="switch">
         <span>
           답할 때 진동
-          <small className="muted">답을 고를 때와 하루 분량을 끝냈을 때 가볍게 울려요. 동작 줄이기를 켜 두면 울리지 않아요.</small>
+          <small className="muted">오늘 끝낼 때도 울려요. 동작 줄이기가 켜져 있으면 울리지 않아요.</small>
         </span>
         <input type="checkbox" checked={p.haptics} onChange={(e) => setPrefs({ haptics: e.target.checked })} />
       </label>
@@ -85,7 +82,7 @@ export default function NativeSettings() {
       <label htmlFor="voice">일본어 음성</label>
       {voices && voices.length === 0 ? (
         <p className="muted small">
-          이 기기에서 일본어 음성을 찾지 못했어요. iPhone의 설정 › 손쉬운 사용 › 읽기 및 말하기 › 음성에서 일본어 음성을 내려받을 수 있어요.
+          일본어 음성이 없어요. iPhone 설정 › 손쉬운 사용 › 읽기 및 말하기 › 음성에서 받을 수 있어요.
         </p>
       ) : (
         <select id="voice" value={p.voiceURI ?? ''} onChange={(e) => setPrefs({ voiceURI: e.target.value || null })}>
