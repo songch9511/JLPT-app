@@ -311,7 +311,6 @@
   .backlog-tag .num { font-size: var(--font-size-base); line-height: 1.45; }
   /* under the buttons: "밀린 587 · 50장 더 ›", then "복습 +50장 · 되돌리기" in its place */
   .plan-lever { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0 var(--spacing-1); min-height: var(--size-element-md); font-size: var(--font-size-base); margin-block: calc(-1 * var(--spacing-1)) calc(-1 * var(--spacing-3)); }
-  .first-note { font-size: var(--font-size-base); color: var(--color-text-secondary); text-align: center; }
 
   /* short screens (320×568) and the accessibility text sizes: a smaller Ruma and tighter gaps, so the two buttons stay
      on the first screen */
@@ -489,7 +488,7 @@
   .kanji-ja { font-size: calc(var(--font-size-base) * 0.93); line-height: 1.2; color: var(--color-text-secondary); }
   .example { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-1); text-align: center; }
   /* room above each line for the ruby row; a reading wider than its kanji widens the word, never leaves the card */
-  .example-ja { max-width: 100%; font-size: calc(var(--font-size-lg) * 1.125); line-height: 2.1; overflow-wrap: anywhere; }
+  .example-ja { max-width: 100%; font-size: calc(var(--font-size-lg) * 1.125); line-height: 2.1; overflow-wrap: anywhere; text-wrap: balance; }
   .example-ja ruby { ruby-position: over; }
   .example-ja rt { font-size: max(10px, 0.56em); line-height: 1; color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
   .example-ja rt.held { visibility: hidden; }
@@ -706,7 +705,6 @@
   .first-head h1 { font-size: calc(var(--font-size-lg) * 1.125); }
   .first-actions { display: flex; flex-direction: column; gap: var(--spacing-3); padding-top: var(--spacing-4); }
   .btn.first-go { min-height: 64px; border-radius: var(--ruma-radius-card); font-size: calc(var(--font-size-lg) * 1.125); }
-  .first-note { font-size: var(--font-size-sm); color: var(--color-text-secondary); text-align: center; }
   .lv-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 28px; min-height: 0; }
   .lv-row {
     --card-w: min(290px, 74vw); display: flex; gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;

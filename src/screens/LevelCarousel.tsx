@@ -9,7 +9,6 @@ import { COUNTS, LEVELS, type Level } from '../data'
 import { chooseLevel } from '../guide'
 import { KANJI_COUNTS } from '../kanji'
 import { useStore } from '../store'
-import { UNOFFICIAL_LINE } from '../brand'
 
 const f = (n: number) => n.toLocaleString('ko-KR')
 
@@ -105,7 +104,6 @@ export function LevelCarousel() {
       </div>
       <div className="first-actions">
         <Button label={`N${level} 시작하기`} variant="primary" size="lg" width="100%" className="first-go" onClick={() => chooseLevel(level)} />
-        <p className="first-note">{UNOFFICIAL_LINE}</p>
       </div>
     </div>
   )

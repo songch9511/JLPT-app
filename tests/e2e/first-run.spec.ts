@@ -24,7 +24,7 @@ test('a new learner: the level cards, three intro pages, then Home with the firs
   await expect(cards).toHaveCount(5)
   await expect(cards.locator('.lv-counts')).toHaveText(['718단어 · 450한자', '668단어 · 334한자', '2,140단어 · 657한자', '1,905단어 · 242한자', '2,699단어 · 291한자'])
   await expect(page.getByRole('button', { name: 'N5, 718단어, 450한자' })).toHaveAttribute('aria-current', 'true')
-  await expect(page.locator('.first-note')).toHaveText('JF·JEES와 무관한 비공식 앱')
+  await expect(page.locator('.first-note')).toHaveCount(0)
   await expect(page.locator('.home-go, .today, .streak, .tabbar')).toHaveCount(0)
   // one primary: start the level in the middle; a dot (or a card at the side) brings another level to the middle
   await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)

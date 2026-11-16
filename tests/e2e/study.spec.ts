@@ -5,7 +5,7 @@ import { levelOfId } from '../../src/ids'
 test('first run → a full day of study (new words, then kanji) → done screen → home', async ({ page }) => {
   await open(page)
   // the level cards, then three short intro pages
-  await expect(page.locator('.first-note')).toHaveText('JF·JEES와 무관한 비공식 앱')
+  await expect(page.locator('.first-note')).toHaveCount(0)
   await page.getByRole('button', { name: 'N4', exact: true }).click()
   await page.getByRole('button', { name: 'N4 시작하기' }).click()
   await page.getByRole('button', { name: '다음', exact: true }).click()
