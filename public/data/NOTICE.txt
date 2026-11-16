@@ -35,5 +35,9 @@ the derived data under CC BY-SA.
 Not decided yet: whether this licence extends to the rest of each file (the Korean meanings and the
 word-type labels). See docs/plan/08-word-data.md, "결정이 필요한 것" 1, in the source repository.
 
+Example sentences (examples-n5.json): one example sentence per N5 word with its readings and a Korean
+translation, keyed by the word id. They were machine-written by this project and checked mechanically, not
+reviewed by a native speaker; see data/examples/README.md in the source repository.
+
 Word list: open-anki-jlpt-decks (MIT licence, https://github.com/jamsinclair/open-anki-jlpt-decks),
 based on the lists at tanos.co.uk. JLPT does not publish an official vocabulary list.

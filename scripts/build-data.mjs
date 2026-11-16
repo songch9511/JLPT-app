@@ -9,7 +9,8 @@
 //   node scripts/build-data.mjs --assign-ids    issue ids to source words that have none (new words), then build
 //   node scripts/build-data.mjs --check         check the registry and inputs, write nothing
 //
-// Every build also writes src/generated/word-ids.ts (the app's id table, from data/ids.json).
+// Every build also writes src/generated/word-ids.ts (the app's id table, from data/ids.json) and, for each level
+// that has them, the example sentences of data/examples/n{l}.json as public/data/examples-n{l}.json (checked first).
 //
 // Word ids (docs/plan/08-word-data.md §7) come from data/ids.json and never from a word's position. The build
 // fails, writing nothing, when a source word has no registered id, when two words would share one, when an
@@ -188,6 +189,53 @@ export function levelRows(words, inputs, extras) {
   return { rows: out, missing, note }
 }
 
+// ---- example sentences (data/examples/n{l}.json, data/examples/README.md) ----
+// { "<word id>": { "seg": [[text] | [text, reading], …], "ko": "<Korean translation>" } }: joining the segments' texts
+// gives the Japanese sentence; a segment with kanji carries its reading in hiragana (the app's furigana), a kana
+// segment none. Only some levels have them (N5 for now); a level without a file shows no example.
+const KANJI = /[\u3400-\u9fff々〆ヶ]/
+const HIRAGANA = /^[\u3041-\u3096ー]+$/
+const HANGUL = /[가-힣]/
+
+/** The example files there are: { [level]: { "<id>": example } }. */
+export function readExamples() {
+  const out = {}
+  for (const l of LEVELS) {
+    const f = `${root}data/examples/n${l}.json`
+    if (existsSync(f)) out[l] = JSON.parse(readFileSync(f, 'utf8'))
+  }
+  return out
+}
+
+/** The problems with one level's examples (every id a live word of that level, every segment well formed). */
+export function checkExamples(l, examples, words) {
+  const problems = []
+  const ids = new Set(words.map((w) => w.id))
+  if (!examples || typeof examples !== 'object' || Array.isArray(examples)) return [`data/examples/n${l}.json: not an object`]
+  for (const [id, e] of Object.entries(examples)) {
+    const at = `data/examples/n${l}.json ${id}`
+    if (!ids.has(id)) problems.push(`${at}: not a word of N${l}`)
+    if (!e || typeof e !== 'object' || !Array.isArray(e.seg) || !e.seg.length) { problems.push(`${at}: no segments`); continue }
+    if (Object.keys(e).some((k) => k !== 'seg' && k !== 'ko')) problems.push(`${at}: only seg and ko`)
+    for (const g of e.seg) {
+      if (!Array.isArray(g) || g.length < 1 || g.length > 2 || g.some((x) => typeof x !== 'string' || !x)) { problems.push(`${at}: bad segment ${JSON.stringify(g)}`); continue }
+      const kanji = KANJI.test(g[0])
+      if (kanji && g.length < 2) problems.push(`${at}: no reading for ${g[0]}`)
+      // a reading belongs to the kanji it is over: okurigana and particles are segments of their own
+      if (kanji && /[\u3041-\u3096]/.test(g[0])) problems.push(`${at}: kana inside a kanji segment ${g[0]}`)
+      if (!kanji && g.length === 2) problems.push(`${at}: a reading on kana ${g[0]}`)
+      if (g.length === 2 && !HIRAGANA.test(g[1])) problems.push(`${at}: reading not in hiragana: ${g[1]}`)
+    }
+    const ja = e.seg.map((g) => (Array.isArray(g) ? g[0] : '')).join('')
+    if (!/[。？]$/.test(ja)) problems.push(`${at}: the sentence does not end in 。 or ？`)
+    if (typeof e.ko !== 'string' || !HANGUL.test(e.ko) || e.ko !== e.ko.trim()) problems.push(`${at}: no Korean translation`)
+  }
+  return problems
+}
+
+/** public/data/examples-n{l}.json: the same entries, in the level's id order, one line. */
+export const exampleFile = (examples) => JSON.stringify(Object.fromEntries(Object.keys(examples).sort().map((id) => [id, examples[id]])))
+
 /** src/generated/word-ids.ts: which level each live id belongs to, and the frozen positional → stable map. */
 export function idModule(reg) {
   const runs = []
@@ -248,6 +296,12 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
     console.error(`enrichment inputs do not match the word ids:\n  ${inputs.problems.slice(0, 40).join('\n  ')}`)
     process.exit(1)
   }
+  const examples = readExamples()
+  const exampleProblems = Object.entries(examples).flatMap(([l, e]) => checkExamples(Number(l), e, levels[l]))
+  if (exampleProblems.length) {
+    console.error(`example sentences do not check:\n  ${exampleProblems.slice(0, 40).join('\n  ')}`)
+    process.exit(1)
+  }
   const dropped = LEVELS.flatMap((l) => readSource(l).dropped.map((d) => `N${l} ${d.w}|${d.r}`))
   if (dropped.length) console.log(`duplicate source rows merged (first kept): ${dropped.join(', ')}`)
   const out = LEVELS.map((l) => [l, levelRows(levels[l], inputs, extras)])
@@ -259,6 +313,10 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
   for (const [l, { rows, missing, note }] of out) {
     writeFileSync(`${outDir}words-n${l}.json`, JSON.stringify(rows))
     console.log(`N${l}: ${rows.length} words, ${missing} without Korean${note}`)
+  }
+  for (const [l, e] of Object.entries(examples)) {
+    writeFileSync(`${outDir}examples-n${l}.json`, exampleFile(e))
+    console.log(`N${l}: ${Object.keys(e).length} example sentences`)
   }
   mkdirSync(`${root}src/generated`, { recursive: true })
   writeFileSync(`${root}src/generated/word-ids.ts`, idModule(reg))
