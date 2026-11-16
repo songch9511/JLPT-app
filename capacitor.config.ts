@@ -8,7 +8,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
  * which also updates the Xcode project, the widget extension and the App Group id that is derived from it.
  */
 const config: CapacitorConfig = {
-  appId: 'com.example.jlptruma', // PLACEHOLDER, e.g. io.github.<owner>.jlptruma
+  appId: 'com.songch9511.jlptruma', // PLACEHOLDER, e.g. io.github.<owner>.jlptruma
   appName: 'JLPT 루마', // PLACEHOLDER display name (store name is set in App Store Connect)
   webDir: 'dist-native',
   // the light theme's ground colour behind the web view while it loads; MainViewController.swift replaces it with the
