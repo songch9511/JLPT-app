@@ -28,6 +28,26 @@ const finalOf = (syllable: string) => {
   return c >= 0 && c < 11172 ? c % 28 : -1
 }
 
+/** One kanji of a word with its Korean hanja reading and its Japanese reading (the study card's kanji row). */
+export interface KanjiPart {
+  kanji: string
+  ko: string
+  ja: string
+}
+
+/**
+ * A word's kanji one by one, where the data pairs them safely: the word is read entirely on'yomi, and its kanji, its
+ * Korean reading's syllables and its reading's split (`a`) are one to one. Empty otherwise.
+ */
+export function kanjiParts(w: Pick<Word, 'w' | 'sk' | 'rt' | 'a'>): KanjiPart[] {
+  if (w.rt !== 'on' || !w.sk || !w.a || /[;；、,]/.test(w.w)) return []
+  const kanji = [...w.w].filter(isHan)
+  const segs = w.a.split('|')
+  const ko = [...w.sk]
+  if (kanji.length !== segs.length || ko.length !== segs.length) return []
+  return segs.map((ja, i) => ({ kanji: kanji[i], ko: ko[i], ja }))
+}
+
 /** Correspondence hints for a word, one per kanji the rules cover (empty when none can be shown safely). */
 export function soundHints(w: Pick<Word, 'w' | 'sk' | 'rt' | 'a'>): SoundHint[] {
   if (w.rt !== 'on' || !w.sk || !w.a) return []

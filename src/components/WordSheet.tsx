@@ -6,6 +6,9 @@ import { speak } from '../util'
 import { Icon } from './Icon'
 import { IconButton, Meta, Sheet } from './ui'
 import { FalseFriend, SoundHints, TypeLine } from './WordNotes'
+import { ExampleSentence } from './Example'
+import { LevelBadge } from './LevelBadge'
+import { useExample } from '../examples'
 
 /**
  * A word's details in a bottom sheet. Pass `word={null}` to close: the sheet stays mounted for its exit motion and
@@ -32,15 +35,16 @@ function WordDetails({ word, onClose }: { word: Word; onClose: () => void }) {
   // the card that comes back first speaks for the word; a reading card is named as such
   const next = wordCards(st, word.id).sort((a, b) => a.card.due - b.card.due)[0]
   const lapses = wordLapses(st, word.id)
+  const example = useExample(word.id)
 
   return (
     <div className="sheet">
-      {/* the word's facts as one plain line: level · stage · next review · lapses */}
+      {/* the word's facts: the level in its colour, then one plain line: stage · next review · lapses */}
       <div className="sheet-head">
+        <LevelBadge level={word.level} />
         <Meta
           className="sheet-status grow"
           items={[
-            `N${word.level}`,
             STAGE_LABEL[stage],
             next && `${next.id === readingId(word.id) ? '읽기 ' : ''}다음 복습 ${next.card.due <= Date.now() ? '지금' : formatInterval(next.card.due - Date.now()) + ' 뒤'}`,
             lapses > 0 && `${lapses}번 잊음`,
@@ -76,6 +80,12 @@ function WordDetails({ word, onClose }: { word: Word; onClose: () => void }) {
         <TypeLine word={word} />
         <SoundHints word={word} />
       </div>
+      {/* the example with every furigana and its translation */}
+      {example && (
+        <div className="sheet-example">
+          <ExampleSentence example={example} headword={word.w} headwordReading translation />
+        </div>
+      )}
     </div>
   )
 }

@@ -17,6 +17,9 @@
 // being relearned) and 새 단어 25개 (17 new + the 8 words still in their first steps) — with "오늘 37 / 196장" above
 // them; the word card left Home, so the words met (2,776 / 5,431) are read on 기록. Only `home` and `words` were
 // re-recorded (RECORD_LEGACY=1); every other recorded text came out identical.
+// A sixth (2026-11-16, Home in names and numbers): the same counts without the helper lines — the buttons read
+// "복습 134장" and "새 단어 25개" (the 8 words in their first steps are in the button's name only), and the 오늘 card
+// reads "오늘 26분 남음 37 / 196장"; `home` edited by hand from the above.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { homeShown, KEY, L, NOW, open, saved, user } from './fixtures'
@@ -42,8 +45,8 @@ async function screens(page: Page) {
   // still count as met (2,783 instead of 2,776; "(읽기만 n)", the old signal, is no longer on Home)
   // 17 new words today and the 8 still in their first steps: the new session's 25
   await expect(page.locator('.plan .c-new b')).toHaveText('25')
-  await expect(page.locator('.plan .c-learning')).toHaveText('익히는 중 8개 포함')
-  out.home = { plan: await text(page, '.plan'), progress: await text(page, '.home-progress-text') }
+  await expect(page.getByRole('button', { name: /익히는 중 8개 포함$/ })).toHaveText('새 단어25개')
+  out.home = { plan: await text(page, '.plan'), progress: await text(page, '.today-figures') }
   // the words met, on 기록 (they left Home with its word card)
   await page.goto('./#/stats')
   await expect(page.locator('.stamp-group')).toContainText('만난 단어 2,776 / 5,431')

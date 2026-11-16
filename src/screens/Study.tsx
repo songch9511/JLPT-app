@@ -6,11 +6,13 @@ import { PastBar, PastCard } from '../components/PastCard'
 import { useSwipe } from '../components/useSwipe'
 import { Session, type Entry } from '../session'
 import { Icon } from '../components/Icon'
-import { Announce, Button, IconButton, Meta, ProgressBar, Result, Skeleton } from '../components/ui'
+import { Announce, Button, IconButton, ProgressBar, Result, Skeleton } from '../components/ui'
 import { ReadingChoice } from '../components/Choices'
-import { done as guideDone, markDone } from '../guide'
-import { Bridge, FalseFriend, SoundHints, TypeLine } from '../components/WordNotes'
+import { Bridge, SoundHints } from '../components/WordNotes'
+import { CardHead, CardScroll, Headword, MeaningFace, Slot } from '../components/StudyCard'
+import { ExampleSentence } from '../components/Example'
 import { isReadingCard, levelOf, meaning, useAllWords, useLevel, useLevels, wordById } from '../data'
+import { useExample } from '../examples'
 import { legacySeed } from '../ids'
 import { readingOf, readingQuestion } from '../distractors'
 import {
@@ -19,6 +21,8 @@ import {
   cardsLeft,
   gradeReading,
   formatInterval,
+  wordLapses,
+  isRelearning,
   previewIntervals,
   Rating,
   MORE_REVIEWS,
@@ -42,8 +46,6 @@ const DOUBLE_TAP_MS = 350
 /** How long the "26일 뒤" note and the undo chip stay after an answer. */
 const NOTE_MS = 900
 const UNDO_CHIP_MS = 4000
-/** Ruma's words on the first reading card (src/guide.ts). */
-const READING_TIP = '한국어와 뜻이 같은 한자어는 읽기만 골라요.'
 
 /** "알아요, 26일 뒤 다시" — the interval read as part of the button's name. */
 const answerLabel = (label: string, interval?: string) =>
@@ -51,9 +53,9 @@ const answerLabel = (label: string, interval?: string) =>
 const afterText = (interval: string) => (interval.endsWith('이내') ? interval : `${interval} 뒤`)
 
 /**
- * One answer button of the bar under the card: 60px high on both steps, so the thumb never moves. The interval it sets
- * is a small label above the button and read as part of its name ("알아요, 26일 뒤 다시"); the label's line is kept
- * when there is none. Only the one primary is filled.
+ * One answer button of the bar under the card, always the same height, so the thumb never moves: its name, and under
+ * it inside the button the interval it sets ("4일 뒤"), read as part of its name ("알아요, 4일 뒤 다시"). Only the one
+ * primary is filled.
  */
 function Grade({
   label,
@@ -71,14 +73,14 @@ function Grade({
   onClick: () => void
 }) {
   return (
-    <div className={`grade-cell ${className ?? ''}`}>
-      <span className="grade-after" aria-hidden="true">
-        {interval}
-      </span>
-      <Button label={answerLabel(label, interval)} variant={primary ? 'primary' : 'secondary'} size="lg" className="grade" isDisabled={isDisabled} onClick={onClick}>
-        <span className="grade-label">{label}</span>
-      </Button>
-    </div>
+    <Button label={answerLabel(label, interval)} variant={primary ? 'primary' : 'secondary'} size="lg" className={`grade ${className ?? ''}`} isDisabled={isDisabled} onClick={onClick}>
+      <span className="grade-label">{label}</span>
+      {interval && (
+        <span className="grade-after" aria-hidden="true">
+          {afterText(interval)}
+        </span>
+      )}
+    </Button>
   )
 }
 
@@ -115,12 +117,14 @@ function useActiveTime(cardKey: string, paused = false) {
 }
 
 /**
- * One study session. `mode` is which of the day's cards it shows (srs.ts `StudyMode`): Home's 복습하기 and 새 단어 open
+ * One study session. `mode` is which of the day's cards it shows (srs.ts `StudyMode`): Home's 복습 and 새 단어 open
  * `review` and `new`; `all` is the whole day in one queue (the plain `#/study` route).
  */
 export function Study({ mode = 'all' }: { mode?: StudyMode }) {
   const s = useStore((x) => x)
-  const [revealed, setRevealed] = useState(false)
+  /** the card's two toggles, each on its own: 의미 (the meaning, the example's translation), 히라가나 (the reading, the
+   * headword's furigana in the example). Kept for this card only. */
+  const [open, setOpen] = useState({ meaning: false, kana: false })
   const [missed, setMissed] = useState(false)
   const [answered, setAnswered] = useState(0)
   const [last, setLast] = useState<string | undefined>()
@@ -170,6 +174,7 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
   // reading questions draw wrong choices from the data and must know every entry of the same written word
   const all = useAllWords(reading)
   const word = words && id ? wordById(id) : null
+  const example = useExample(id)
   const error = levelError ?? levels.error
   const reps = id ? (s.cards[id]?.reps ?? 0) : 0
   const question = useMemo(() => (reading && word && all ? readingQuestion(word, all, `${legacySeed(id!)}|${reps}`) : null), [reading, word, all, id, reps])
@@ -180,18 +185,8 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
   const cardKey = `${id}:${answered}`
   const activeMs = useActiveTime(cardKey, view !== null)
 
-  // Ruma's tip on the first reading card of a learner who started with the first-run guide (src/guide.ts): shown with
-  // that card only, counted as shown at once so it never comes back
-  const [readingTip, setReadingTip] = useState<string | null>(null)
-  const tipDue = quiz && !!word && !!s.guide && s.onboarded && !guideDone(s, 'reading')
   useEffect(() => {
-    if (!tipDue) return
-    setReadingTip(cardKey)
-    markDone('reading')
-  }, [tipDue, cardKey])
-
-  useEffect(() => {
-    setRevealed(false)
+    setOpen({ meaning: false, kana: false })
     setMissed(false)
     setPicked(null)
   }, [cardKey])
@@ -223,19 +218,15 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
     if (finished && answered > 0) platform.haptic('done')
   }, [finished])
 
-  /** `fromButton`: the grade buttons appear where "정답 보기" was, so a double tap on it must not answer. */
-  const reveal = useCallback(
-    (fromButton = false) => {
-      if (revealed) return
-      if (fromButton) lockUntil.current = Date.now() + DOUBLE_TAP_MS
-      setRevealed(true)
-    },
-    [revealed],
-  )
+  /** Both toggles on (Space/Enter). */
+  const openAll = useCallback(() => setOpen({ meaning: true, kana: true }), [])
 
+  /** A grade. 알아요 and 쉬워요 need nothing opened first: a known word is passed quickly. A reading card is graded
+   * by its choice. */
   const submit = useCallback(
     (grade: Grade) => {
-      if (!q.next || !revealed || Date.now() < lockUntil.current) return
+      if (!q.next || Date.now() < lockUntil.current) return
+      if (quiz && picked === null) return
       lockUntil.current = Date.now() + DOUBLE_TAP_MS
       const record = quiz && question && picked !== null ? { choices: question.choices, answer: question.answer, picked } : undefined
       undo.current = { entry: session.answer({ id: q.next.id, kind: q.next.kind, grade, at: Date.now(), ms: activeMs(), quiz: record }), card: q.next }
@@ -247,20 +238,21 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
       setLast(q.next.id)
       setAnswered((n) => n + 1)
     },
-    [q.next, revealed, intervals, activeMs, quiz, question, picked, session],
+    [q.next, intervals, activeMs, quiz, question, picked, session],
   )
 
   const autoSpeak = s.settings.autoSpeak
-  /** On the front: show the answer and mark the card forgotten. On the back: grade it "모르겠어요". */
+  /** "모르겠어요": everything opens and the result line shows; the next press ("다음") grades it. */
   const onAgain = useCallback(() => {
-    if (!revealed) {
+    if (!missed) {
+      // "다음" takes its place: a double tap must not grade at once
       lockUntil.current = Date.now() + DOUBLE_TAP_MS
-      setRevealed(true)
+      openAll()
       setMissed(true)
       // hear the reading once — inside the tap or key press, so the browser allows it
       if (autoSpeak && word) speak(word.r || word.w)
     } else submit(Rating.Again)
-  }, [revealed, submit, autoSpeak, word])
+  }, [missed, openAll, submit, autoSpeak, word])
 
   /** Reading card: a choice (or -1, "모르겠어요") grades it at once; the answer and meaning are then shown. */
   const choose = useCallback(
@@ -268,7 +260,6 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
       if (!question || picked !== null || Date.now() < lockUntil.current) return
       lockUntil.current = Date.now() + DOUBLE_TAP_MS
       setPicked(i)
-      setRevealed(true)
       setMissed(i !== question.answer)
       if (autoSpeak && word) speak(word.r || word.w)
     },
@@ -351,10 +342,10 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
     }
   }, [])
 
-  // Keys follow the two steps: Space/Enter shows the answer; 1/2/3 (↑ also 3) grade once it is shown. ←/→ move between
-  // the session's cards (they graded before swiping existed). 1 on the front is "모르겠어요", the only other choice
-  // there. Registered before paint, so a key pressed as soon as a card shows is never handled by the previous card's
-  // handler.
+  // Keys: Space/Enter opens both toggles (after "모르겠어요" it is "다음"); 1 "모르겠어요", 2 "알아요", 3 (↑ too) "쉬워요",
+  // whether anything is open or not. ←/→ move between the session's cards (they graded before swiping existed).
+  // Registered before paint, so a key pressed as soon as a card shows is never
+  // handled by the previous card's handler.
   useLayoutEffect(() => {
     const on = (e: KeyboardEvent) => {
       // ← / → go through the session's cards, with the same limits as a swipe
@@ -393,15 +384,18 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
       }
       if (k === ' ' || k === 'Enter') {
         e.preventDefault()
-        if (!revealed) reveal()
-        else if (missed) submit(Rating.Again)
+        if (missed) submit(Rating.Again)
+        else openAll()
       } else if (k === '1') onAgain()
-      else if (revealed && !missed && k === '2') submit(Rating.Good)
-      else if (revealed && !missed && (k === '3' || k === 'ArrowUp')) submit(Rating.Easy)
+      else if (!missed && k === '2') submit(Rating.Good)
+      else if (!missed && (k === '3' || k === 'ArrowUp')) {
+        e.preventDefault()
+        submit(Rating.Easy)
+      }
     }
     addEventListener('keydown', on)
     return () => removeEventListener('keydown', on)
-  }, [ready, word, quiz, question, picked, choose, revealed, missed, submit, onAgain, reveal, view, goPrev, goNext, regrade, session])
+  }, [ready, word, quiz, question, picked, choose, missed, submit, onAgain, openAll, view, goPrev, goNext, regrade, session])
 
   const swipe = useSwipe({ canPrev, canNext, onPrev: goPrev, onNext: goNext })
 
@@ -412,7 +406,7 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
     const w = wordById(e.id)
     return (
       <div key={`${e.id}@${e.at}`} className="card-slot" style={{ '--slot': slot } as CSSProperties} inert={slot !== 0} aria-hidden={slot !== 0 || undefined}>
-        <PastCard entry={e} index={i} total={total} word={w} marked={!!w && s.marks.includes(w.id)} onMark={() => w && toggleMark(w.id)} />
+        <PastCard entry={e} index={i} total={total} word={w} marked={!!w && s.marks.includes(w.id)} lapses={w ? wordLapses(s, w.id) : 0} onMark={() => w && toggleMark(w.id)} />
       </div>
     )
   }
@@ -432,17 +426,22 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
         {/* Home's language: Ruma in its tinted circle (both eyes when the day is done, one eye while cards remain),
             the day's figures as three tiles, the buttons at the thumb */}
         <section className="done-body" aria-labelledby="done-title">
-          <div className="home-ruma done-mascot" data-mood={dayCleared ? 'day' : 'wake'}>
+          <div className="done-mascot" data-mood={dayCleared ? 'day' : 'wake'}>
             <Ruma progress={dayCleared ? 1 : (log?.c ?? 0) / Math.max(1, (log?.c ?? 0) + cardsLeft(day))} mood={dayCleared ? 'cheer' : 'idle'} size={160} />
           </div>
-          <h1 id="done-title">{dayCleared ? '오늘 끝' : !cleared ? '쉬어 가요' : mode === 'review' ? '복습 끝' : '새 단어 끝'}</h1>
-          {/* Ruma's eyes say the day is done; only what the screen cannot show is said in words */}
+          {/* names and numbers only: what is done, or what waits and when; the backlog left as its tag */}
+          <h1 id="done-title">{dayCleared ? '오늘 끝' : !cleared ? `익히는 중 ${q.waiting}장` : mode === 'review' ? '복습 끝' : '새 단어 끝'}</h1>
           {!cleared ? (
-            <p className="done-text">{`익히는 중 ${q.waiting}장이 ${inMin}분 뒤에 돌아와요.`}</p>
-          ) : rest > 0 ? (
-            <p className="done-text">{mode === 'review' ? `새 단어 ${rest}개가 남았어요.` : `복습 ${rest.toLocaleString()}장이 남았어요.`}</p>
+            <p className="done-time" role="img" aria-label={`${inMin}분 뒤에 돌아와요`}>
+              {inMin}분 뒤
+            </p>
           ) : (
-            q.held > 0 && <p className="done-text">{`밀린 복습 ${q.held.toLocaleString()}장은 내일부터 나눠서 나와요.`}</p>
+            dayCleared &&
+            q.held > 0 && (
+              <span className="backlog-tag" role="img" aria-label={`밀린 복습 ${q.held.toLocaleString()}장`}>
+                밀린 <b className="num">{q.held.toLocaleString()}</b>
+              </span>
+            )
           )}
           {/* the day in three figures (labels as before: 본 카드 · 연속 학습 · 오늘 XP) */}
           <dl className="done-figures">
@@ -473,7 +472,18 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
         </section>
         <div className="done-actions">
           {!cleared && <Button label={`${q.waiting}장 지금 하기`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
-          <Button label="홈으로" variant={cleared ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
+          {/* this session is done, the other one still has cards: it is the next thing to do */}
+          {rest > 0 &&
+            (mode === 'review' ? (
+              <Button label={`새 단어 시작, ${rest}개`} variant="primary" size="lg" width="100%" onClick={() => go('/study/new')}>
+                새 단어 {rest}개
+              </Button>
+            ) : (
+              <Button label={`복습 시작, ${rest.toLocaleString()}장`} variant="primary" size="lg" width="100%" onClick={() => go('/study/review')}>
+                복습 {rest.toLocaleString()}장
+              </Button>
+            ))}
+          <Button label="홈으로" variant={cleared && rest === 0 ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
           {/* while reviews are held for later days, more reviews rather than more new words (03 §5.1, §5.3). What is
               let in belongs to one session: this one goes on, or the other one opens */}
           {dayCleared && q.held > 0 ? (
@@ -516,7 +526,11 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
   // session's own cards are what is left
   const dayTotal = Math.max(1, todayCount + left)
   const marked = word ? s.marks.includes(word.id) : false
-  const lower = !!next && levelOf(next.id) !== s.settings.target
+  // the kind of card, as the session it belongs to: a word introduced today (still learning it) is a new word, a
+  // review answered "모르겠어요" (relearning) a review
+  const kind = next && (next.kind === 'review' || (next.kind === 'learning' && isRelearning(s.cards[next.id])) ? '복습' : '새 단어')
+  const settled = picked !== null
+  const lapses = word ? wordLapses(s, word.id) : 0
 
   return (
     <main className="study">
@@ -536,17 +550,6 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
           </span>
         )}
       </p>
-
-      {readingTip === cardKey && (
-        <div className="study-tip">
-          <Ruma progress={dayTotal > 0 ? todayCount / dayTotal : 0} size={40} />
-          <div className="bubble">
-            <p>{READING_TIP}</p>
-            <IconButton label="루마의 안내 닫기" icon={<Icon name="close" size={18} />} onClick={() => setReadingTip(null)} />
-          </div>
-          <Announce text={`루마: ${READING_TIP}`} />
-        </div>
-      )}
 
       {/* previous / next card without swiping: for the keyboard and screen readers, shown when focused */}
       {total > 0 && (
@@ -570,126 +573,118 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
             inert={view !== null}
             aria-hidden={view !== null || undefined}
           >
-        {error && (
-          <div className="load-error" role="alert">
-            <p>{error}</p>
-            <Button
-              label="다시 시도"
-              onClick={() => {
-                // whichever failed: the studied levels (the queue's order) or the card's own level
-                levels.retry()
-                setRetry((n) => n + 1)
-              }}
-            />
-          </div>
-        )}
-        {!ready && !error && (
-          <div className="skeleton" aria-busy="true" aria-label="단어를 불러오는 중">
-            <Skeleton width={120} height={48} />
-            <Skeleton width={160} height={20} />
-          </div>
-        )}
-        {ready && word && next && (
-          <div
-            className={`flash ${revealed ? 'open' : ''} ${missed ? 'missed' : ''} ${reading ? 'reading-card' : ''}`}
-            key={cardKey}
-            onClick={() => !quiz && reveal()}
-          >
-            <div className="flash-head">
-              {/* the card's facts as one plain line; on a meaning card answered "모르겠어요" the result takes its place
-                  (a reading card says its result where it asked, above the choices) */}
-              <span className="flash-status grow" role="status">
-                {missed && !quiz ? (
-                  <Result tone="again">{intervals ? `${afterText(intervals[Rating.Again])} 다시 나와요` : '다시 나와요'}</Result>
-                ) : (
-                  <Meta className="flash-meta" items={[next.kind === 'new' && '새 단어', reading && '읽기', lower && `N${levelOf(next.id)}`]} />
-                )}
-              </span>
-              {(!reading || revealed) && (
-                <IconButton
-                  label="발음 듣기"
-                  icon={<Icon name="speaker" />}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    speak(word.r || word.w)
+            {error && (
+              <div className="load-error" role="alert">
+                <p>{error}</p>
+                <Button
+                  label="다시 시도"
+                  onClick={() => {
+                    // whichever failed: the studied levels (the queue's order) or the card's own level
+                    levels.retry()
+                    setRetry((n) => n + 1)
                   }}
                 />
-              )}
-              <IconButton
-                label="북마크"
-                className={marked ? 'marked' : undefined}
-                aria-pressed={marked}
-                icon={<Icon name="mark" fill={marked} />}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggleMark(word.id)
-                }}
-              />
-            </div>
-            <div className="flash-body">
-              <p lang="ja" className={`flash-word ${word.w.length > 6 ? 'long' : ''}`}>
-                {word.w}
-              </p>
-              {reading && question ? (
-                <>
-                  {/* the question's line, then the result in its place: one line, a mark and the colour on the text */}
-                  <p className="reading-prompt" id="reading-prompt" aria-live="polite">
-                    {picked === null ? (
-                      '어떻게 읽을까요?'
-                    ) : picked === question.answer ? (
-                      <Result tone="right">맞았어요</Result>
-                    ) : picked < 0 ? (
-                      <Result tone="again">이렇게 읽어요</Result>
-                    ) : (
-                      <Result tone="wrong">틀렸어요</Result>
-                    )}
-                  </p>
-                  <div className="choices" role="group" aria-labelledby="reading-prompt">
-                    {question.choices.map((c, i) => {
-                      const state = picked === null ? '' : i === question.answer ? 'right' : i === picked ? 'wrong' : 'dim'
-                      return (
-                        <ReadingChoice
-                          key={c}
-                          text={c}
-                          state={state}
-                          disabled={picked !== null}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            choose(i)
-                          }}
-                        />
-                      )
-                    })}
-                  </div>
-                  <div className="flash-answer-slot" aria-live="polite">
-                    {picked !== null && (
-                      <div className="flash-answer">
+              </div>
+            )}
+            {!ready && !error && (
+              <div className="skeleton" aria-busy="true" aria-label="단어를 불러오는 중">
+                <Skeleton width={120} height={48} />
+                <Skeleton width={160} height={20} />
+              </div>
+            )}
+            {ready && word && next && (
+              <div className={`flash ${missed ? 'missed' : ''} ${reading ? 'reading-card' : ''}`} key={cardKey}>
+                {/* the level in its colour and the kind of card; a reading card speaks only once answered (hearing it
+                    first would give the answer away) */}
+                <CardHead
+                  level={word.level}
+                  items={[kind, reading && '읽기', lapses > 0 && `${lapses}번 잊음`]}
+                  word={word}
+                  speakable={!quiz || settled}
+                  marked={marked}
+                  onMark={() => toggleMark(word.id)}
+                />
+                {quiz && question ? (
+                  <CardScroll>
+                    <div className="flash-body">
+                      <Headword word={word} />
+                      {/* the question's line, then the result in its place: one line, a mark and the colour on the text */}
+                      <p className="reading-prompt" id="reading-prompt" aria-live="polite">
+                        {picked === null ? (
+                          '어떻게 읽을까요?'
+                        ) : picked === question.answer ? (
+                          <Result tone="right">맞았어요</Result>
+                        ) : picked < 0 ? (
+                          <Result tone="again">이렇게 읽어요</Result>
+                        ) : (
+                          <Result tone="wrong">틀렸어요</Result>
+                        )}
+                      </p>
+                      <div className="choices" role="group" aria-labelledby="reading-prompt">
+                        {question.choices.map((c, i) => {
+                          const state = picked === null ? '' : i === question.answer ? 'right' : i === picked ? 'wrong' : 'dim'
+                          return (
+                            <ReadingChoice
+                              key={c}
+                              text={c}
+                              state={state}
+                              disabled={settled}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                choose(i)
+                              }}
+                            />
+                          )
+                        })}
+                      </div>
+                      {/* the answer's room is kept until it is answered, so the choices do not move */}
+                      <Slot on={settled} className="flash-answer">
                         {word.sk && <Bridge word={word} reading={readingOf(word)} />}
                         <p className="flash-meaning">{meaning(word)}</p>
                         <SoundHints word={word} />
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="flash-answer-slot" aria-live="polite">
-                  {revealed && (
-                    <div className="flash-answer">
-                      {word.r && (
-                        <p lang="ja" className="flash-reading">
-                          {word.r}
-                        </p>
+                      </Slot>
+                      {example && (
+                        <div className="flash-example">
+                          <ExampleSentence example={example} headword={word.w} headwordReading={settled} translation={settled} />
+                        </div>
                       )}
-                      <p className="flash-meaning">{meaning(word)}</p>
-                      <FalseFriend word={word} />
-                      <TypeLine word={word} />
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+                  </CardScroll>
+                ) : (
+                  <>
+                    <MeaningFace word={word} example={example} kana={open.kana} meaningOpen={open.meaning} />
+                    {/* the two toggles, each on its own; after "모르겠어요" the result line in the same place (both are
+                        always laid out in one cell, so the card keeps its height) */}
+                    <div className="flash-foot">
+                      <div className={`flash-toggles ${missed ? 'gone' : ''}`} role="group" aria-label="카드 열기" inert={missed}>
+                        <Button
+                          label="의미"
+                          className="toggle"
+                          aria-pressed={open.meaning}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpen((o) => ({ ...o, meaning: !o.meaning }))
+                          }}
+                        />
+                        <Button
+                          label="히라가나"
+                          className="toggle"
+                          aria-pressed={open.kana}
+                          isDisabled={!word.r}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpen((o) => ({ ...o, kana: !o.kana }))
+                          }}
+                        />
+                      </div>
+                      <p className="flash-result" role="status">
+                        {missed && <Result tone="again">{intervals ? `${afterText(intervals[Rating.Again])} 다시 나와요` : '다시 나와요'}</Result>}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -705,32 +700,25 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
         <footer className="answer-bar">
           {picked === null ? (
             <Grade className="wide" label="모르겠어요" onClick={() => choose(-1)} isDisabled={!ready} />
-          ) : missed ? (
+          ) : (
             <Grade
               className="wide"
               primary
               label="다음"
-              interval={intervals?.[Rating.Again]}
-              onClick={() => submit(gradeReading(picked, question?.answer ?? 0))}
+              interval={intervals?.[missed ? Rating.Again : Rating.Good]}
+              onClick={() => question && submit(gradeReading(picked, question.answer))}
             />
-          ) : (
-            <Grade className="wide" primary label="다음" interval={intervals?.[Rating.Good]} onClick={() => submit(gradeReading(picked, question?.answer ?? -2))} />
           )}
         </footer>
       ) : (
-        <footer className={`answer-bar ${!revealed ? 'front' : missed ? '' : 'three'}`}>
-          {!revealed ? (
-            <>
-              <Grade label="모르겠어요" onClick={onAgain} isDisabled={!ready} />
-              <Grade primary label="정답 보기" onClick={() => reveal(true)} isDisabled={!ready} />
-            </>
-          ) : missed ? (
+        <footer className={`answer-bar ${missed ? '' : 'three'}`}>
+          {missed ? (
             <Grade className="wide" primary label="다음" onClick={() => submit(Rating.Again)} />
           ) : (
             <>
-              <Grade label="모르겠어요" interval={intervals?.[Rating.Again]} onClick={onAgain} />
-              <Grade primary label="알아요" interval={intervals?.[Rating.Good]} onClick={() => submit(Rating.Good)} />
-              <Grade label="쉬워요" interval={intervals?.[Rating.Easy]} onClick={() => submit(Rating.Easy)} />
+              <Grade label="모르겠어요" interval={intervals?.[Rating.Again]} onClick={onAgain} isDisabled={!ready} />
+              <Grade primary label="알아요" interval={intervals?.[Rating.Good]} onClick={() => submit(Rating.Good)} isDisabled={!ready} />
+              <Grade label="쉬워요" interval={intervals?.[Rating.Easy]} onClick={() => submit(Rating.Easy)} isDisabled={!ready} />
             </>
           )}
         </footer>

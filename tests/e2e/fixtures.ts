@@ -96,7 +96,7 @@ export async function rightChoice(page: Page) {
 }
 
 /**
- * Reveal the current card and answer it. On a reading card (fast-track) "알아요"/"쉬워요" pick the right
+ * Open the current card's meaning and answer it. On a reading card (fast-track) "알아요"/"쉬워요" pick the right
  * reading — a reading card has no "쉬워요" — and "모르겠어요" is its own button.
  */
 export async function answer(page: Page, choice: '알아요' | '쉬워요' | '모르겠어요' = '알아요') {
@@ -114,7 +114,8 @@ export async function answer(page: Page, choice: '알아요' | '쉬워요' | '�
     await page.waitForTimeout(READ_MS)
     await page.getByRole('button', { name: '다음', exact: true }).click()
   } else {
-    await card.click()
+    // open the meaning first, as a learner checking it would (grading needs nothing opened: study.spec.ts)
+    await page.getByRole('button', { name: '의미', exact: true }).click()
     await expect(page.locator('.flash-meaning')).toBeVisible()
     await page.getByRole('button', { name: new RegExp(`^${choice}`) }).click()
   }

@@ -1,78 +1,74 @@
-// Home (docs/design-system.md §3 "홈"): Ruma in a tinted circle with one line, the day's progress, and in the thumb zone
-// the day's two sessions as two big buttons — 복습하기 (reviews due today) and 새 단어 (today's new words). Each button's
-// number is what its session will show (srs.ts `StudyMode`); the two always add up to the day's cards.
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+// Home (docs/design-system.md §3 "홈"): name-tags and numbers only. At the top the target level as a chip (it opens the
+// level picker) and the streak; a white "오늘" card with Ruma (asleep, one eye, both eyes: the day's progress), the
+// day's count, time and bar, and the day's two sessions as two buttons — 복습 (reviews due today) and 새 단어 (today's
+// new words). Each button's number is what its session will show (srs.ts `StudyMode`); the two add up to the day's
+// cards. Below, the target level's words in three rows. The first run asks the level first (LevelPicker).
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { go } from '../App'
-import { Announce, Button, ProgressBar } from '../components/ui'
+import { Button, ProgressBar } from '../components/ui'
 import { Ruma } from '../components/Ruma'
 import { Icon } from '../components/Icon'
-import { askLevelAgain, homeTip, markDone, phase as guidePhase, type Phase, type Tip } from '../guide'
-import { LevelAnswers, QUESTION, TIPS, TipLine } from './HomeGuide'
-import { UNOFFICIAL_LINE } from '../brand'
-import { LEVELS } from '../data'
-import { breakdowns, buildQueue, cardsLeft, minutesFor, MORE_REVIEWS, newWordsLeft, secondsPerAnswer, streak, unlockMoreNew, unlockMoreReviews } from '../srs'
+import { phase as guidePhase } from '../guide'
+import { LevelPicker } from './LevelPicker'
+import { COUNTS, LEVELS, type Level } from '../data'
+import { breakdowns, buildQueue, cardsLeft, leechIds, minutesFor, MORE_REVIEWS, newWordsLeft, secondsPerAnswer, streak, unlockMoreNew, unlockMoreReviews } from '../srs'
 import { update, useStore, type State } from '../store'
 import { dayKey, useClock } from '../util'
 
-const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
-
 const f = (n: number) => n.toLocaleString('ko-KR')
 
-/** Ruma's state, which tints its circle: asleep before today's study, one eye open, both eyes, nothing to do. */
-export type Mood = 'sleep' | 'wake' | 'day' | 'rest'
+/** Ruma's state: asleep before today's study, one eye open once it started, both eyes when the day is done. */
+export type Mood = 'sleep' | 'wake' | 'day'
 
-/**
- * Ruma's one line for a state. Where a state has two, the line changes once a day (never while the screen is open),
- * so it does not flicker. Voice rules (docs/design-system.md §3 "문구"): plain, first person, no interjections,
- * adverbs, praise or exclamation marks; what the numbers and Ruma's face already say is not said again.
- */
-function rumaLine(lines: string[], today: Date) {
-  const day = Math.floor(new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() / 86_400_000)
-  return lines[day % lines.length]
+/** The target level as a chip in its colour: it opens the level picker. */
+function LevelChip({ level }: { level: Level }) {
+  return (
+    <a href="#/level" className="level-chip" data-level={level} aria-label={`급수 N${level}, 바꾸기`}>
+      N{level}
+      <Icon name="down" size={16} strokeWidth={2.8} />
+    </a>
+  )
 }
 
-/** Top line: the day and the level, the streak at the right; while Ruma asks the level, the app's name. */
-function HomeHeader({ s, today, first }: { s: State; today: Date; first: Phase }) {
-  if (first === 'level')
-    return (
-      <header className="top home-head">
-        <h1>JLPT 루마</h1>
-      </header>
-    )
+/** The streak as a white pill with the flame (none before anything was studied). */
+function Streak({ s, today }: { s: State; today: Date }) {
   const days = streak(s.log, today)
   const lit = !!s.log[dayKey(today)]?.c
   return (
-    <header className="top home-head">
-      <div className="grow">
-        <h1>오늘</h1>
-        <p className="subtitle">
-          {today.getMonth() + 1}월 {today.getDate()}일 {DAY_NAMES[today.getDay()]}요일 · <b>N{s.settings.target}</b>
-        </p>
-      </div>
-      {/* no streak before anything was studied */}
-      {first !== 'start' && (
-        <span className={`streak ${lit ? 'lit' : ''}`} role="img" aria-label={lit || !days ? `연속 ${days}일` : `연속 ${days}일, 오늘 하면 ${days + 1}일`}>
-          <Icon name="flame" size={18} fill={lit} strokeWidth={2.4} />
-          <span className="num">{days}</span>
-        </span>
-      )}
-    </header>
+    <span className={`streak ${lit ? 'lit' : ''}`} role="img" aria-label={lit || !days ? `연속 ${days}일` : `연속 ${days}일, 오늘 하면 ${days + 1}일`}>
+      <Icon name="flame" size={18} fill={lit} strokeWidth={2.4} />
+      <span className="num">{days}</span>
+    </span>
   )
 }
 
 /**
- * One of Home's big buttons: what it starts at the left (with an optional line under it), how much at the right. The
- * first of the group is the one ink primary (76px); the other is white (64px).
+ * One of the "오늘" card's buttons: what it starts at the left, how much at the right. The first of the group is the
+ * one ink primary; the other is white.
  */
-function BigButton({ label, title, sub, count, primary, className, onClick }: { label: string; title: string; sub?: ReactNode; count: ReactNode; primary?: boolean; className?: string; onClick: () => void }) {
+function BigButton({ label, title, count, primary, className, onClick }: { label: string; title: string; count: ReactNode; primary?: boolean; className?: string; onClick: () => void }) {
   return (
     <Button label={label} variant={primary ? 'primary' : 'secondary'} size="lg" width="100%" className={`home-go ${className ?? ''}`} onClick={onClick}>
-      <span className="home-go-text">
-        <span className="home-go-title">{title}</span>
-        {sub && <span className="home-go-sub">{sub}</span>}
-      </span>
+      <span className="home-go-title">{title}</span>
       <span className="home-go-count num">{count}</span>
     </Button>
+  )
+}
+
+/** One row of the level's words: a name, "a / b" and a small bar in the level's colour. */
+function Figure({ label, value, total, level }: { label: string; value: number; total: number; level: Level }) {
+  return (
+    <div className="lw-row" role="group" aria-label={`${label} ${f(total)}개 중 ${f(value)}개`}>
+      <span className="lw-name grow" aria-hidden="true">
+        {label}
+      </span>
+      <b className="lw-value num" aria-hidden="true">
+        {f(value)} / {f(total)}
+      </b>
+      <span className="lw-bar" data-level={level} aria-hidden="true">
+        <i style={{ width: `${total ? Math.min(100, (value / total) * 100) : 0}%` }} />
+      </span>
+    </div>
   )
 }
 
@@ -110,61 +106,25 @@ export function Home() {
     return () => clearTimeout(t)
   }, [added])
 
-  // Ruma's first run (src/guide.ts): the level question, then the first session
+  // the first run (src/guide.ts): the level is asked first, then the first session
   const first = guidePhase(s)
-  // a tip is taken when Home opens and counted as shown at once, so it is never repeated (not even after a reload)
-  const [tip, setTip] = useState<Tip | null>(() => homeTip(s))
-  useEffect(() => {
-    if (tip) markDone(tip)
-  }, [tip])
-
-  // the mascot opens one eye once today's study starts, both when today's share is done; a day with nothing to do
-  // sleeps rather than looking done without any study
-  const progress = cleared ? 1 : started ? done / (done + todo) : 0
-  const mood: Mood = first === 'level' ? 'rest' : cleared ? 'day' : started ? 'wake' : todo > 0 || first ? 'sleep' : 'rest'
-  const line =
-    first === 'level'
-      ? '반가워요, 루마예요'
-      : first === 'start'
-        ? '깨워 줄래요?'
-        : todo === 0 && nextLevel
-          ? `다음은 N${nextLevel}예요`
-          : rumaLine(
-              mood === 'day'
-                ? ['두 눈 다 떴어요', '내일 봐요']
-                : mood === 'wake'
-                  ? ['한쪽 눈 떴어요']
-                  : behind
-                    ? ['보고 싶었어요', '같이 치워요']
-                    : mood === 'sleep'
-                      ? ['깨워 줄래요?', '자고 있어요']
-                      : ['오늘은 쉬어요'],
-              today,
-            )
-  const showTip = !first && tip === 'srs'
-
-  // one polite announcement when Ruma's state changes while Home is open (not when it opens)
-  const said = useRef(mood)
-  const [announce, setAnnounce] = useState('')
-  useEffect(() => {
-    if (said.current === mood) return
-    said.current = mood
-    setAnnounce(`루마: ${line}`)
-  }, [mood, line])
-
-  // the level answer replaces the buttons that had focus: focus goes to Ruma's line, which now holds what comes next
+  // once the level is chosen the picker goes: focus moves to the day's heading, and the next Tab is the first session
   // (not when Home opens: that is the learner's to start)
-  const lineRef = useRef<HTMLParagraphElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
   const askedFor = useRef(first)
   useEffect(() => {
     if (askedFor.current === first) return
     askedFor.current = first
-    if (first) lineRef.current?.focus()
+    if (first === 'start') titleRef.current?.focus()
   }, [first])
 
-  const qid = useId()
+  if (first === 'level') return <LevelPicker first />
+
+  // the mascot opens one eye once today's study starts, both when today's share is done
+  const progress = cleared ? 1 : started ? done / (done + todo) : 0
+  const mood: Mood = cleared ? 'day' : started ? 'wake' : 'sleep'
   const total = done + todo
-  // 복습하기 once a review was answered today reads "계속"; 새 단어 once a new word was met
+  // a session already begun today is named "이어서 하기" for screen readers
   const reviewing = (todayLog?.r ?? 0) > 0
   const learningNew = (todayLog?.n ?? 0) > 0
   const backlogTag = behind && (
@@ -176,44 +136,35 @@ export function Home() {
     unlockMoreNew(10)
     go('/study/new')
   }
+  const b = all[target]
+  const met = COUNTS[target] - b.new
+  const weak = leechIds(s.cards, 40, s.settings.fastTrack).length
 
   return (
     <>
-      <HomeHeader s={s} today={today} first={first} />
+      <header className="top home-head">
+        <LevelChip level={target} />
+        <span className="grow" />
+        {first !== 'start' && <Streak s={s} today={today} />}
+      </header>
 
-      <div className="home-center">
-        <div className="home-ruma" data-mood={mood}>
-          <Ruma progress={mood === 'rest' ? 0 : progress} mood={mood === 'day' ? 'cheer' : mood === 'wake' ? 'idle' : 'sleep'} size={172} />
-        </div>
-        {showTip ? (
-          <TipLine text={TIPS.srs} onClose={() => setTip(null)} />
-        ) : (
-          <p className="ruma-line" ref={lineRef} tabIndex={first ? -1 : undefined}>
-            {first === 'level' ? (
-              <>
-                <span className="ruma-hello">{line}</span>
-                <b className="ruma-ask" id={qid}>
-                  {QUESTION}
-                </b>
-              </>
-            ) : (
-              line
-            )}
-          </p>
-        )}
-        {first !== 'level' && (
-          <div className="home-progress">
-            <p className="home-progress-text">
-              <span>
-                오늘 <b className="num">{f(done)}</b> / {f(total)}장
-              </span>
+      <section className="today" aria-labelledby="today-title">
+        <div className="today-top">
+          <div className="today-ruma" data-mood={mood}>
+            <Ruma progress={progress} mood={mood === 'day' ? 'cheer' : mood === 'wake' ? 'idle' : 'sleep'} size={84} />
+          </div>
+          <div className="today-figures">
+            <div className="today-line">
+              <h1 id="today-title" ref={titleRef} tabIndex={-1}>
+                오늘
+              </h1>
               {waitMin !== null ? (
                 <span className="plan-time" role="img" aria-label={`익히는 중인 ${q.waiting}장이 ${waitMin}분 뒤에 돌아와요`}>
                   {waitMin}분 뒤
                 </span>
               ) : todo > 0 ? (
                 <span className="plan-time" role="img" aria-label={started ? `약 ${minutes}분 남음` : `약 ${minutes}분`}>
-                  약 {minutes}분{started && ' 남음'}
+                  {minutes}분{started && ' 남음'}
                 </span>
               ) : (
                 cleared &&
@@ -223,24 +174,15 @@ export function Home() {
                   </span>
                 )
               )}
+            </div>
+            <p className="today-count">
+              <b className="num">{f(done)}</b> / {f(total)}장
             </p>
             <ProgressBar label="오늘 학습" value={done} max={Math.max(1, total)} valueText={`오늘 ${f(total)}장 중 ${f(done)}장`} />
           </div>
-        )}
-        {announce && <Announce text={announce} />}
-      </div>
+        </div>
 
-      {first === 'level' ? (
-        <section className="home-actions ask" aria-labelledby={qid}>
-          <LevelAnswers labelledBy={qid} />
-          <p className="level-scale" aria-hidden="true">
-            <span>쉬움</span>
-            <span>어려움</span>
-          </p>
-          <p className="first-note">{UNOFFICIAL_LINE}</p>
-        </section>
-      ) : (
-        <section className="home-actions plan" role="region" aria-labelledby="plan-title">
+        <div className="home-actions plan" role="region" aria-labelledby="plan-title">
           <h2 id="plan-title" className="sr-only">
             오늘의 계획
           </h2>
@@ -252,8 +194,7 @@ export function Home() {
                   primary
                   className="go-review"
                   label={reviewing ? `복습 이어서 하기, ${f(reviews)}장 남음` : `복습 시작, ${f(reviews)}장`}
-                  title={reviewing ? '복습 계속하기' : '복습하기'}
-                  sub={reviewing ? `${f(todayLog!.r)}장 끝냄` : '오늘 돌아온 단어'}
+                  title="복습"
                   count={
                     <span className="c-review">
                       <b>{f(reviews)}</b>장
@@ -271,7 +212,6 @@ export function Home() {
                     (qn.learning > 0 ? `, 익히는 중 ${qn.learning}개 포함` : '')
                   }
                   title="새 단어"
-                  sub={qn.learning > 0 ? <span className="c-learning">익히는 중 {qn.learning}개 포함</span> : undefined}
                   count={
                     <span className="c-new">
                       <b>{fresh}</b>개
@@ -280,11 +220,10 @@ export function Home() {
                   onClick={() => go('/study/new')}
                 />
               )}
-              {first === 'start' ? (
-                <Button label="급수 다시 고르기" variant="ghost" className="text-action home-quiet" onClick={askLevelAgain} />
-              ) : added !== null ? (
+              {added !== null ? (
                 <p className="plan-lever" role="status">
-                  복습 {added}장 늘렸어요
+                  <span aria-hidden="true">복습 +{added}장</span>
+                  <span className="sr-only">복습 {added}장 늘렸어요</span>
                   <Button
                     label="되돌리기"
                     variant="ghost"
@@ -364,9 +303,27 @@ export function Home() {
               )}
             </>
           )}
-          {first && <p className="first-note">{UNOFFICIAL_LINE}</p>}
-        </section>
-      )}
+        </div>
+      </section>
+
+      <section className="level-words" aria-labelledby="lw-title">
+        <div className="section-head">
+          <h2 id="lw-title">N{target} 단어</h2>
+          <a href={`#/level/${target}`} className="section-link">
+            모든 단어
+            <Icon name="chevron" size={16} />
+          </a>
+        </div>
+        <div className="lw-card">
+          <Figure label="만난 단어" value={met} total={COUNTS[target]} level={target} />
+          <Figure label="장기 기억" value={b.mature} total={COUNTS[target]} level={target} />
+          <a href="#/words/weak" className="lw-row lw-link" aria-label={`약한 단어 ${f(weak)}개`}>
+            <span className="lw-name grow">약한 단어</span>
+            <b className="lw-value num">{f(weak)}</b>
+            <Icon name="chevron" size={16} />
+          </a>
+        </div>
+      </section>
     </>
   )
 }

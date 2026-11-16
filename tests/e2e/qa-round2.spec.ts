@@ -1,14 +1,14 @@
 // Regressions from the second QA round (docs/plan/13-qa-round2.md): each failed before its fix.
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { answer, homeShown, L, NOW, open, READ_MS, saved, todayLog, user } from './fixtures'
+import { answer, homeShown, L, NOW, open, READ_MS, rightChoice, saved, todayLog, user } from './fixtures'
 
 const DAY = 86400_000
 const review = (due: number) => ({ due, stability: 5, difficulty: 5, elapsed_days: 5, scheduled_days: 5, learning_steps: 0, reps: 3, lapses: 0, state: 2, last_review: due - 5 * DAY })
 const due3 = () => ({ [L('5-1')]: review(NOW.getTime() - DAY), [L('5-2')]: review(NOW.getTime() - DAY), [L('5-3')]: review(NOW.getTime() - DAY) })
 
 test.describe('Space/Enter after a tap or click (Q1)', () => {
-  test('a clicked “다음” keeps focus, but Space on the next card only shows the answer', async ({ page }) => {
+  test('a clicked “다음” keeps focus, but Space on the next card only opens it', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 0 }, { cards: due3() }), hash: '/study' })
     await expect(page.locator('.flash')).toBeVisible()
     await page.waitForTimeout(READ_MS)
@@ -65,18 +65,29 @@ test.describe('accessibility (Q7, Q8)', () => {
     expect(await violations(page)).toEqual([])
   })
 
-  test('Ruma’s tips on home and on the study screen', async ({ page }) => {
-    const guide = { done: ['level'] }
-    await open(page, { state: { ...user({ fastTrack: true }), v: 4, guide }, hash: '/study' })
+  test('the study card with its toggles open, after “모르겠어요”, and a reading card before and after its answer', async ({ page }) => {
+    await open(page, { state: { ...user({ fastTrack: true, dailyNew: 20 }), v: 4 }, hash: '/study' })
+    await expect(page.locator('.flash')).toBeVisible()
+    for (let i = 0; i < 20 && (await page.locator('.reading-card').count()); i++) await answer(page, '알아요')
+    await page.keyboard.press('Space')
+    await expect(page.getByRole('button', { name: '의미', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    expect(await violations(page)).toEqual([])
+    await page.waitForTimeout(READ_MS)
+    await page.getByRole('button', { name: /^모르겠어요/ }).click()
+    await expect(page.locator('.flash.missed')).toBeVisible()
+    expect(await violations(page)).toEqual([])
+    await page.waitForTimeout(READ_MS)
+    await page.getByRole('button', { name: '다음', exact: true }).click()
     for (let i = 0; i < 20; i++) {
       await expect(page.locator('.flash')).toBeVisible()
       if (await page.locator('.reading-card').count()) break
       await answer(page, '알아요')
     }
-    await expect(page.locator('.study-tip')).toBeVisible()
+    await expect(page.locator('.reading-card')).toBeVisible()
     expect(await violations(page)).toEqual([])
-    await page.getByRole('button', { name: /나가기/ }).click()
-    await expect(page.locator('.ruma-line.tip')).toBeVisible()
+    await page.waitForTimeout(READ_MS)
+    await (await rightChoice(page)).click()
+    await expect(page.locator('.flash-meaning')).toBeVisible()
     expect(await violations(page)).toEqual([])
   })
 
@@ -84,7 +95,8 @@ test.describe('accessibility (Q7, Q8)', () => {
     await open(page, { state: user({ dailyNew: 0 }, { cards: due3() }), hash: '/study' })
     await expect(page.locator('.flash')).toBeVisible()
     expect(await violations(page)).toEqual([])
-    await page.getByRole('button', { name: /^정답 보기/ }).click()
+    await page.keyboard.press('Space')
+    await expect(page.locator('.flash-meaning')).toBeVisible()
     expect(await violations(page)).toEqual([])
   })
 

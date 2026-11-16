@@ -1,6 +1,7 @@
 import { COUNTS, LEVELS, type Level } from '../data'
 import type { Breakdown } from '../srs'
 import { Group } from './ui'
+import { LevelBadge } from './LevelBadge'
 
 export function StageBar({ b, total }: { b: Breakdown; total: number }) {
   return (
@@ -30,7 +31,7 @@ export function LevelList({ all, target }: { all: Record<Level, Breakdown>; targ
             aria-label={`N${l}${l === target ? ' 목표' : ''}, ${COUNTS[l].toLocaleString()}개 중 ${(COUNTS[l] - all[l].new).toLocaleString()}개 만남, 장기 기억 ${all[l].mature.toLocaleString()}개`}
           >
             <div className="level-name">
-              <b>N{l}</b>
+              <LevelBadge level={l} />
               {l === target && <span className="level-target">목표</span>}
             </div>
             <StageBar b={all[l]} total={COUNTS[l]} />

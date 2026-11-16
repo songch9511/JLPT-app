@@ -20,20 +20,20 @@ test.describe('backlog on home', () => {
     await open(page, { state: user({ dailyNew: 20 }, { cards: overdue(600) }) })
     await homeShown(page)
     const plan = page.getByRole('region', { name: '오늘의 계획' })
-    await expect(page.locator('.home-progress-text > :first-child')).toHaveText('오늘 0 / 230장')
+    await expect(page.locator('.today-count')).toHaveText('0 / 230장')
     await expect(plan.locator('.c-review b')).toHaveText('225')
     // fewer new words while behind (03 §5.1)
     await expect(plan.locator('.c-new b')).toHaveText('5')
     // the backlog is a tag on the numbers, read in full; no paragraph, no catch-up estimate
     await expect(plan.getByRole('img', { name: '밀린 복습 375장' })).toHaveText('밀린 375')
     await expect(page.getByText(/따라잡아요|나눠서 해요|오래된 것부터/)).toHaveCount(0)
-    // Ruma has missed the learner; asleep, in its pink circle
-    await expect(page.locator('.ruma-line')).toHaveText(/^(보고 싶었어요|같이 치워요)$/)
-    await expect(page.locator('.home-ruma')).toHaveAttribute('data-mood', 'sleep')
+    // Ruma is asleep (today's study has not started) and says nothing
+    await expect(page.locator('.today-ruma')).toHaveAttribute('data-mood', 'sleep')
+    await expect(page.getByText(/보고 싶었어요|같이 치워요/)).toHaveCount(0)
     // one primary button in the group: the reviews; the new words are the white one; "더" is a quiet text action under them
     await expect(plan.locator('.btn[data-variant="primary"]')).toHaveCount(1)
     await expect(plan.getByRole('button', { name: '복습 시작, 225장' })).toHaveAttribute('data-variant', 'primary')
-    await expect(plan.getByRole('button', { name: '복습 시작, 225장' })).toHaveText('복습하기오늘 돌아온 단어225장')
+    await expect(plan.getByRole('button', { name: '복습 시작, 225장' })).toHaveText('복습225장')
     await expect(plan.getByRole('button', { name: '새 단어 시작, 5개' })).toHaveAttribute('data-variant', 'secondary')
     await expect(plan.getByRole('button', { name: '하루 새 단어' })).toHaveCount(0)
     const more = plan.getByRole('button', { name: '밀린 복습 50장 더 하기' })
@@ -42,6 +42,7 @@ test.describe('backlog on home', () => {
     // the buttons stay where they were when the quiet action turns into the undo line
     const y = (await plan.locator('.home-go.go-review').boundingBox())!.y
     await more.click()
+    await expect(plan.getByRole('status')).toContainText('복습 +50장')
     await expect(plan.getByRole('status')).toContainText('복습 50장 늘렸어요')
     await expect(plan.locator('.c-review b')).toHaveText('275')
     expect((await plan.locator('.home-go.go-review').boundingBox())!.y).toBe(y)
@@ -57,11 +58,11 @@ test.describe('backlog on home', () => {
     await open(page, { state })
     await homeShown(page)
     const plan = page.getByRole('region', { name: '오늘의 계획' })
-    // today's share is done: both eyes, the green circle, what was done today, and the rest as a tag
+    // today's share is done: both eyes, what was done today, and the rest as a tag
     await expect(plan.locator('.plan-eyebrow')).toHaveText('오늘 끝')
-    await expect(page.locator('.home-progress-text > :first-child')).toHaveText('오늘 225 / 225장')
+    await expect(page.locator('.today-count')).toHaveText('225 / 225장')
     await expect(plan.getByRole('img', { name: '밀린 복습 300장' })).toBeVisible()
-    await expect(page.locator('.home-ruma')).toHaveAttribute('data-mood', 'day')
+    await expect(page.locator('.today-ruma')).toHaveAttribute('data-mood', 'day')
     await expect(page.locator('.ruma.cheer')).toBeVisible()
     await expect(plan.locator('.btn[data-variant="primary"]')).toHaveCount(0)
     await expect(plan.getByRole('button', { name: '새 단어 10개 더 하기' })).toHaveCount(0)
@@ -83,7 +84,9 @@ test.describe('backlog on home', () => {
     await open(page, { state, hash: '/study' })
     await answer(page, '알아요')
     await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
-    await expect(page.locator('.done-text')).toContainText('밀린 복습 225장은 내일부터 나눠서 나와요.')
+    // what is left is the backlog's tag, as on Home (no sentence about when it comes)
+    await expect(page.getByRole('img', { name: '밀린 복습 225장' })).toHaveText('밀린 225')
+    await expect(page.getByText(/나눠서/)).toHaveCount(0)
     // the same button as Home's: short on screen, the whole action as its name
     await expect(page.getByRole('button', { name: '밀린 복습 50장 더 하기' })).toHaveText('50장 더')
     await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toHaveCount(0)

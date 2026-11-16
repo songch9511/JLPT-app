@@ -7,6 +7,7 @@ import { COUNTS, meaning, useLevel, type Level, type Word } from '../data'
 import { breakdowns, STAGE_LABEL, wordStage, type Stage } from '../srs'
 import { update, useStore } from '../store'
 import { StageBar } from '../components/LevelList'
+import { LevelBadge } from '../components/LevelBadge'
 
 const PAGE = 100
 
@@ -41,7 +42,9 @@ export function LevelScreen({ level }: { level: Level }) {
       <header className="top">
         <IconButton label="뒤로" href="#/words" icon={<Icon name="back" />} />
         <div className="grow">
-          <h1>JLPT N{level}</h1>
+          <h1 className="level-title">
+            JLPT <LevelBadge level={level} className="title" />
+          </h1>
           <p className="subtitle">단어 {COUNTS[level].toLocaleString()}개</p>
         </div>
         {isTarget ? (

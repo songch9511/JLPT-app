@@ -61,10 +61,10 @@ test.describe('swiping between the cards of the session', () => {
     const [a, b, c] = await studyThree(page)
     const d = await currentWord(page)
     const before = JSON.stringify(await saved(page))
-    // the card to answer: a swipe left only stretches and springs back, and is not a tap (the answer stays hidden)
+    // the card to answer: a swipe left only stretches and springs back, and opens nothing
     await touchSwipe(page, -220)
     await expect(shown(page)).toHaveText(d)
-    await expect(page.locator('.flash-meaning')).toHaveCount(0)
+    await expect(page.locator('.card-slot:not([inert]) .flash-meaning')).not.toBeVisible()
 
     await back(page)
     await expect(shown(page)).toHaveText(c)
@@ -138,15 +138,21 @@ test.describe('swiping between the cards of the session', () => {
     const box = (await stage(page).boundingBox())!
     await touchSwipe(page, 220, { at: { x: 6, y: box.y + box.height / 2 } })
     await expect(shown(page)).toHaveText(d)
-    // a tap that moves a few pixels is still a tap: it shows the answer
+    // a press that moves a few pixels is not a swipe: the card stays (and a tap on the card opens nothing)…
     await touchSwipe(page, 5, { steps: 2 })
+    await expect(shown(page)).toHaveText(d)
+    await expect(page.locator('.flash.past')).toHaveCount(0)
+    await expect(page.locator('.card-slot:not([inert]) .flash-meaning')).not.toBeVisible()
+    // …and on the 의미 toggle it is a tap that opens the meaning
+    const toggle = (await page.getByRole('button', { name: '의미', exact: true }).boundingBox())!
+    await touchSwipe(page, 5, { steps: 2, at: { x: toggle.x + toggle.width / 2, y: toggle.y + toggle.height / 2 } })
     await expect(page.locator('.flash-meaning')).toBeVisible()
     expect((await todayLog(page)).c).toBe(3)
     await back(page)
     await expect(shown(page)).toHaveText(c)
   })
 
-  test('mouse: dragging works too, and the click at the end of a drag does not reveal the card', async ({ page }) => {
+  test('mouse: dragging works too, and the click at the end of a drag opens nothing', async ({ page }) => {
     await studyThree(page)
     const d = await currentWord(page)
     const box = (await stage(page).boundingBox())!
@@ -156,7 +162,7 @@ test.describe('swiping between the cards of the session', () => {
     await page.mouse.up()
     await page.waitForTimeout(400)
     await expect(shown(page)).toHaveText(d)
-    await expect(page.locator('.flash-meaning')).toHaveCount(0)
+    await expect(page.locator('.flash-meaning')).not.toBeVisible()
     await page.mouse.move(box.x + 40, box.y + box.height / 2)
     await page.mouse.down()
     for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + 40 + i * 24, box.y + box.height / 2, { steps: 1 })
@@ -209,7 +215,7 @@ test.describe('another grade on an earlier card', () => {
     // Home and 기록 show the same as the study screen
     await page.getByRole('button', { name: /나가기/ }).click()
     await expect(page.locator('.plan .c-review b')).toHaveText('2')
-    await expect(page.locator('.plan .c-learning')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /익히는 중/ })).toHaveCount(0)
     await page.goto('./#/stats')
     await expect(page.locator('.stat', { hasText: 'XP' }).locator('b')).toHaveText('30')
   })

@@ -3,6 +3,7 @@ import { LevelList } from '../components/LevelList'
 import { Choice, Empty, SearchField } from '../components/ui'
 import { inGroup, TypeFilter, type TypeGroup } from '../components/TypeFilter'
 import { WordSheet } from '../components/WordSheet'
+import { LevelBadge } from '../components/LevelBadge'
 import { levelInfoVersion, meaning, useAllWords, type Word } from '../data'
 import { breakdowns, leechIds, wordLapses } from '../srs'
 import { useStore } from '../store'
@@ -17,7 +18,7 @@ function Row({ w, onOpen, extra }: { w: Word; onOpen: (w: Word) => void; extra?:
         {w.r && <span lang="ja">{w.r}</span>}
       </span>
       <span className="word-meaning">{meaning(w)}</span>
-      <span className="word-aside">{extra ?? `N${w.level}`}</span>
+      <span className="word-aside">{extra ?? <LevelBadge level={w.level} />}</span>
     </button>
   )
 }

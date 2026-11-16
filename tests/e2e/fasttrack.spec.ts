@@ -30,7 +30,9 @@ test('an S word is asked for its reading: four choices, a wrong pick shows the a
   await expect(page.locator('#reading-prompt')).toHaveText('어떻게 읽을까요?')
   // the speaker would give the answer away before answering
   await expect(page.getByRole('button', { name: '발음 듣기' })).toHaveCount(0)
-  await expect(page.locator('.flash-meaning')).toHaveCount(0)
+  // the answer's room is there, empty: nothing shows before the choice
+  await expect(page.locator('.flash-meaning')).not.toBeVisible()
+  await expect(page.locator('.bridge')).not.toBeVisible()
   const choices = await page.locator('.choice').allInnerTexts()
   expect(choices).toHaveLength(4)
   expect(new Set(choices).size).toBe(4)
@@ -96,16 +98,19 @@ test('the right reading moves on with "다음"; keys 1–4 choose', async ({ pag
   await expect.poll(async () => (await saved(page)).cards[L(`5-${idx}:r`)]?.reps).toBe(1)
 })
 
-test('an F word warns after the reveal, not before, and on the word sheet', async ({ page }) => {
+test('an F word warns once its meaning is open, not before, and on the word sheet', async ({ page }) => {
   const pos = firstOf('F')
   const idx = ORDER[pos]
   const [w, , , , , , , , ff] = N5[idx] as string[]
   await open(page, { state: user({ fastTrack: true, dailyNew: 1 }, { cards: seen(pos) }), hash: '/study' })
   await expect(page.locator('.flash-word')).toHaveText(w)
   await expect(page.locator('.flash.reading-card')).toHaveCount(0)
-  await expect(page.locator('.false-friend')).toHaveCount(0)
-  await page.waitForTimeout(READ_MS)
-  await page.getByRole('button', { name: '정답 보기' }).click()
+  await expect(page.locator('.false-friend')).not.toBeVisible()
+  // 히라가나 alone does not show it; 의미 does
+  await page.getByRole('button', { name: '히라가나', exact: true }).click()
+  await expect(page.locator('.false-friend')).not.toBeVisible()
+  await page.getByRole('button', { name: '의미', exact: true }).click()
+  await expect(page.locator('.false-friend')).toBeVisible()
   await expect(page.locator('.false-friend')).toContainText('한국어와 뜻이 달라요')
   await expect(page.locator('.false-friend')).toContainText(ff)
 
@@ -128,7 +133,7 @@ test('turning the fast-track off in settings: the S word comes as a meaning card
   await page.goto('./#/study')
   await expect(page.locator('.flash-word')).toHaveText(N5[idx][0] as string)
   await expect(page.locator('.flash.reading-card')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '정답 보기' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '의미', exact: true })).toBeVisible()
 
   await page.goto('./#/level/5')
   await expect(page.locator('.fast-count')).toContainText('모든 단어를 뜻 카드로 배워요')
@@ -153,7 +158,7 @@ test('a reading card left from when a word was tagged S (元気, corrected to J)
   await expect(page.locator('.flash.reading-card')).toHaveCount(0)
   await expect(page.locator('.flash-head').getByText('새 단어', { exact: true })).toBeVisible()
   await page.waitForTimeout(READ_MS)
-  await page.getByRole('button', { name: '정답 보기' }).click()
+  await page.getByRole('button', { name: '의미', exact: true }).click()
   await expect(page.locator('.flash-meaning')).toHaveText(live[idx][3] as string)
   await expect(page.locator('.bridge')).toHaveCount(0)
   await page.waitForTimeout(READ_MS)

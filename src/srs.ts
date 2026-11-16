@@ -38,6 +38,8 @@ const fromCard = (c: Card): SCard => ({
 export const reviewTime = (c: SCard | undefined, now: Date) => (c?.last_review && c.last_review > now.getTime() ? new Date(c.last_review) : now)
 
 const isLearning = (c: SCard) => c.state === CardState.Learning || c.state === CardState.Relearning
+/** A review answered "모르겠어요", being learnt again (it belongs to the review session, `StudyMode`). */
+export const isRelearning = (c: SCard | undefined) => c?.state === CardState.Relearning
 
 export function endOfDay(now: Date): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime()

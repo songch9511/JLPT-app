@@ -214,9 +214,6 @@
   .row > * { flex: 1; }
   .data-facts { display: flex; flex-direction: column; gap: 2px; }
   .last-backup { font-size: var(--text-body-size); }
-  .group-body > .replay-tips { padding-block: var(--spacing-1); }
-  .replay-tips { min-height: var(--ruma-control); display: flex; align-items: center; font-size: var(--font-size-base); color: var(--color-text-secondary); margin-left: calc(-1 * var(--spacing-2)); }
-  .replay-done { padding-inline: var(--spacing-2); }
   .data-reset { display: flex; }
   .data-reset .btn { flex: 1; }
   /* the buttons of 데이터 are one block: no hairline between the two rows of them */
@@ -257,97 +254,117 @@
   .astryx-button:not([data-variant='ghost'], [aria-disabled='true']) { margin-bottom: var(--ruma-depth-sm); }
   .astryx-button:not([data-variant='ghost'], [data-variant='destructive'], [aria-disabled='true']):active { transform: translateY(var(--ruma-depth-sm)); box-shadow: 0 0 0 transparent; }
 
-  /* ── home (screens/Home.tsx, docs/design-system.md §3 "홈"): the day at the top, Ruma in a tinted circle with one
-     line and the day's progress in the middle, the two session buttons in the thumb zone above the tab bar ── */
+  /* ── home (screens/Home.tsx, docs/design-system.md §3 "홈"): name-tags and numbers. The level chip and the streak,
+     the white "오늘" card (Ruma, the day's figures, the two session buttons), then the target level's words ── */
   .page.home { gap: 0; min-height: 100dvh; padding-bottom: calc(var(--tabbar-h, calc(env(safe-area-inset-bottom) + 64px)) + var(--spacing-5)); }
-  .home-head { align-items: flex-start; }
-  .home-head .subtitle b { color: var(--color-text-primary); }
+  .home-head { gap: var(--spacing-2); }
   /* the streak: a white pill, the flame in persimmon */
   .streak {
     display: inline-flex; align-items: center; gap: var(--spacing-1); min-height: 36px; padding: 0 var(--spacing-3); border-radius: var(--radius-full);
-    background: var(--color-background-surface); box-shadow: var(--shadow-low); color: var(--color-text-primary); white-space: nowrap;
+    background: var(--color-background-surface); border: 1px solid var(--color-border); color: var(--color-text-primary); white-space: nowrap;
   }
   .streak svg { color: var(--ruma-flame); }
   .streak .num { font-size: var(--font-size-base); line-height: 1.4; }
 
-  .home-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-4); padding-block: var(--spacing-4); text-align: center; }
-  /* Ruma's circle: its tint follows Ruma's state (pink asleep, yellow with one eye open, green when the day is done,
-     beige on a day off and during the first run) */
-  .home-ruma {
-    flex: none; display: grid; place-items: center; width: clamp(104px, 25dvh, 216px); aspect-ratio: 1; border-radius: var(--radius-full);
-    background: var(--color-background-muted); transition: background-color var(--duration-slow) var(--ease-standard);
+  /* a level's name on its colour (LevelBadge): the same five colours wherever a level is named */
+  .level-badge, .level-chip, .lw-bar { --lv-tint: var(--color-background-muted); --lv-ink: var(--color-text-primary); --lv-fill: var(--ruma-green); }
+  :is(.level-badge, .level-chip, .lw-bar)[data-level='5'] { --lv-tint: var(--ruma-level-5-tint); --lv-ink: var(--ruma-level-5-ink); --lv-fill: var(--ruma-level-5-fill); }
+  :is(.level-badge, .level-chip, .lw-bar)[data-level='4'] { --lv-tint: var(--ruma-level-4-tint); --lv-ink: var(--ruma-level-4-ink); --lv-fill: var(--ruma-level-4-fill); }
+  :is(.level-badge, .level-chip, .lw-bar)[data-level='3'] { --lv-tint: var(--ruma-level-3-tint); --lv-ink: var(--ruma-level-3-ink); --lv-fill: var(--ruma-level-3-fill); }
+  :is(.level-badge, .level-chip, .lw-bar)[data-level='2'] { --lv-tint: var(--ruma-level-2-tint); --lv-ink: var(--ruma-level-2-ink); --lv-fill: var(--ruma-level-2-fill); }
+  :is(.level-badge, .level-chip, .lw-bar)[data-level='1'] { --lv-tint: var(--ruma-level-1-tint); --lv-ink: var(--ruma-level-1-ink); --lv-fill: var(--ruma-level-1-fill); }
+  .level-badge {
+    display: inline-flex; align-items: center; justify-content: center; flex: none; min-height: 26px; padding: 0 9px; border-radius: 8px;
+    background: var(--lv-tint); color: var(--lv-ink); font-size: var(--text-label-size); font-weight: 700; line-height: 1.4; white-space: nowrap;
   }
-  .home-ruma[data-mood='sleep'] { background: var(--ruma-pink-tint); }
-  .home-ruma[data-mood='wake'] { background: var(--ruma-yellow-tint); }
-  .home-ruma[data-mood='day'] { background: var(--color-success-muted); }
-  .home-ruma .ruma { width: 80%; height: 80%; }
-  .ruma-line { max-width: 21em; font-size: var(--font-size-xl); font-weight: 700; line-height: 1.3; text-wrap: balance; }
-  .ruma-line:focus { outline: none; }
-  .ruma-line:focus-visible { outline: var(--focus-outline-width) solid var(--focus-outline-color); outline-offset: 2px; border-radius: var(--radius-inner); }
-  .ruma-hello { display: block; margin-bottom: var(--spacing-3); font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); line-height: 1.5; }
-  .ruma-ask { display: block; }
-  /* the one-time tip in place of Ruma's line, with a quiet "알겠어요" */
-  .ruma-line.tip { display: flex; flex-direction: column; align-items: center; font-size: var(--font-size-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
-  .ruma-line.tip .tip-close { margin-bottom: calc(-1 * var(--spacing-3)); }
-  /* "오늘 64 / 127장 · 약 13분 남음" over the day's bar */
-  .home-progress { align-self: stretch; display: flex; flex-direction: column; gap: var(--spacing-2); }
-  .home-progress-text { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 var(--spacing-3); font-size: var(--font-size-base); color: var(--color-text-secondary); }
-  .home-progress-text .num { font-weight: inherit; line-height: inherit; }
+  .level-badge.title { min-height: 32px; padding: 0 10px; border-radius: 10px; font-size: inherit; vertical-align: 2px; }
+  .level-badge.lg { width: 68px; height: 68px; border-radius: 18px; font-size: calc(var(--font-size-2xl) * 1.08); }
+  /* Home's level chip: the target level in its colour, a link to the picker */
+  .level-chip {
+    display: inline-flex; align-items: center; gap: 6px; min-height: var(--size-element-md); padding: 0 14px; border-radius: var(--radius-full);
+    background: var(--lv-tint); color: var(--lv-ink); font-size: calc(var(--font-size-lg) * 1.125); font-weight: 700; text-decoration: none;
+  }
+  .level-chip:active { background-image: linear-gradient(var(--color-overlay-pressed), var(--color-overlay-pressed)); }
 
-  /* the thumb zone: the day's two sessions, or what is left to offer when the day is done */
+  /* the "오늘" card: Ruma beside the day's figures, the buttons under them */
+  .today { display: flex; flex-direction: column; gap: var(--spacing-4); margin-top: var(--spacing-3); padding: var(--spacing-5); border: 1px solid var(--color-border); border-radius: var(--radius-page); background: var(--color-background-surface); }
+  .today-top { display: flex; align-items: center; gap: var(--spacing-4); }
+  .today-ruma { flex: none; display: grid; place-items: center; }
+  .today-figures { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--spacing-2); }
+  .today-line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-2); font-size: var(--font-size-base); color: var(--color-text-secondary); }
+  .today-line h1 { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); line-height: 1.4; color: var(--color-text-secondary); }
+  .today-line h1:focus { outline: none; }
+  .today-line h1:focus-visible { outline: var(--focus-outline-width) solid var(--focus-outline-color); outline-offset: 2px; border-radius: var(--radius-inner); }
+  .plan-time { white-space: nowrap; }
+  .today-count { font-size: var(--font-size-lg); color: var(--color-text-secondary); line-height: 1.2; }
+  .today-count b { font-size: calc(var(--font-size-2xl) * 1.17); color: var(--color-text-primary); }
+  .today .progress { height: 10px; }
+
+  /* the day's two sessions, or what is left to offer when the day is done */
   .home-actions { display: flex; flex-direction: column; gap: var(--spacing-3); }
-  .btn.home-go { justify-content: space-between; min-height: 64px; padding-inline: var(--spacing-6); border-radius: var(--radius-container); text-align: left; }
-  .btn.home-go[data-variant='primary'] { min-height: 76px; }
+  .btn.home-go { justify-content: space-between; min-height: 64px; padding-inline: var(--spacing-5); border-radius: var(--ruma-radius-card); text-align: left; }
   .btn.home-go.more { justify-content: center; font-size: calc(var(--font-size-lg) * 1.125); }
-  .home-go-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .home-go-title { font-size: calc(var(--font-size-lg) * 1.125); line-height: 1.3; }
-  .home-go-sub { font-size: var(--font-size-base); font-weight: var(--font-weight-medium); line-height: 1.4; }
   .home-go-count { flex: none; font-size: var(--font-size-xl); white-space: nowrap; }
-  .btn.home-go[data-variant='primary'] .home-go-title { font-size: var(--font-size-xl); }
-  .btn.home-go[data-variant='primary'] .home-go-count { font-size: var(--font-size-2xl); }
   /* the day is done: a quiet status row where the buttons were */
   .home-done {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--spacing-1) var(--spacing-2); min-height: 56px; padding: var(--spacing-2) var(--spacing-4);
-    border-radius: var(--radius-container); background: var(--color-background-muted); color: var(--color-text-success); font-weight: 700;
+    border-radius: var(--ruma-radius-card); background: var(--color-background-muted); color: var(--color-text-success); font-weight: 700;
   }
   .home-done > svg { flex: none; }
   .home-done .num { line-height: inherit; }
   /* "밀린 587": the backlog as a small tag on the numbers, not a sentence */
   .backlog-tag { display: inline-flex; align-items: baseline; gap: 3px; padding: 2px var(--spacing-2); border-radius: var(--radius-full); background: var(--ruma-yellow-tint); color: var(--color-text-primary); font-size: var(--font-size-base); font-weight: var(--font-weight-medium); white-space: nowrap; }
   .backlog-tag .num { font-size: var(--font-size-base); line-height: 1.45; }
-  /* under the buttons: "밀린 587 · 50장 더 ›", then "복습 50장 늘렸어요 · 되돌리기" in its place */
+  /* under the buttons: "밀린 587 · 50장 더 ›", then "복습 +50장 · 되돌리기" in its place */
   .plan-lever { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0 var(--spacing-1); min-height: var(--size-element-md); font-size: var(--font-size-base); margin-block: calc(-1 * var(--spacing-1)) calc(-1 * var(--spacing-3)); }
-  .home-quiet { align-self: center; margin-block: calc(-1 * var(--spacing-1)) calc(-1 * var(--spacing-3)); }
   .first-note { font-size: var(--font-size-base); color: var(--color-text-secondary); text-align: center; }
 
-  /* the first-run answers: one row of five big white buttons, easiest first */
-  .guide-answers { display: grid; gap: var(--spacing-2); }
-  .guide-answers.level-answers { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .guide-answers .btn { min-width: 0; min-height: 64px; padding-inline: var(--spacing-1); border-radius: var(--ruma-radius-card); font-size: calc(var(--font-size-lg) * 1.125); }
-  .level-scale { display: flex; justify-content: space-between; font-size: var(--font-size-base); color: var(--color-text-secondary); }
+  /* the target level's words: a heading with "모든 단어 ›", then three rows in one white card */
+  .level-words { display: flex; flex-direction: column; gap: var(--spacing-2); margin-top: var(--spacing-6); }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-2); }
+  .section-head h2 { font-size: var(--font-size-lg); }
+  .section-link { display: inline-flex; align-items: center; gap: 2px; min-height: var(--size-element-md); font-size: var(--font-size-base); color: var(--color-text-secondary); text-decoration: none; }
+  .lw-card { display: flex; flex-direction: column; padding: 0 var(--spacing-4); border: 1px solid var(--color-border); border-radius: var(--ruma-radius-card); background: var(--color-background-surface); }
+  .lw-row { display: flex; align-items: center; gap: var(--spacing-3); min-height: 52px; color: var(--color-text-primary); text-decoration: none; }
+  .lw-row + .lw-row { border-top: 1px solid var(--color-border); }
+  .lw-name { font-size: var(--text-body-size); }
+  .lw-value { font-size: var(--font-size-base); line-height: 1.4; white-space: nowrap; }
+  .lw-link svg { color: var(--color-icon-secondary); }
+  .lw-link:active { background: var(--color-overlay-hover); }
+  .lw-bar { flex: none; width: 64px; height: 6px; border-radius: var(--radius-full); background: var(--color-track); overflow: hidden; }
+  .lw-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--lv-fill); }
+  @media (max-width: 360px) { .lw-bar { width: 40px; } }
 
-  /* short screens (320×568) and the accessibility text sizes: a smaller circle and tighter gaps, so the two buttons stay
+  /* short screens (320×568) and the accessibility text sizes: a smaller Ruma and tighter gaps, so the two buttons stay
      on the first screen */
   @media (max-height: 700px) {
-    .home-center { gap: var(--spacing-3); padding-block: var(--spacing-3); }
-    .home-ruma { width: clamp(80px, 18dvh, 160px); }
-    .btn.home-go[data-variant='primary'] { min-height: 68px; }
+    .today { gap: var(--spacing-3); padding: var(--spacing-4); }
+    .today-ruma .ruma { width: 64px; height: 64px; }
+    .btn.home-go { min-height: 56px; }
   }
-  :root[data-text-size='large'] .home-center { gap: var(--spacing-3); padding-block: var(--spacing-3); }
-  :root[data-text-size='large'] .home-ruma { width: 88px; }
+  :root[data-text-size='large'] .today-ruma .ruma { width: 56px; height: 56px; }
+  :root[data-text-size='large'] .today-top { align-items: flex-start; }
 
-  /* the reading-card tip on the study screen: a small Ruma and its bubble above the card */
-  .bubble {
-    position: relative; flex: 1; background: var(--color-background-muted); border-radius: var(--radius-element);
-    padding: 10px var(--spacing-3); font-size: var(--font-size-base); line-height: 1.45; text-wrap: pretty;
+  /* ── the level picker (screens/LevelPicker.tsx): five white cards, the level in its colour and its word count ── */
+  .level-picker { flex: 1; display: flex; flex-direction: column; gap: var(--spacing-3); }
+  .level-picker .group-title { margin-top: var(--spacing-2); }
+  .picker-levels { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .picker-level {
+    flex: 1 0 auto; display: flex; align-items: center; gap: var(--spacing-4); min-height: 76px; padding: var(--spacing-2) 18px;
+    border: 1px solid var(--color-border); border-radius: 22px; background: var(--color-background-surface); color: var(--color-text-primary);
+    font: inherit; text-align: left; cursor: pointer; transition: background var(--duration-fast) var(--ease-standard);
   }
-  .bubble::before {
-    content: ''; position: absolute; left: -6px; top: 50%; width: 12px; height: 12px; background: var(--color-background-muted);
-    transform: translateY(-50%) rotate(45deg); border-radius: 2px;
+  .picker-level:active { background-image: linear-gradient(var(--color-overlay-pressed), var(--color-overlay-pressed)); }
+  .picker-level[aria-current='true'] { border-color: var(--color-border-emphasized); }
+  .picker-count { flex: 1; font-size: calc(var(--font-size-lg) * 1.125); font-weight: 700; }
+  .picker-level > svg { flex: none; color: var(--color-text-primary); }
+  @media (max-height: 700px) {
+    .level-picker { gap: var(--spacing-2); }
+    .picker-levels { gap: var(--spacing-2); }
+    .picker-level { min-height: 56px; padding-block: var(--spacing-1); }
+    .level-badge.lg { width: 46px; height: 46px; border-radius: 14px; font-size: var(--font-size-xl); }
   }
-  .study-tip { display: flex; align-items: center; gap: var(--spacing-2); padding: 0 max(var(--spacing-5), env(safe-area-inset-right)) var(--spacing-2) max(var(--spacing-5), env(safe-area-inset-left)); animation: fade var(--duration-medium) var(--ease-standard) both; }
-  .study-tip .bubble { display: flex; align-items: center; gap: var(--spacing-1); padding-right: 0; }
-  .study-tip .bubble p { flex: 1; min-width: 0; }
 
   /* plain link rows (Astryx List was 23 KB gzip for two rows: docs/design-system.md §7) */
   .row-link {
@@ -419,9 +436,9 @@
   .level-row + .level-row { border-top: 1px solid var(--color-border); }
   .level-row:active { background: var(--color-overlay-hover); }
   .level-name { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-  .level-name b { font-size: var(--font-size-lg); }
-  /* the target level, as a word in the pink ink (never a border or a fill) */
-  .level-target { font-size: var(--text-label-size); font-weight: 700; color: var(--ruma-pink-text); white-space: nowrap; }
+  .level-name .level-badge { font-size: var(--font-size-base); }
+  /* the target level, as a word in the bold ink (never a border or a fill; pink is N3's colour now) */
+  .level-target { font-size: var(--text-label-size); font-weight: 700; color: var(--color-text-primary); white-space: nowrap; }
   .level-count { font-size: var(--text-label-size); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; text-align: right; }
   /* the stage bar: plain fills in the three stage colours */
   .bar { position: relative; height: 8px; border-radius: var(--radius-full); background: var(--color-track); overflow: hidden; }
@@ -485,45 +502,85 @@
   .after-note span { display: inline-block; animation: note 0.9s var(--ease-standard) both; }
   @keyframes note { 0% { opacity: 0; } 15%, 75% { opacity: 1; } 100% { opacity: 0; } }
   .card-area { flex: 1; min-height: 0; padding: 0 max(var(--spacing-5), env(safe-area-inset-right)) var(--spacing-4) max(var(--spacing-5), env(safe-area-inset-left)); display: flex; }
-  /* the card: the one thing you hold — white, a hairline, the 24px corner, the faintest lift */
+  /* the card: the one thing you hold — white, a hairline, the 24px corner, the faintest lift. Top to bottom: the head
+     (level, the card's facts, sound, bookmark), the centre (reading slot, headword, meaning slot, the example and its
+     translation's line, the kanji row), the two toggles; spacing separates them, no lines inside. Nothing moves when a
+     toggle opens: every slot is always laid out and only becomes visible (`.slot.on`); a card taller than its room
+     (320px, the largest text sizes) scrolls inside itself while the answer bar stays on screen. */
   .flash {
     flex: 1; display: flex; flex-direction: column; background: var(--color-background-surface);
     border: 1px solid var(--color-border); border-radius: var(--radius-page); box-shadow: var(--shadow-low);
-    padding: var(--spacing-3); overflow-y: auto; cursor: pointer; animation: card-in var(--duration-medium) var(--ease-standard) both;
+    padding: var(--spacing-3) var(--spacing-4) var(--spacing-4); min-height: 0; overflow: hidden; animation: card-in var(--duration-medium) var(--ease-standard) both;
   }
-  .flash.open { cursor: default; }
+  /* the middle scrolls on its own; the head and the toggles stay put */
+  .flash-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; margin-inline: calc(-1 * var(--spacing-4)); padding-inline: var(--spacing-4); }
   /* the card's surface never changes with the answer (`.missed` is a state hook, not a style): the result is one line */
   @keyframes card-in { from { opacity: 0; transform: translateY(8px); } }
-  .flash-head { display: flex; align-items: center; gap: 0; padding-left: var(--spacing-2); min-height: 44px; }
-  .flash-status { display: flex; align-items: center; min-width: 0; font-size: var(--text-label-size); }
-  .flash-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-3); padding: var(--spacing-2) var(--spacing-2) var(--spacing-8); text-align: center; }
-  /* the headword, in the textbook hand: the one size outside the scale — large while it is the question, smaller once
-     the answer shares the card */
-  .flash-word { font-family: var(--ruma-font-ja-head); font-size: clamp(48px, 21vw, 96px); line-height: 1.15; font-weight: 600; overflow-wrap: anywhere; }
-  .flash.open .flash-word, .flash.reading-card .flash-word { font-size: clamp(40px, 15vw, 60px); }
+  .flash-head { display: flex; align-items: center; gap: 0; min-height: 44px; margin-right: calc(-1 * var(--spacing-2)); }
+  .flash-status { display: flex; align-items: center; gap: var(--spacing-2); min-width: 0; font-size: var(--text-label-size); }
+  .flash-body { flex: none; margin-block: auto; display: flex; flex-direction: column; align-items: center; gap: var(--spacing-1); padding: var(--spacing-2) 0 var(--spacing-4); text-align: center; }
+  /* a slot keeps its room while closed: invisible to the eye and to screen readers, never collapsed */
+  .slot { visibility: hidden; opacity: 0; max-width: 100%; }
+  .slot.on { visibility: visible; opacity: 1; transition: opacity var(--duration-medium) var(--ease-standard); }
+  /* the headword, in the textbook hand: one size whatever is open (a long word is smaller); outside the type scale */
+  .flash-word { max-width: 100%; font-family: var(--ruma-font-ja-head); font-size: clamp(48px, 21vw, 84px); line-height: 1.15; font-weight: 600; overflow-wrap: anywhere; }
   .flash .flash-word.long { font-size: clamp(28px, 9vw, 42px); }
-  .flash-answer-slot { min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 100%; }
-  .flash-answer { display: flex; flex-direction: column; align-items: center; gap: 6px; animation: answer-in var(--duration-medium) var(--ease-standard) both; max-width: 100%; }
-  @keyframes answer-in { from { opacity: 0; transform: translateY(4px); } }
-  .flash-reading { font-size: calc(var(--font-size-lg) * 1.125); color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+  .flash.reading-card .flash-word { font-size: clamp(40px, 15vw, 60px); }
+  .flash-reading { min-height: 1.5em; font-size: calc(var(--font-size-lg) * 1.125); line-height: 1.5; color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+  .flash-meaning-slot { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-1); min-height: calc(var(--font-size-2xl) * 1.3); }
   .flash-meaning { font-size: var(--font-size-2xl); font-weight: 700; line-height: 1.3; text-wrap: balance; }
+  .flash-answer { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 100%; }
+  /* the example, set apart by space: the sentence with small furigana, its translation's line under it */
+  .flash-example { flex: none; max-width: 100%; padding-top: var(--spacing-6); }
+  .flash.reading-card .flash-example { padding-top: var(--spacing-4); }
+  /* one chip per kanji: the kanji, its Korean reading (의미), its Japanese reading (히라가나) */
+  .kanji-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: var(--spacing-6); }
+  .kanji-chip { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: var(--spacing-1) var(--spacing-4); border-radius: var(--radius-element); background: var(--color-background-body); }
+  .kanji-char { font-family: var(--ruma-font-ja-head); font-size: calc(var(--font-size-2xl) * 1.17); font-weight: 600; line-height: 1; }
+  .kanji-readings { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+  .kanji-ko { font-size: calc(var(--font-size-lg) * 0.9375); font-weight: 700; line-height: 1.2; }
+  .kanji-ja { font-size: calc(var(--font-size-base) * 0.93); line-height: 1.2; color: var(--color-text-secondary); }
+  .example { display: flex; flex-direction: column; align-items: center; gap: var(--spacing-1); text-align: center; }
+  /* room above each line for the ruby row; a reading wider than its kanji widens the word, never leaves the card */
+  .example-ja { max-width: 100%; font-size: calc(var(--font-size-lg) * 1.125); line-height: 2.1; overflow-wrap: anywhere; }
+  .example-ja ruby { ruby-position: over; }
+  .example-ja rt { font-size: max(10px, 0.56em); line-height: 1; color: var(--color-text-secondary); font-weight: var(--font-weight-medium); }
+  .example-ja rt.held { visibility: hidden; }
+  .example-ko { min-height: 1.5em; font-size: var(--font-size-base); line-height: 1.5; color: var(--color-text-secondary); }
+  /* the toggles and, after "모르겠어요", the result line: both laid out in one cell, so the card keeps its height */
+  .flash-foot { flex: none; display: grid; padding-top: var(--spacing-2); }
+  .flash-foot > * { grid-area: 1 / 1; }
+  .flash-toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .flash-toggles.gone { visibility: hidden; }
+  .btn.toggle { min-height: var(--size-element-md); margin-bottom: 0; border-radius: var(--radius-full); box-shadow: inset 0 0 0 1px var(--ruma-edge-line); font-size: calc(var(--font-size-lg) * 0.9375); }
+  .btn.toggle:active:not([aria-disabled='true']) { transform: none; }
+  .btn.toggle[aria-pressed='true'] { --face: var(--color-background-muted); --ink: var(--color-text-primary); --line: transparent; transform: none; box-shadow: none; }
+  .flash-result { display: flex; align-items: center; justify-content: center; min-height: var(--size-element-md); font-size: var(--text-body-size); }
   .skeleton { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-4); background: var(--color-background-surface); border: 1px solid var(--color-border); border-radius: var(--radius-page); }
   .load-error { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-3); text-align: center; color: var(--color-text-secondary); }
   .undo-chip-row { display: flex; justify-content: center; padding: 0 0 var(--spacing-2); animation: fade var(--duration-medium) var(--ease-standard) both; }
   .btn.undo-chip { --face: var(--color-background-muted); --ink: var(--color-text-secondary); min-height: var(--size-element-md); border-radius: var(--radius-full); font-weight: var(--font-weight-medium); font-size: var(--font-size-base); padding-inline: var(--spacing-4); gap: var(--spacing-1); }
   @keyframes fade { from { opacity: 0; } }
-  /* the bar keeps its height and place between the two steps, so the thumb never moves: each button sits under one
-     line for its interval ("10분"), kept when there is none */
-  .answer-bar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 0 max(var(--spacing-5), env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + var(--spacing-5)) max(var(--spacing-5), env(safe-area-inset-left)); }
-  .answer-bar.front { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+  /* the answer bar: three grades (or one wide "다음"), always the same height so the thumb never moves; each button
+     holds its name and, under it, the interval it sets ("4일 뒤", the one 12px use on the screen) */
+  .answer-bar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: var(--spacing-1) max(var(--spacing-5), env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + var(--spacing-5)) max(var(--spacing-5), env(safe-area-inset-left)); }
   .answer-bar.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .grade-cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-  .grade-cell.wide { grid-column: 1 / -1; }
-  /* the interval a grade gives: a unit, the one 12px use on the screen */
-  .grade-after { display: block; min-height: 1.25em; text-align: center; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); line-height: 1.25; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .answer-bar .btn.grade { height: 60px; min-height: 60px; width: 100%; padding: 0 6px; border-radius: var(--ruma-radius-card); font-size: calc(var(--font-size-lg) * 0.9375); line-height: 1.4; white-space: nowrap; }
+  .answer-bar.past-bar:not(.three) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .answer-bar .btn.grade {
+    flex-direction: column; gap: 2px; height: 68px; min-height: 68px; width: 100%; padding: 0 6px; border-radius: var(--ruma-radius-card);
+    font-size: calc(var(--font-size-lg) * 0.9375); line-height: 1.25; white-space: nowrap;
+  }
   .grade-label { display: inline-flex; align-items: center; justify-content: center; gap: 3px; line-height: 1.25; }
+  .grade-after { display: block; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); line-height: 1.25; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+  .btn[data-variant='primary'] .grade-after { color: inherit; opacity: 0.8; }
+  .btn[aria-pressed='true'] .grade-after { color: inherit; }
   @media (max-width: 340px) { .answer-bar.three { gap: 6px; } }
+  /* short screens and the largest text sizes: a little less room around the parts of the card */
+  @media (max-height: 700px) {
+    .flash-word { font-size: clamp(44px, 17vw, 72px); }
+    .flash-example, .kanji-row { padding-top: 0; margin-top: var(--spacing-4); }
+    .kanji-chip { min-height: 48px; }
+  }
   /* swiping between the session's cards (Study.tsx, useSwipe.ts): the cards sit side by side, one card width plus a gap
      apart (`--slot`), and move together through `--drag` — transforms only. The screen clips them at its sides. */
   .study { overflow-x: clip; }
@@ -531,12 +588,12 @@
   .card-slot { grid-area: 1 / 1; display: flex; min-width: 0; min-height: 0; transform: translateX(calc(var(--slot, 0) * (100% + var(--slot-gap)) + var(--drag, 0px))); }
   .card-slot[data-away] { visibility: hidden; }
   /* touch-action is read up to the nearest scroller, and a card scrolls (a long one): set on it too */
-  .card-stage .flash { touch-action: pan-y; }
+  .card-stage .flash, .card-stage .flash-scroll { touch-action: pan-y; }
   .card-stage.dragging { user-select: none; -webkit-user-select: none; }
   .card-stage.dragging .card-slot { will-change: transform; }
   .card-stage.settling .card-slot { transition: transform var(--duration-medium) var(--ease-standard); }
   /* an earlier card is already known: no entry motion */
-  .flash.past, .flash.past .flash-answer { animation: none; }
+  .flash.past { animation: none; }
   /* previous / next card for the keyboard and screen readers: out of sight until focused */
   .study-nav { position: absolute; z-index: 2; left: 50%; top: calc(env(safe-area-inset-top) + 60px); transform: translateX(-50%); display: flex; gap: var(--spacing-2); padding: var(--spacing-1); border-radius: var(--radius-full); background: var(--color-background-surface); box-shadow: var(--shadow-high); }
   .study-nav:not(:focus-within) { width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; box-shadow: none; }
@@ -549,9 +606,15 @@
     padding: env(safe-area-inset-top) max(var(--spacing-5), env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + var(--spacing-6)) max(var(--spacing-5), env(safe-area-inset-left));
   }
   .done-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--spacing-3); padding-block: var(--spacing-8) var(--spacing-6); text-align: center; }
-  .done-mascot { width: clamp(96px, 23dvh, 200px); margin-bottom: var(--spacing-1); }
+  /* Ruma in a tinted circle: yellow with one eye open while cards remain, green with both when the day is done */
+  .done-mascot {
+    flex: none; display: grid; place-items: center; width: clamp(96px, 23dvh, 200px); aspect-ratio: 1; margin-bottom: var(--spacing-1);
+    border-radius: var(--radius-full); background: var(--ruma-yellow-tint);
+  }
+  .done-mascot[data-mood='day'] { background: var(--color-success-muted); }
+  .done-mascot .ruma { width: 80%; height: 80%; }
   .done-body h1 { font-size: var(--text-heading-1-size); }
-  .done-text { color: var(--color-text-secondary); font-size: var(--text-supporting-size); }
+  .done-time { color: var(--color-text-secondary); font-size: var(--font-size-lg); }
   /* the day in three tiles: "20장 본 카드 · 3일 연속 학습 · 250 오늘 XP" */
   .done-figures { align-self: stretch; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: var(--spacing-3) 0 0; text-align: left; }
   .done-figures > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; min-width: 0; padding: 14px var(--spacing-3); }
@@ -587,6 +650,9 @@
   /* below: the type tag, the false-friend warning, the sound correspondences */
   .sheet-notes { display: flex; flex-direction: column; align-items: flex-start; gap: var(--spacing-3); margin-top: var(--spacing-2); }
   .sheet-notes:empty { display: none; }
+  .sheet-head .level-badge { margin-right: 2px; }
+  .sheet-example { margin-top: var(--spacing-2); padding-top: var(--spacing-3); border-top: 1px solid var(--color-border); }
+  .sheet-example .example { align-items: flex-start; text-align: left; }
 
   /* ── word types: cognate fast-track (reading cards), false friends, hanja readings ── */
   /* the word type as a small beige tag with dark ink ("일본 한자어 · 심배") */
@@ -597,6 +663,7 @@
     border-top: 1px solid var(--color-border); color: var(--color-text-primary); font-size: var(--text-supporting-size); line-height: 1.5;
   }
   .false-friend b { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text-error); }
+  .flash .false-friend { border-top: 0; margin-top: 0; padding-top: var(--spacing-1); }
   .sheet .false-friend { align-self: stretch; align-items: flex-start; text-align: left; margin-top: 0; }
   .bridge { font-size: var(--font-size-lg); color: var(--color-text-secondary); }
   .bridge b { color: var(--color-text-primary); }

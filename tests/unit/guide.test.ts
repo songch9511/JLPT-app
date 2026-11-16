@@ -18,13 +18,12 @@ describe('guide: who sees the first run', () => {
     expect(guide.phase(store.getState())).toBe('level')
   })
 
-  it('an existing learner (onboarded, saved before the guide) gets no guide, so no first-run prompt or tip ever', async () => {
+  it('an existing learner (onboarded, saved before the guide) gets no guide, so no first-run prompt ever', async () => {
     const { store, guide } = await bootGuide({ now: NOW, saved: learner({ cards: { w000: card({ due: Date.parse(NOW) + DAY }) } }) })
     const s = store.getState()
     expect(s.guide).toBeUndefined()
     expect(guide.phase(s)).toBeNull()
-    expect(guide.homeTip(s)).toBeNull()
-  })
+      })
 
   it('a learner from the versions before stable ids (v2/v3) is migrated without a guide', async () => {
     const { store } = await bootGuide({ now: NOW, legacy: { ...learner(), v: 3 } })
@@ -39,8 +38,8 @@ describe('guide: who sees the first run', () => {
   })
 
   it('a damaged guide is cleaned, not crashed on', async () => {
-    const { store } = await bootGuide({ now: NOW, saved: learner({ guide: { done: ['srs', 3, 'srs', null] } }) })
-    expect(store.getState().guide).toEqual({ done: ['srs'] })
+    const { store } = await bootGuide({ now: NOW, saved: learner({ guide: { done: ['level', 3, 'level', null] } }) })
+    expect(store.getState().guide).toEqual({ done: ['level'] })
   })
 
   it('importing an existing learner’s backup over a new install leaves no first-run prompt', async () => {
@@ -52,16 +51,15 @@ describe('guide: who sees the first run', () => {
     const s = store.getState()
     expect(s.guide).toBeUndefined()
     expect(guide.phase(s)).toBeNull()
-    expect(guide.homeTip(s)).toBeNull()
-  })
+      })
 
-  it('a backup made by a learner who started with the guide keeps it (without the retired exam steps and tip), and exports carry it', async () => {
+  it('a backup made by a learner who started with the guide keeps it (without the retired exam steps and tips), and exports carry it', async () => {
     const { store } = await bootGuide({ now: NOW })
     const backup = await import('../../src/backup')
-    const read = backup.readBackup({ format: 'jlpt-luma-backup', formatVersion: 3, ...learner({ guide: { done: ['level', 'exam', 'exam-unknown', 'srs', 'ready'] } }) })
+    const read = backup.readBackup({ format: 'jlpt-luma-backup', formatVersion: 3, ...learner({ guide: { done: ['level', 'exam', 'exam-unknown', 'srs', 'reading', 'ready'] } }) })
     if (read.ok) store.importState(read.state)
-    expect(store.getState().guide).toEqual({ done: ['level', 'srs'] })
-    expect(backup.backupFile(store.getState()).guide).toEqual({ done: ['level', 'srs'] })
+    expect(store.getState().guide).toEqual({ done: ['level'] })
+    expect(backup.backupFile(store.getState()).guide).toEqual({ done: ['level'] })
   })
 
   it('“모든 기록 초기화” starts the first run again', async () => {
@@ -111,35 +109,23 @@ describe('guide: the conversation', () => {
     expect(guide.phase(store.getState())).toBe('level')
   })
 
-  it('“급수 다시 고르기” before the first session goes back to the level question', async () => {
+  it('the level can be chosen again before the first session (Home’s chip): the first session stays', async () => {
     const { store, guide } = await bootGuide({ now: NOW })
     guide.chooseLevel(2)
-    guide.askLevelAgain()
-    expect(store.getState().onboarded).toBe(false)
-    expect(guide.phase(store.getState())).toBe('level')
-    guide.chooseLevel(4)
+    store.update((d) => void (d.settings.target = 4))
     expect(guide.phase(store.getState())).toBe('start')
     expect(store.getState().settings.target).toBe(4)
   })
 
-  it('the first-run card stays until something is studied; then the spaced-repetition tip, once', async () => {
+  it('the first session ends with the first answer; no tip follows (the tips are gone)', async () => {
     vi.setSystemTime(new Date(NOW))
     const { store, guide } = await bootGuide({ now: NOW })
     guide.chooseLevel(5)
-    expect(guide.homeTip(store.getState())).toBeNull()
+    expect(guide.phase(store.getState())).toBe('start')
     store.update((d) => void (d.log = { '2026-11-13': { c: 1, n: 1, r: 0, p: 0 } }))
     expect(guide.phase(store.getState())).toBeNull()
-    expect(guide.homeTip(store.getState())).toBe('srs')
-    guide.markDone('srs')
-    expect(guide.homeTip(store.getState())).toBeNull()
-  })
-
-  it('“루마의 안내 다시 보기” brings the tips back, also for a learner from before the guide, but not the question', async () => {
-    const { store, guide } = await bootGuide({ now: NOW, saved: learner({ log: { '2026-11-12': { c: 5, n: 5, r: 0, p: 0 } } }) })
-    guide.replayTips()
-    const s = store.getState()
-    expect(guide.phase(s)).toBeNull()
-    expect(guide.homeTip(s)).toBe('srs')
-    expect(guide.done(s, 'reading')).toBe(false)
+    expect(Object.keys(guide)).not.toContain('homeTip')
+    expect(Object.keys(guide)).not.toContain('replayTips')
+    expect(store.getState().guide).toEqual({ done: ['level'] })
   })
 })

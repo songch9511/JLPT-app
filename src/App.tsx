@@ -6,6 +6,7 @@ import { useLevels, type Level } from './data'
 import { Doc, isDoc, type DocName } from './screens/Doc'
 import { Home } from './screens/Home'
 import { LevelScreen } from './screens/Level'
+import { LevelPicker } from './screens/LevelPicker'
 import { Settings } from './screens/Settings'
 import { Stats } from './screens/Stats'
 import { Study } from './screens/Study'
@@ -20,11 +21,14 @@ type Route =
   | { name: 'study'; mode: StudyMode }
   | { name: 'words'; tab?: 'weak' }
   | { name: 'level'; level: Level }
+  // the level picker (Home's level chip); the first run shows it on Home
+  | { name: 'picker' }
   | { name: 'doc'; doc: DocName }
 
 function parse(hash: string): Route {
   const [, a, b] = hash.split('/')
   if (a === 'level' && ['1', '2', '3', '4', '5'].includes(b)) return { name: 'level', level: Number(b) as Level }
+  if (a === 'level' && b === undefined) return { name: 'picker' }
   if (a === 'doc' && isDoc(b)) return { name: 'doc', doc: b }
   if (a === 'words') return b === 'weak' ? { name: 'words', tab: 'weak' } : { name: 'words' }
   if (a === 'study') return { name: 'study', mode: b === 'review' || b === 'new' ? b : 'all' }
@@ -100,8 +104,8 @@ export default function App() {
   const meta = useMeta()
   const nudge = useStore((s) => shouldNudge(s, meta, new Date()))
 
-  // There is no onboarding page: a new learner starts on Home, where Ruma asks the level
-  // (screens/HomeGuide.tsx). Until it is answered there is nothing to study, so the study route shows Home.
+  // There is no onboarding page: a new learner starts on Home, which asks the level first (screens/LevelPicker.tsx).
+  // Until it is answered there is nothing to study, so the study route shows Home.
   if (route.name === 'study' && onboarded)
     return (
       <>
@@ -112,12 +116,13 @@ export default function App() {
     )
 
   // a level's word list belongs to the 단어장 tab, where the level rows are; the privacy and support pages to 설정
-  const tab = route.name === 'level' ? 'words' : route.name === 'doc' ? 'settings' : route.name === 'study' ? 'home' : route.name
+  const tab = route.name === 'level' ? 'words' : route.name === 'doc' ? 'settings' : route.name === 'study' || route.name === 'picker' ? 'home' : route.name
   return (
     <div className="app">
       <SaveWarning />
       <main className={`page ${tab === 'home' ? 'home' : ''}`}>
-        {(route.name === 'home' || route.name === 'study') && <Home />}
+        {(route.name === 'home' || route.name === 'study' || (route.name === 'picker' && !onboarded)) && <Home />}
+        {route.name === 'picker' && onboarded && <LevelPicker />}
         {route.name === 'level' && <LevelScreen level={route.level} />}
         {route.name === 'words' && <Words key={route.tab ?? 'search'} initialTab={route.tab} />}
         {route.name === 'stats' && <Stats />}

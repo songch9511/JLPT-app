@@ -4,7 +4,6 @@ import { APP_VERSION, TITLE, UNOFFICIAL_NOTICE } from '../brand'
 import { Banner, Button, Choice, ConfirmDialog, Field, Group, MessageDialog, RowLink, Switch } from '../components/ui'
 import { BackupNudge } from '../components/Notices'
 import { LEVELS } from '../data'
-import { replayTips } from '../guide'
 import { canUndoImport, importState, MAX_DAILY_NEW, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
 import { docHref, type DocName } from './Doc'
@@ -31,8 +30,6 @@ export function Settings() {
   const [confirmReset, setConfirmReset] = useState(false)
   const [pending, setPending] = useState<State | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
-  const onboarded = useStore((s) => s.onboarded)
-  const [replayed, setReplayed] = useState(false)
 
   const importData = async (f: File) => importText(await f.text())
   const importText = (text: string) => {
@@ -87,24 +84,6 @@ export function Settings() {
           value={st.fastTrack}
           onChange={(fastTrack) => set({ fastTrack })}
         />
-        {onboarded && (
-          <p className="replay-tips" role="status">
-            {replayed ? (
-              // the same inset as the text button it replaces, so the line does not jump left
-              <span className="replay-done">루마의 안내를 다시 켰어요.</span>
-            ) : (
-              <Button
-                label="루마의 안내 다시 보기"
-                variant="ghost"
-                className="text-action"
-                onClick={() => {
-                  replayTips()
-                  setReplayed(true)
-                }}
-              />
-            )}
-          </p>
-        )}
       </Group>
 
       <Group title="화면 · 소리" id="display-title">

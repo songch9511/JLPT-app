@@ -99,7 +99,7 @@ test.describe('level screen', () => {
     await page.getByRole('link', { name: '뒤로' }).click()
     // the level rows live on the 단어장 tab now
     await expect(page.getByRole('heading', { name: '급수별 기억 상태' })).toBeVisible()
-    await expect(page.locator('.level-row.target .level-name b')).toHaveText('N3')
+    await expect(page.locator('.level-row.target .level-name .level-badge')).toHaveText('N3')
   })
 
   test('garbage hash routes fall back to home', async ({ page }) => {
@@ -124,7 +124,7 @@ test.describe('settings', () => {
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
     await page.getByRole('link', { name: '홈' }).click()
-    await expect(page.locator('.home-head .subtitle b')).toHaveText('N2')
+    await expect(page.getByRole('link', { name: '급수 N2, 바꾸기' })).toHaveText('N2')
     await expect(page.locator('.plan .c-new b')).toHaveText('30')
     await page.getByRole('link', { name: '설정' }).click()
     await page.getByRole('radio', { name: '시스템' }).click()
@@ -229,46 +229,45 @@ test('settings: daily new words stop at 40; lower levels can be set; no exam dat
   await expect(page.locator('.about .unofficial')).toContainText('승인하거나 후원하지 않아요')
 })
 
-test('P4: with lower levels included an N3 learner meets N5 words first, and the card says which level', async ({ page }) => {
+test('P4: with lower levels included an N3 learner meets N5 words first, and the card names the level in its colour', async ({ page }) => {
   await open(page, { state: user({ target: 3, includeLower: true }) })
   await page.goto('./#/stats')
   await expect(page.getByText('N5~N3 단어 3,526개 중 0개 만남')).toBeAttached()
   await page.locator('.tabbar').getByRole('link', { name: '홈' }).click()
   await page.getByRole('button', { name: '새 단어 시작' }).click()
-  // the card's facts line names the level, as plain text joined by " · "
-  await expect(page.locator('.flash-head .flash-meta')).toHaveText(/(^| · )N5$/)
+  // the card's head names the level in its badge, then the kind as plain text
+  await expect(page.locator('.flash-head .level-badge')).toHaveText('N5')
+  await expect(page.locator('.flash-head .level-badge')).toHaveAttribute('data-level', '5')
+  await expect(page.locator('.flash-head .flash-meta')).toHaveText('새 단어')
 })
 
 test.describe('home: the day, Ruma, the two sessions', () => {
-  test('an established learner: the day and level, the streak, Ruma with one line and the day’s progress, then the two sessions with one primary; nothing about an exam', async ({ page }) => {
+  test('an established learner: the level chip and the streak, the 오늘 card with Ruma, the day’s figures and the two sessions with one primary, then the level’s words; nothing about an exam', async ({ page }) => {
     const t = NOW.getTime()
     const cards = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`5-${i}`, review(t + ((i % 20) - 5) * DAY, { stability: 10 + (i % 30) })]))
     await open(page, { state: user({}, { cards, log: { '2026-11-12': { c: 60, n: 0, r: 40, p: 36 } } }) })
     await homeShown(page)
     await expect(page.getByRole('heading', { name: '오늘', level: 1 })).toBeVisible()
-    await expect(page.locator('.home-head .subtitle')).toHaveText('11월 13일 금요일 · N5')
+    await expect(page.getByRole('link', { name: '급수 N5, 바꾸기' })).toHaveText('N5')
     await expect(page.getByRole('img', { name: '연속 1일, 오늘 하면 2일' })).toHaveText('1')
-    // order: the header, the middle (Ruma's circle, its line, the day's progress), then the thumb zone (the plan)
-    await expect(page.locator('main.page > *')).toHaveClass([/home-head/, /home-center/, /home-actions/])
-    await expect(page.locator('.home-center > *')).toHaveClass([/home-ruma/, /ruma-line/, /home-progress/])
-    await expect(page.locator('.home-progress-text > :first-child')).toHaveText('오늘 0 / 70장')
+    // order: the header (level chip, streak), the 오늘 card (Ruma and the figures, then the plan), the level's words
+    await expect(page.locator('main.page > *')).toHaveClass([/home-head/, /today/, /level-words/])
+    await expect(page.locator('.today > *')).toHaveClass([/today-top/, /home-actions/])
+    await expect(page.locator('.today-count')).toHaveText('0 / 70장')
     await expect(page.getByRole('progressbar', { name: '오늘 학습' })).toHaveAttribute('aria-valuetext', '오늘 70장 중 0장')
-    const plan = page.locator('main.page > .home-actions')
+    const plan = page.locator('.today > .home-actions')
     await expect(plan).toHaveAccessibleName('오늘의 계획')
     // the two sessions, the reviews first and primary; each names what it starts and how much
-    await expect(plan.getByRole('button')).toHaveText(['복습하기오늘 돌아온 단어60장', '새 단어10개'])
+    await expect(plan.getByRole('button')).toHaveText(['복습60장', '새 단어10개'])
     await expect(plan.getByRole('button', { name: '복습 시작, 60장' })).toHaveAttribute('data-variant', 'primary')
     await expect(plan.getByRole('button', { name: '새 단어 시작, 10개' })).toHaveAttribute('data-variant', 'secondary')
-    // what is not on home: the week, the words met (기록), the long-term-memory line, the weak-words row, the quest
-    await expect(page.getByText(/이번 주|만난 단어|장기 기억|약한 단어|오늘 분량 끝내기|읽기만/)).toHaveCount(0)
+    // what is not on home: the week, the quest, the date
+    await expect(page.getByText(/이번 주|오늘 분량 끝내기|읽기만|금요일/)).toHaveCount(0)
     await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
     // both buttons stay in the first screen, above the tab bar
     const box = await plan.getByRole('button', { name: '새 단어 시작, 10개' }).boundingBox()
     expect(box!.y + box!.height).toBeLessThan(844 - 70)
     await expect(page.getByText(/시험|D-\d|예상|목표에 닿아요|합격/)).toHaveCount(0)
-    // the weak words and the records are a tab away
-    await page.locator('.tabbar').getByRole('link', { name: '단어장' }).click()
-    await expect(page.getByRole('radio', { name: /^약한 단어/ })).toBeVisible()
   })
 
   test('the 기록 tab holds the stamps, forecast and heatmap that left home', async ({ page }) => {
@@ -295,7 +294,7 @@ test('no AI entry points are left: study card, word sheet and weak words', async
   await expect(page.getByRole('dialog').getByText(/AI/)).toHaveCount(0)
   await page.keyboard.press('Escape')
   await page.evaluate(() => (location.hash = '#/study'))
-  await page.getByRole('button', { name: '정답 보기' }).click()
+  await page.getByRole('button', { name: '의미', exact: true }).click()
   await expect(page.locator('.flash-meaning')).toBeVisible()
   await expect(page.getByText(/AI/)).toHaveCount(0)
   expect(JSON.stringify(await saved(page))).not.toContain('sk-ant-old')

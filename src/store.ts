@@ -86,8 +86,8 @@ export interface State {
    */
   legacy?: { h: string }
   /**
-   * Ruma's first-run guide on Home (src/guide.ts): the steps of the first-run conversation answered and the
-   * in-context tips already shown, by id. Only learners who started with this version have it: a state saved before
+   * The first run (src/guide.ts): the steps of it answered, by id (only 'level' now; retired ids are dropped on load,
+   * RETIRED_GUIDE). Only learners who started with the first run have it: a state saved before
    * it existed, or a backup of one, with `onboarded` true has none and never sees a first-run prompt. Added within
    * v4 (an optional field); carried in backups.
    */
@@ -238,8 +238,11 @@ export function migrate(s: StoredState): State {
  * next save; a backup without them still imports in the versions that had them (they fill in their defaults).
  */
 const RETIRED_SETTINGS = ['examDate', 'goal', 'apiKey'] as const
-/** First-run steps and tips that no longer exist: the exam-date question and its "아직 몰라요", the readiness tip. */
-const RETIRED_GUIDE = new Set(['exam', 'exam-unknown', 'ready'])
+/**
+ * First-run steps and tips that no longer exist: the exam-date question and its "아직 몰라요", the readiness tip, and
+ * Ruma's spaced-repetition and reading-card tips (2026-11-16: Ruma no longer speaks).
+ */
+const RETIRED_GUIDE = new Set(['exam', 'exam-unknown', 'ready', 'srs', 'reading'])
 
 function normalize(s: State): State {
   const base = initial()

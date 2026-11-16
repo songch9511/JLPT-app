@@ -125,3 +125,18 @@ describe('example sentences: the headword in the sentence', () => {
     expect(found / kanjiWords).toBeGreaterThan(0.95)
   })
 })
+
+describe('the study card’s kanji row (sound.ts kanjiParts)', () => {
+  it('pairs each kanji with its Korean syllable and its Japanese reading, only when all three match one to one', async () => {
+    const { kanjiParts } = await import('../../src/sound')
+    expect(kanjiParts({ w: '勉強', sk: '면강', rt: 'on', a: 'べん|きょう' })).toEqual([
+      { kanji: '勉', ko: '면', ja: 'べん' },
+      { kanji: '強', ko: '강', ja: 'きょう' },
+    ])
+    // not read on'yomi throughout, no split, a mismatch, or alternative spellings: no row
+    expect(kanjiParts({ w: '勉強', sk: '면강', rt: 'mix', a: 'べん|きょう' })).toEqual([])
+    expect(kanjiParts({ w: '勉強', sk: '면강', rt: 'on', a: '' })).toEqual([])
+    expect(kanjiParts({ w: '勉強', sk: '면', rt: 'on', a: 'べん|きょう' })).toEqual([])
+    expect(kanjiParts({ w: '上手; 上手い', sk: '상수', rt: 'on', a: 'じょう|ず' })).toEqual([])
+  })
+})

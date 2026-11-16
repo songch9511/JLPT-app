@@ -36,7 +36,7 @@ test.describe('error screen', () => {
     await page.getByRole('button', { name: '모든 기록 초기화' }).click()
     await expect(page.getByText('되돌릴 수 없어요.')).toBeVisible()
     await page.getByRole('button', { name: '모두 지우기' }).click()
-    await expect(page.getByRole('group', { name: /어느 급수를 준비해요/ })).toBeVisible()
+    await expect(page.getByRole('group', { name: '준비하는 급수' })).toBeVisible()
     expect(await saved(page)).toBeNull()
   })
 
@@ -56,7 +56,6 @@ test.describe('saving fails', () => {
   }
   async function answerEasy(page: Page, left: number) {
     await page.waitForTimeout(READ_MS)
-    await page.locator('.flash').click()
     await page.getByRole('button', { name: /^쉬워요/ }).click()
     await expect(page.locator('.left-count')).toHaveText(`${left}장 남음`)
   }
@@ -172,7 +171,6 @@ test.describe('backups', () => {
     const calls = () => page.evaluate(() => (window as unknown as { __persist: number }).__persist)
     for (let left = 1; left >= 0; left--) {
       await page.waitForTimeout(READ_MS)
-      await page.locator('.flash').click()
       await page.getByRole('button', { name: /^쉬워요/ }).click()
       if (left) expect(await calls()).toBe(0)
     }

@@ -121,14 +121,15 @@ test('theme modes reach the controls: light, dark and system (following the OS);
   await expect.poll(ground).toBe('rgb(250, 248, 245)')
 })
 
-test('with reduced motion nothing slides or fades: card entry, answer reveal and button press are instant', async ({ page }) => {
+test('with reduced motion nothing slides or fades: card entry, a toggle opening and button press are instant', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
   const card = page.locator('.flash')
   await expect(card).toBeVisible()
   expect(await card.evaluate((el) => getComputedStyle(el).animationName)).toBe('none')
-  await page.getByRole('button', { name: '정답 보기' }).click()
-  expect(await page.locator('.flash-answer').evaluate((el) => getComputedStyle(el).animationName)).toBe('none')
+  await page.getByRole('button', { name: '의미', exact: true }).click()
+  await expect(page.locator('.flash-meaning')).toBeVisible()
+  expect(await page.locator('.flash-meaning-slot').evaluate((el) => getComputedStyle(el).transitionDuration.split(',').every((d) => parseFloat(d) === 0))).toBe(true)
   const grade = page.getByRole('button', { name: /^알아요/ })
   expect(await grade.evaluate((el) => getComputedStyle(el).transitionDuration.split(',').every((d) => parseFloat(d) === 0))).toBe(true)
 })
