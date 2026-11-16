@@ -26,9 +26,13 @@ async function none(page: Page, where: string) {
 
 test('no removed mascot line or helper sentence on the first run, Home in each state, the study card and its ends', async ({ page }) => {
   await open(page)
-  await expect(page.getByRole('group', { name: '준비하는 급수' })).toBeVisible()
-  await none(page, 'level picker')
-  await page.getByRole('button', { name: /^N5, / }).click()
+  await expect(page.getByRole('heading', { name: '준비하는 급수' })).toBeVisible()
+  await none(page, 'level cards')
+  await page.getByRole('button', { name: 'N5 시작하기' }).click()
+  for (const [i, next] of ['다음', '다음', '시작하기'].entries()) {
+    await none(page, `intro ${i + 1}`)
+    await page.getByRole('button', { name: next, exact: true }).click()
+  }
   await homeShown(page)
   await none(page, 'first session')
   await page.getByRole('button', { name: /첫 학습 시작/ }).click()
@@ -40,9 +44,7 @@ test('no removed mascot line or helper sentence on the first run, Home in each s
   await none(page, 'card open')
   await page.waitForTimeout(READ_MS)
   await page.getByRole('button', { name: /^모르겠어요/ }).click()
-  await none(page, 'card missed')
-  await page.waitForTimeout(READ_MS)
-  await page.getByRole('button', { name: '다음', exact: true }).click()
+  await none(page, 'card after 모르겠어요')
   await page.getByRole('button', { name: /나가기/ }).click()
   await homeShown(page)
   await none(page, 'home part-way')
@@ -72,7 +74,7 @@ test('no removed line on 단어장, 기록, 설정 and the level screen', async 
   await open(page, { state: user(), hash: '/words' })
   await expect(page.getByRole('heading', { name: '단어장', level: 1 })).toBeVisible()
   await none(page, '단어장')
-  for (const [hash, heading] of [['/stats', '기록'], ['/settings', '설정'], ['/level/5', 'JLPT N5']]) {
+  for (const [hash, heading] of [['/stats', '기록'], ['/settings', '설정'], ['/level/5', 'N5'], ['/level/5/1', 'N5 챕터 1'], ['/kanji/5', 'N5 한자'], ['/words/kanji', '단어장'], ['/marks', '북마크'], ['/weak', '약한 단어']]) {
     await page.goto(`./#${hash}`)
     await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
     await none(page, heading)

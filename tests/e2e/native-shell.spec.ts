@@ -103,19 +103,27 @@ test('iOS evicted localStorage: the study state comes back from the durable copy
 
 test('first launch with nothing saved: Ruma asks on home; progress is mirrored to the durable copy', async ({ page }) => {
   await openShell(page)
-  await page.getByRole('button', { name: 'N5' }).click()
-  await expect(page.getByRole('button', { name: '첫 학습 시작' })).toBeVisible()
+  await page.getByRole('button', { name: 'N5 시작하기' }).click()
+  await page.getByRole('button', { name: '건너뛰기' }).click()
+  await page.getByRole('button', { name: '시작하기', exact: true }).click()
+  await expect(page.getByRole('button', { name: /^첫 학습 시작/ })).toBeVisible()
   await homeShown(page)
-  await expect.poll(async () => JSON.parse((await fakeFile(page, 'LIBRARY/ruma/state-a.json')) ?? 'null')?.onboarded).toBe(true)
+  // the newer of the two slots holds the onboarded state
+  await expect
+    .poll(async () => {
+      const slots = [await fakeFile(page, 'LIBRARY/ruma/state-a.json'), await fakeFile(page, 'LIBRARY/ruma/state-b.json')].filter(Boolean).map((s) => JSON.parse(s!))
+      return slots.sort((a, b) => (b.rev ?? 0) - (a.rev ?? 0))[0]?.onboarded
+    })
+    .toBe(true)
   // nothing asked of iOS at first launch: no notification permission request
   expect(await calls(page, 'LocalNotifications', 'requestPermissions')).toEqual([])
 })
 
 test('settings: native section shown, export through the share sheet, import through the document picker', async ({ page }) => {
-  const backup = { format: 'jlpt-luma-backup', formatVersion: 2, ...user({}, { xp: 999 }) }
+  const backup = { format: 'jlpt-luma-backup', formatVersion: 2, ...user({}, { xp: 999, kanji: false }) }
   await openShell(page, { state: user({}, { xp: 5 }), hash: '/settings', pick: JSON.stringify(backup) })
   await expect(page.getByRole('heading', { name: '알림 · 진동 · 발음' })).toBeVisible()
-  await expect(page.getByText('학습 기록은 이 기기에만 저장돼요.', { exact: false })).toBeVisible()
+  await expect(page.getByText('기록은 이 기기에만 저장돼요', { exact: true })).toBeVisible()
 
   // no browser download inside the app: the file goes to the share sheet
   let downloaded = false
@@ -128,7 +136,7 @@ test('settings: native section shown, export through the share sheet, import thr
   expect(downloaded).toBe(false)
 
   await page.getByRole('button', { name: '백업 가져오기' }).click()
-  await page.getByRole('alertdialog', { name: '백업으로 바꿀까요?' }).getByRole('button', { name: '백업으로 바꾸기' }).click()
+  await page.getByRole('dialog', { name: '이 백업으로 바꿀까요?' }).getByRole('button', { name: '바꾸기', exact: true }).click()
   await expect.poll(async () => page.evaluate((k) => JSON.parse(localStorage.getItem(k)!).xp, KEY)).toBe(999)
   const [, , pick] = (await calls(page, 'FilePicker', 'pickFiles'))[0] as Call
   expect(pick).toEqual({ types: ['application/json'], limit: 1, readData: true })
@@ -138,6 +146,7 @@ test('licence links open in the in-app Safari view, the local notice in a sheet;
   await openShell(page, { state: user(), hash: '/settings' })
   let popup = false
   page.on('popup', () => (popup = true))
+  await page.getByText('출처 · 라이선스').click()
   await page.getByRole('link', { name: 'wordfreq' }).click()
   await expect.poll(async () => (await calls(page, 'Browser', 'open')).length).toBe(1)
   expect(((await calls(page, 'Browser', 'open'))[0] as Call)[2]).toEqual({ url: 'https://github.com/rspeer/wordfreq' })
@@ -216,9 +225,9 @@ test('the offer is not repeated once answered “나중에”', async ({ page })
 test('reset clears the durable copy of the old history', async ({ page }) => {
   await openShell(page, { state: user({}, { xp: 50, rev: 3 }), hash: '/settings', files: { 'LIBRARY/ruma/state-b.json': JSON.stringify(user({}, { xp: 40, rev: 2 })) } })
   await page.getByRole('button', { name: '모든 기록 초기화' }).click()
-  await page.getByRole('alertdialog').getByRole('button', { name: '모두 지우기' }).click()
+  await page.getByRole('dialog', { name: '모든 기록을 지울까요?' }).getByRole('button', { name: '지우기', exact: true }).click()
   await page.getByRole('link', { name: '홈' }).click()
-  await expect(page.getByRole('button', { name: 'N5' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'N5 시작하기' })).toBeVisible()
   await expect
     .poll(async () => {
       const slots = [await fakeFile(page, 'LIBRARY/ruma/state-a.json'), await fakeFile(page, 'LIBRARY/ruma/state-b.json')].filter(Boolean)

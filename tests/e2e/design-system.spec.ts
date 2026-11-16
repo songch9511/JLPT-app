@@ -22,26 +22,33 @@ test('reset and import confirm inside the app, never with confirm()/alert()', as
   await page.keyboard.press('Escape')
   await expect(problem).toBeHidden()
   // a real backup: asks first; the action is the primary, cancel is offered
-  await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(user({}, { xp: 70 }))) })
-  const ask = page.getByRole('alertdialog', { name: '백업으로 바꿀까요?' })
-  await expect(ask).toContainText('바꾼 뒤 이 화면에서 되돌릴 수 있어요.')
-  await expect(ask.getByRole('button', { name: '백업으로 바꾸기' })).toHaveAttribute('data-variant', 'primary')
-  await ask.getByRole('button', { name: '백업으로 바꾸기' }).click()
+  await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(user({}, { xp: 70, kanji: false }))) })
+  // board 6-4: a sheet from the bottom with what the file holds; the action is the primary, cancel is offered
+  const ask = page.getByRole('dialog', { name: '이 백업으로 바꿀까요?' })
+  await expect(ask.locator('.confirm-box')).toContainText('백업 파일')
+  await expect(ask.locator('.confirm-box')).toContainText('단어 0개 · 한자 0자')
+  await expect(ask).toContainText('지금 기록은 이 백업으로 바뀌어요.')
+  await expect(ask.getByRole('button', { name: '바꾸기', exact: true })).toHaveAttribute('data-variant', 'primary')
+  await ask.getByRole('button', { name: '바꾸기', exact: true }).click()
   await expect.poll(async () => (await saved(page)).xp).toBe(70)
-  // the reset is destructive: its action is the destructive style, never the filled primary
+  // board 6-3: the reset is destructive: a red action, never the ink primary; what goes is counted
   await page.getByRole('button', { name: '모든 기록 초기화' }).click()
-  const reset = page.getByRole('alertdialog', { name: '모든 기록을 지울까요?' })
-  await expect(reset.getByRole('button', { name: '모두 지우기' })).toHaveAttribute('data-variant', 'destructive')
+  const reset = page.getByRole('dialog', { name: '모든 기록을 지울까요?' })
+  await expect(reset).toContainText('단어 0개, 한자 0자 기록이 사라져요.')
+  await expect(reset).toContainText('되돌릴 수 없어요.')
+  await expect(reset.getByRole('button', { name: '지우기', exact: true })).toHaveAttribute('data-variant', 'destructive')
+  expect(await reset.getByRole('button', { name: '지우기', exact: true }).evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(196, 85, 59)')
   await reset.getByRole('button', { name: '취소' }).click()
   expect((await saved(page)).xp).toBe(70)
 })
 
-test('a confirm dialog starts on the safe choice, keeps focus inside, and Escape returns focus to its button', async ({ page }) => {
+test('a confirm sheet keeps focus inside, and Escape returns focus to its button', async ({ page }) => {
   await open(page, { state: user({}, { xp: 7 }), hash: '/settings' })
   const opener = page.getByRole('button', { name: '모든 기록 초기화' })
   await opener.click()
-  const reset = page.getByRole('alertdialog', { name: '모든 기록을 지울까요?' })
-  await expect(reset.getByRole('button', { name: '취소' })).toBeFocused()
+  const reset = page.getByRole('dialog', { name: '모든 기록을 지울까요?' })
+  await expect(reset.getByRole('button', { name: '취소' })).toBeVisible()
+  await expect.poll(() => reset.evaluate((d) => d.contains(document.activeElement))).toBe(true)
   for (let i = 0; i < 5; i++) {
     await page.keyboard.press('Tab')
     expect(await reset.evaluate((d) => d.contains(document.activeElement))).toBe(true)
@@ -53,8 +60,8 @@ test('a confirm dialog starts on the safe choice, keeps focus inside, and Escape
 })
 
 test('the word sheet traps focus, closes on Escape and gives focus back to the row that opened it', async ({ page }) => {
-  await open(page, { state: user(), hash: '/words' })
-  await page.getByPlaceholder('일본어, 읽기, 뜻으로 검색').fill('学校')
+  await open(page, { state: user(), hash: '/search/word' })
+  await page.getByPlaceholder('단어 · 읽기 · 뜻').fill('学校')
   const row = page.locator('.word-row').filter({ hasText: 'がっこう' }).first()
   await row.focus()
   await page.keyboard.press('Enter')
@@ -74,7 +81,7 @@ test('theme modes reach the controls: light, dark and system (following the OS);
   const group = '.group'
   const card = '.group-body'
   // the chosen segment is white on the beige track, in the ink
-  const segment = '[role="radio"][aria-checked="true"]'
+  const segment = '.segmented:not(.level-choice) [role="radio"][aria-checked="true"]'
   const ground = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
   const css = (selector: string, prop: string) => page.locator(selector).first().evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop)
   // a group is a small heading and one card: the group itself has no surface, its rows sit in a white card with a
@@ -87,31 +94,31 @@ test('theme modes reach the controls: light, dark and system (following the OS);
   expect(await css(card, 'border-top-color')).toBe('rgb(233, 228, 217)')
   expect(await css(card, 'border-top-left-radius')).toBe('20px')
   expect(await css(card, 'box-shadow')).toBe('none')
-  expect(await bg(page, '.segmented')).toBe('rgb(243, 239, 231)')
+  expect(await bg(page, '.segmented:not(.level-choice)')).toBe('rgb(243, 239, 231)')
   expect(await bg(page, segment)).toBe('rgb(255, 255, 255)')
   expect(await css(segment, 'color')).toBe('rgb(45, 42, 38)')
-  // a switch that is on is green
+  // a switch that is on is the ink
   await page.getByRole('switch', { name: '발음 자동 재생' }).check()
-  await expect.poll(() => bg(page, '.switch-input:checked')).toBe('rgb(95, 143, 69)')
+  await expect.poll(() => bg(page, '.switch-input:checked')).toBe('rgb(45, 42, 38)')
   await page.getByRole('radio', { name: '다크' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  // a warm dark ground, a lighter dark card, light ink
-  await expect.poll(ground).toBe('rgb(28, 26, 23)')
-  await expect.poll(() => bg(page, card)).toBe('rgb(39, 36, 32)')
-  await expect.poll(() => bg(page, segment)).toBe('rgb(39, 36, 32)')
+  // a warm dark ground, a lighter dark card, light ink (boards 7-1, 7-2)
+  await expect.poll(ground).toBe('rgb(27, 25, 23)')
+  await expect.poll(() => bg(page, card)).toBe('rgb(37, 34, 31)')
+  await expect.poll(() => bg(page, segment)).toBe('rgb(37, 34, 31)')
   expect(await bg(page, group)).toBe('rgba(0, 0, 0, 0)')
-  expect(await css(segment, 'color')).toBe('rgb(236, 231, 219)')
+  expect(await css(segment, 'color')).toBe('rgb(241, 237, 229)')
   // system follows the OS setting
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.getByRole('radio', { name: '시스템' }).click()
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
-  expect(await ground()).toBe('rgb(28, 26, 23)')
+  expect(await ground()).toBe('rgb(27, 25, 23)')
   // the primary button on home in dark: the light ink as its face with a dark label, readable on the dark ground
   await page.getByRole('link', { name: '홈' }).click()
   await homeShown(page)
   const primary = 'button[data-variant="primary"]'
-  await expect.poll(() => bg(page, primary)).toBe('rgb(236, 231, 219)')
-  expect(await css(primary, 'color')).toBe('rgb(28, 26, 23)')
+  await expect.poll(() => bg(page, primary)).toBe('rgb(241, 237, 229)')
+  expect(await css(primary, 'color')).toBe('rgb(27, 25, 23)')
   await page.emulateMedia({ colorScheme: 'light' })
   // in light: the ink face, a white label, a 4px darker edge under it
   await expect.poll(() => bg(page, primary)).toBe('rgb(45, 42, 38)')

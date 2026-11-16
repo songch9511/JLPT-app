@@ -5,7 +5,7 @@
 // toggles, the speaker and the bookmark.
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { answer, NOW, open, READ_MS, rightChoice, todayLog, user } from './fixtures'
+import { answer, NOW, open, READ_MS, todayLog, user } from './fixtures'
 import { headwordSegments, type Example } from '../../src/examples'
 import { kanjiParts } from '../../src/sound'
 
@@ -119,7 +119,7 @@ test('의미 and 히라가나 open on their own; the headword and the example ne
   expect(await todayLog(page)).toBeUndefined()
 })
 
-test('“모르겠어요” opens everything and puts the result line where the toggles were; “다음” grades it', async ({ page }) => {
+test('“모르겠어요” before anything is open opens everything; the three grades stay, and 모르겠어요 again grades it', async ({ page }) => {
   await studyFull(page)
   await page.waitForTimeout(READ_MS)
   await page.getByRole('button', { name: /^모르겠어요/ }).click()
@@ -127,13 +127,29 @@ test('“모르겠어요” opens everything and puts the result line where the 
   await expect(page.locator('.flash-reading')).toBeVisible()
   await expect(page.locator('.example-head rt').first()).toBeVisible()
   await expect(page.locator('.example-ko')).toBeVisible()
-  await expect(page.locator('.flash-result')).toHaveText(/다시 나와요$/)
-  await expect(page.locator('.flash-toggles')).not.toBeVisible()
-  await expect(page.locator('.answer-bar').getByRole('button')).toHaveText(['다음'])
+  await expect(page.getByRole('button', { name: '의미', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: '히라가나', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.answer-bar .grade-label')).toHaveText(['모르겠어요', '알아요', '쉬워요'])
   expect(await todayLog(page)).toBeUndefined()
   await page.waitForTimeout(READ_MS)
-  await page.getByRole('button', { name: '다음', exact: true }).click()
+  await page.getByRole('button', { name: /^모르겠어요/ }).click()
   await expect.poll(async () => (await todayLog(page))?.c).toBe(1)
+  expect((await todayLog(page)).r ?? 0).toBe(0)
+})
+
+test('“모르겠어요” once everything is open grades at once; 알아요 after it is still 알아요', async ({ page }) => {
+  await studyFull(page, { dailyNew: 2 })
+  await page.waitForTimeout(READ_MS)
+  await page.getByRole('button', { name: /^모르겠어요/ }).click()
+  await page.waitForTimeout(READ_MS)
+  await page.getByRole('button', { name: /^알아요/ }).click()
+  await expect.poll(async () => (await todayLog(page))?.c).toBe(1)
+  // the next card: both toggles on by hand, then 모르겠어요 grades
+  await page.waitForTimeout(READ_MS)
+  await page.getByRole('button', { name: '의미', exact: true }).click()
+  await page.getByRole('button', { name: '히라가나', exact: true }).click()
+  await page.getByRole('button', { name: /^모르겠어요/ }).click()
+  await expect.poll(async () => (await todayLog(page))?.c).toBe(2)
 })
 
 test('the card’s facts: a review says so, with the times it was forgotten', async ({ page }) => {
@@ -141,24 +157,6 @@ test('the card’s facts: a review says so, with the times it was forgotten', as
   await open(page, { state: { ...user({ dailyNew: 0 }), v: 4, cards: { [FULL[0]]: lapsed } }, hash: '/study' })
   await expect(page.locator('.flash-head .flash-meta')).toHaveText('복습 · 1번 잊음')
   await expect(page.locator('.flash-head .level-badge')).toHaveAttribute('data-level', '5')
-})
-
-test('a reading card: the example is there, its headword’s furigana and the translation only once answered', async ({ page }) => {
-  const s = ORDER.find((r) => r[7] === 'S' && EX[r[0]] && headwordSegments(r[1], EX[r[0]].seg).some(Boolean))!
-  await open(page, { state: { ...user({ dailyNew: 1, fastTrack: true }), v: 4, cards: before(s[0]) }, hash: '/study' })
-  await expect(page.locator('.flash.reading-card')).toBeVisible()
-  await expect(page.locator('.flash-head .flash-meta')).toHaveText('새 단어 · 읽기')
-  await expect(page.locator('.example-ja')).toBeVisible()
-  await expect(page.locator('.example-head rt').first()).not.toBeVisible()
-  await expect(page.locator('.example-ko')).not.toBeVisible()
-  await expect(page.locator('.flash-meaning')).not.toBeVisible()
-  // no toggles on a reading card: the reading is the question
-  await expect(page.getByRole('button', { name: '히라가나', exact: true })).toHaveCount(0)
-  await page.waitForTimeout(READ_MS)
-  await (await rightChoice(page)).click()
-  await expect(page.locator('.example-head rt').first()).toBeVisible()
-  await expect(page.locator('.example-ko')).toHaveText(EX[s[0]].ko)
-  await expect(page.locator('.flash-meaning')).toBeVisible()
 })
 
 test('an earlier card shows everything open: reading, meaning, every furigana, the translation, the kanji', async ({ page }) => {
@@ -169,25 +167,25 @@ test('an earlier card shows everything open: reading, meaning, every furigana, t
   await expect.poll(async () => (await todayLog(page))?.c).toBe(1)
   await page.keyboard.press('ArrowLeft')
   const past = page.locator('.flash.past')
-  await expect(past.locator('.flash-meta')).toHaveText('이전 1/1')
+  await expect(past.locator('.flash-meta')).toHaveText('이전 1 / 1')
   await expect(past.locator('.flash-word')).toHaveText(FULL[1])
   for (const sel of ['.flash-reading', '.flash-meaning', '.example-ko', '.kanji-row', '.kanji-ko', '.kanji-ja']) await expect(past.locator(sel).first(), sel).toBeVisible()
   for (const rt of await past.locator('.example-ja rt').all()) await expect(rt).toBeVisible()
   await expect(past.locator('.flash-toggles')).toHaveCount(0)
 })
 
-test('a level without examples shows no example block', async ({ page }) => {
+test('every level with an example file shows its examples (N4 here, loaded with its first card)', async ({ page }) => {
   await open(page, { state: user({ target: 4, includeLower: false, dailyNew: 3 }), hash: '/study' })
   await expect(page.locator('.flash-word')).toBeVisible()
   await expect(page.locator('.flash-head .level-badge')).toHaveText('N4')
-  await page.waitForTimeout(400)
-  await expect(page.locator('.flash-example')).toHaveCount(0)
+  await expect(page.locator('.flash-example')).toHaveCount(1)
+  await expect(page.locator('.example-ja')).toHaveText(/[。？]$/)
   await answer(page, '알아요')
 })
 
 test('the word sheet (단어장) shows the example with all its furigana and the translation', async ({ page }) => {
-  await open(page, { state: user(), hash: '/words' })
-  await page.getByPlaceholder('일본어, 읽기, 뜻으로 검색').fill(FULL[1])
+  await open(page, { state: user(), hash: '/search/word' })
+  await page.getByPlaceholder('단어 · 읽기 · 뜻').fill(FULL[1])
   await page.locator('.word-row').filter({ hasText: FULL[3] }).first().click()
   const sheet = page.getByRole('dialog')
   await expect(sheet.locator('.level-badge')).toHaveText('N5')

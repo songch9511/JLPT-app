@@ -1,7 +1,9 @@
-// Home (docs/design-system.md §3 "홈"): every state of the screen, in names and numbers only — Ruma's face follows the
-// day (it says nothing), the 오늘 card holds the day's figures and the two sessions as two buttons with at most one
-// primary, each button's number is what its session shows; the level's words below; at 320×568 the buttons are on the
-// first screen without sideways scrolling; no accessibility violations in light and dark.
+// Home (docs/design-system.md §3 "홈", boards 2-1 … 2-4): every state of the screen, in names and numbers only — Ruma's
+// face follows the day (it says nothing), the 오늘 card holds the day's figures and the sessions (복습, 새 단어, 한자) as
+// buttons with at most one primary, each button's number is what its session shows; the current chapter and the
+// level's words and kanji below; at 320×568 the buttons are on the first screen without sideways scrolling; no
+// accessibility violations in light and dark.
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { answer, axeViolations, homeShown, KEY, keyFor, NOW, open, todayLog, user } from './fixtures'
 
@@ -22,18 +24,20 @@ const days = (n: number, today?: Record<string, number>) => ({
  * "done / all" of the 오늘 card, `time` the figure at its right (null: none). */
 type Case = { state: unknown; mood: string; ruma: string; primary: number; review: string | null; fresh: string | null; count: string; time: RegExp | null }
 const CASES: Record<string, Case> = {
-  'before studying': { state: user({ dailyNew: 20 }, { cards: cards(300, 107), log: days(5) }), mood: 'sleep', ruma: 'sleep', primary: 1, review: '107', fresh: '20', count: '0 / 127장', time: /^\d+분$/ },
-  'part-way': { state: user({ dailyNew: 20 }, { cards: cards(300, 40), log: days(5, { c: 60, n: 10, r: 50, p: 45, ms: 9 * MIN }) }), mood: 'wake', ruma: 'idle', primary: 1, review: '40', fresh: '10', count: '60 / 110장', time: /^\d+분 남음$/ },
-  'today’s share done': { state: user({ dailyNew: 0 }, { cards: cards(300, 0), log: days(5, { c: 90, n: 10, r: 80, p: 70, ms: 14 * MIN }) }), mood: 'day', ruma: 'cheer', primary: 0, review: null, fresh: null, count: '90 / 90장', time: /^14분$/ },
-  'a backlog': { state: user({ dailyNew: 20 }, { cards: cards(700, 600, 7) }), mood: 'sleep', ruma: 'sleep', primary: 1, review: '225', fresh: '5', count: '0 / 230장', time: /^\d+분$/ },
+  'before studying': { state: user({ dailyNew: 20 }, { cards: cards(300, 107), log: days(5) }), mood: 'sleep', ruma: 'sleep', primary: 1, review: '107장', fresh: '20', count: '0 / 127', time: /^\d+분$/ },
+  'part-way': { state: user({ dailyNew: 20 }, { cards: cards(300, 40), log: days(5, { c: 60, n: 10, r: 50, p: 45, ms: 9 * MIN }) }), mood: 'wake', ruma: 'idle', primary: 1, review: '40장', fresh: '10', count: '60 / 110', time: /^\d+분$/ },
+  'today’s share done': { state: user({ dailyNew: 0 }, { cards: cards(300, 0), log: days(5, { c: 90, n: 10, r: 80, p: 70, ms: 14 * MIN }) }), mood: 'day', ruma: 'cheer', primary: 0, review: null, fresh: null, count: '90 / 90', time: /^14분$/ },
+  // more due than a day holds: "600장 중 225장", new words cut to 5
+  'a backlog': { state: user({ dailyNew: 20 }, { cards: cards(700, 600, 7) }), mood: 'sleep', ruma: 'sleep', primary: 1, review: '600장 중225장', fresh: '5', count: '0 / 230', time: /^\d+분$/ },
   'waiting for learning cards': {
     state: user({ dailyNew: 0 }, { cards: { ...cards(100, 0), '5-200': learning(t + 40 * MIN), '5-201': learning(t + 45 * MIN) }, log: days(2, { c: 30, n: 0, r: 28, p: 26 }) }),
     // the two words still in their first steps are the new session's
-    mood: 'wake', ruma: 'idle', primary: 1, review: null, fresh: '2', count: '30 / 32장', time: /^40분 뒤$/,
+    mood: 'wake', ruma: 'idle', primary: 1, review: null, fresh: '2', count: '30 / 32', time: /^40분 뒤$/,
   },
-  'a day off with words left': { state: user({ dailyNew: 0 }, { cards: cards(100, 0), log: days(3) }), mood: 'sleep', ruma: 'sleep', primary: 1, review: null, fresh: null, count: '0 / 0장', time: null },
-  'every word of the level met': { state: user({ target: 5 }, { cards: cards(718, 0), log: days(3) }), mood: 'sleep', ruma: 'sleep', primary: 1, review: null, fresh: null, count: '0 / 0장', time: null },
-  'the first session': { state: { v: 4, onboarded: true, guide: { done: ['level'] }, settings: { target: 3, dailyNew: 20, theme: 'light', autoSpeak: false, fastTrack: true, includeLower: true }, cards: {}, log: {}, marks: [], xp: 0 }, mood: 'sleep', ruma: 'sleep', primary: 1, review: null, fresh: '20', count: '0 / 20장', time: /^\d+분$/ },
+  'a day off with words left': { state: user({ dailyNew: 0 }, { cards: cards(100, 0), log: days(3) }), mood: 'sleep', ruma: 'sleep', primary: 1, review: null, fresh: null, count: '0 / 0', time: null },
+  'every word of the level met': { state: user({ target: 5 }, { cards: cards(718, 0), log: days(3) }), mood: 'sleep', ruma: 'sleep', primary: 0, review: null, fresh: null, count: '0 / 0', time: null },
+  // a new learner: the new words and the kanji, nothing studied yet
+  'the first session': { state: { v: 4, onboarded: true, guide: { done: ['level', 'intro'] }, settings: { target: 3, dailyNew: 20, theme: 'light', autoSpeak: false, includeLower: true }, cards: {}, log: {}, marks: [], xp: 0 }, mood: 'sleep', ruma: 'sleep', primary: 1, review: null, fresh: '20', count: '0 / 25', time: /^\d+분$/ },
 }
 
 const withTheme = (state: unknown, theme: string) =>
@@ -60,7 +64,7 @@ for (const [name, c] of Object.entries(CASES)) {
     await expect(review).toHaveCount(c.review ? 1 : 0)
     await expect(fresh).toHaveCount(c.fresh ? 1 : 0)
     if (c.review) {
-      await expect(review).toHaveText(`복습${c.review}장`)
+      await expect(review).toHaveText(`복습${c.review}`)
       await expect(review).toHaveAttribute('data-variant', 'primary')
     }
     if (c.fresh) {
@@ -82,7 +86,7 @@ for (const [name, c] of Object.entries(CASES)) {
     // dark: the same state at night
     await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'))
     await shown(page, c)
-    expect(await ground()).toBe(rgb('#1c1a17'))
+    expect(await ground()).toBe(rgb('#1b1917'))
     expect(await axeViolations(page)).toEqual([])
   })
 
@@ -95,7 +99,8 @@ for (const [name, c] of Object.entries(CASES)) {
     const tabbar = (await page.locator('.tabbar').boundingBox())!.y
     // every button of the 오늘 card is above the tab bar without scrolling
     const buttons = await page.locator('.home-actions .btn').all()
-    expect(buttons.length).toBeGreaterThan(0)
+    // (every word of the level met: nothing to offer)
+    expect(buttons.length).toBeGreaterThan(name === 'every word of the level met' ? -1 : 0)
     for (const b of buttons) {
       const box = (await b.boundingBox())!
       expect(box.y + box.height).toBeLessThanOrEqual(tabbar)
@@ -104,10 +109,10 @@ for (const [name, c] of Object.entries(CASES)) {
   })
 }
 
-test('the states without a session: “오늘 끝” and more new words, a day off, the next level', async ({ page }) => {
+test('the states without a session: “오늘 끝” and more new words, a day off, a level with every word met', async ({ page }) => {
   await open(page, { state: CASES['today’s share done'].state })
-  await expect(page.locator('.home-done')).toHaveText('오늘 끝 · 새 단어 10')
-  const more = page.getByRole('button', { name: '새 단어 10개 더 하기' })
+  await expect(page.locator('.home-done')).toHaveText('오늘 끝')
+  const more = page.getByRole('button', { name: '새 단어 더 하기, 10개' })
   await expect(more).toHaveText('새 단어 더10개')
   await expect(more).toHaveAttribute('data-variant', 'secondary')
   // a day off: more new words is the one thing to do
@@ -115,18 +120,15 @@ test('the states without a session: “오늘 끝” and more new words, a day o
   await page.reload()
   await expect(page.locator('.home-done')).toHaveCount(0)
   await expect(more).toHaveAttribute('data-variant', 'primary')
-  // every word of the level met: the next level
+  // every word of the level met: nothing offered (the level is changed in 설정)
   await reseed(page, CASES['every word of the level met'].state)
   await page.reload()
-  const next = page.getByRole('button', { name: '다음 급수 N4 시작하기' })
-  await expect(next).toHaveText('N4 시작하기')
-  await next.click()
-  await expect(page).toHaveURL(/#\/study\/new$/)
-  await page.getByRole('button', { name: /나가기/ }).click()
-  await expect(page.getByRole('link', { name: '급수 N4, 바꾸기' })).toBeVisible()
+  await expect(page.locator('.home-actions .btn')).toHaveCount(0)
+  await expect(page.getByRole('img', { name: '준비하는 급수 N5' })).toBeVisible()
+  await expect(page.getByRole('link', { name: /급수/ })).toHaveCount(0)
 })
 
-test('the two buttons do not move between before and part-way; a backlog adds its line under them', async ({ page }) => {
+test('the buttons do not move between before, part-way and a backlog', async ({ page }) => {
   const ys: Record<string, number[]> = {}
   await open(page, { state: CASES['before studying'].state })
   for (const name of ['before studying', 'part-way', 'a backlog']) {
@@ -137,44 +139,42 @@ test('the two buttons do not move between before and part-way; a backlog adds it
     ys[name] = [Math.round((await page.locator('.home-go.go-review').boundingBox())!.y), Math.round((await page.locator('.home-go.go-new').boundingBox())!.y)]
   }
   expect(ys['part-way']).toEqual(ys['before studying'])
-  // the backlog's "밀린 n · 50장 더" is one line under the buttons, above the tab bar
-  const lever = (await page.locator('.plan-lever').boundingBox())!
-  expect(lever.y).toBeGreaterThan(ys['a backlog'][1])
-  expect(lever.y + lever.height).toBeLessThanOrEqual((await page.locator('.tabbar').boundingBox())!.y)
+  // the backlog changes the review button's figure only ("600장 중 225장"): the buttons stay where they are
+  expect(ys['a backlog']).toEqual(ys['before studying'])
 })
 
-test('the level’s words: met and long-term memory out of all, the weak words; the links go to the level and the weak tab', async ({ page }) => {
-  // 40 N5 words met: 10 in long-term memory, 3 forgotten twice
-  const mature = { ...review(t + 30 * DAY), stability: 40, scheduled_days: 40 }
-  const lapsed = { ...review(t + 3 * DAY), lapses: 2 }
-  const state = user({}, { cards: Object.fromEntries(Array.from({ length: 40 }, (_, i) => [`5-${i}`, i < 10 ? mature : i < 13 ? lapsed : review(t + 5 * DAY)])) })
+test('the current chapter: its number, the words met, the next words; the line under it: the level’s words and kanji met', async ({ page }) => {
+  // 60 N5 words met in their order: chapter 1 done, chapter 2 has 10
+  const order = JSON.parse(readFileSync(new URL('../../public/data/words-n5.json', import.meta.url), 'utf8')) as [string, string, string, string, string, number][]
+  const ids = [...order].sort((a, b) => a[5] - b[5]).map((r) => r[0])
+  const state = { ...user({}, { kanji: false }), v: 4, cards: Object.fromEntries(ids.slice(0, 60).map((id) => [id, review(t + 5 * DAY)])) }
   await open(page, { state })
   await homeShown(page)
-  await expect(page.getByRole('heading', { name: 'N5 단어', level: 2 })).toBeVisible()
-  await expect(page.getByRole('group', { name: '만난 단어 718개 중 40개' })).toHaveText(/만난 단어\s*40 \/ 718/)
-  await expect(page.getByRole('group', { name: '장기 기억 718개 중 10개' })).toHaveText(/장기 기억\s*10 \/ 718/)
-  // the small bars are in the level's colour
-  expect(await page.locator('.lw-bar > i').first().evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(rgb('#8fb573'))
-  const weak = page.getByRole('link', { name: '약한 단어 3개' })
-  await expect(weak).toHaveText(/약한 단어\s*3/)
-  await weak.click()
-  await expect(page).toHaveURL(/#\/words\/weak$/)
-  await expect(page.getByRole('radio', { name: /약한 단어/ })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('heading', { name: '지금 챕터', level: 2 })).toBeVisible()
+  const chapter = page.getByRole('link', { name: 'N5 챕터 2, 50단어 중 10 만남' })
+  await expect(chapter.locator('.chapter-name')).toHaveText('챕터 2')
+  await expect(chapter.locator('.chapter-count')).toHaveText('10 / 50')
+  await expect(chapter.locator('.word-chip')).toHaveCount(4)
+  await expect(page.locator('.home-foot')).toHaveText(/N5 단어 60 \/ 718\s*·\s*한자 0 \/ 450/)
+  // the bar is in ink
+  expect(await chapter.locator('.bar > i').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(rgb('#2d2a26'))
+  await chapter.click()
+  await expect(page).toHaveURL(/#\/level\/5\/2$/)
+  await expect(page.getByRole('heading', { name: /챕터 2/, level: 1 })).toBeVisible()
   await page.goBack()
-  await page.getByRole('link', { name: /모든 단어/ }).click()
+  await page.getByRole('link', { name: /모든 챕터/ }).click()
   await expect(page).toHaveURL(/#\/level\/5$/)
-  await expect(page.getByRole('heading', { name: 'JLPT N5', level: 1 })).toBeVisible()
 })
 
 test('복습하기 opens a session of the reviews only, 새 단어 one of the new words only; each button’s number is its session’s', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 3 }, { cards: cards(40, 4) }) })
   await homeShown(page)
-  await expect(page.locator('.go-review .c-review')).toHaveText('4장')
-  await expect(page.locator('.go-new .c-new')).toHaveText('3개')
+  await expect(page.locator('.go-review .home-go-count')).toHaveText('4장')
+  await expect(page.locator('.go-new .home-go-count')).toHaveText('3개')
   // the reviews: four cards, none of them new; the new words are untouched
   await page.getByRole('button', { name: '복습 시작, 4장' }).click()
   await expect(page).toHaveURL(/#\/study\/review$/)
-  await expect(page.locator('.left-count')).toHaveText('4장 남음')
+  await expect(page.locator('.left-count')).toHaveAttribute('data-left', '4')
   for (let i = 0; i < 4; i++) {
     await expect(page.locator('.flash-meta')).not.toContainText('새 단어')
     await answer(page, '알아요')
@@ -182,8 +182,8 @@ test('복습하기 opens a session of the reviews only, 새 단어 one of the ne
   // the session is over while the day is not: it says what is left and goes home
   await expect(page.getByRole('heading', { name: '복습 끝', level: 1 })).toBeVisible()
   await expect(page.locator('.done-text')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '새 단어 시작, 3개' })).toHaveText('새 단어 3개')
-  await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '새 단어 시작, 3개' })).toHaveText('새 단어3개')
+  await expect(page.getByRole('button', { name: /새 단어.*더 하기/ })).toHaveCount(0)
   expect(await todayLog(page)).toMatchObject({ c: 4, n: 0, r: 4 })
   await page.getByRole('button', { name: '홈으로' }).click()
   await homeShown(page)
@@ -193,14 +193,14 @@ test('복습하기 opens a session of the reviews only, 새 단어 one of the ne
   await expect(fresh).toHaveAttribute('data-variant', 'primary')
   await fresh.click()
   await expect(page).toHaveURL(/#\/study\/new$/)
-  await expect(page.locator('.left-count')).toHaveText('3장 남음')
+  await expect(page.locator('.left-count')).toHaveAttribute('data-left', '3')
   await expect(page.locator('.flash-meta')).toContainText('새 단어')
   await answer(page, '쉬워요')
   expect(await todayLog(page)).toMatchObject({ c: 5, n: 1, r: 4 })
   // leaving part-way: Home counts what the session still holds
   await page.getByRole('button', { name: /나가기/ }).click()
   await expect(page.getByRole('button', { name: '새 단어 이어서 하기, 2개 남음' })).toBeVisible()
-  await expect(page.locator('.today-count')).toHaveText('5 / 7장')
+  await expect(page.locator('.today-count')).toHaveText('5 / 7')
 })
 
 test('a word forgotten in the new session stays there; a review forgotten stays with the reviews', async ({ page }) => {
@@ -212,16 +212,16 @@ test('a word forgotten in the new session stays there; a review forgotten stays 
   // the word is in its first steps: still the new session's (said in the button's name), not a review
   const fresh = page.getByRole('button', { name: '새 단어 이어서 하기, 1개 남음, 익히는 중 1개 포함' })
   await expect(fresh).toHaveText('새 단어1개')
-  await expect(page.locator('.go-review .c-review')).toHaveText('1장')
+  await expect(page.locator('.go-review .home-go-count')).toHaveText('1장')
   await page.getByRole('button', { name: '복습 시작, 1장' }).click()
   await answer(page, '모르겠어요')
   await page.getByRole('button', { name: /나가기/ }).click()
   // the forgotten review comes back within minutes: it waits in the review session
-  await expect(page.locator('.go-review .c-review')).toHaveText('1장')
-  await expect(page.locator('.go-new .c-new')).toHaveText('1개')
+  await expect(page.locator('.go-review .home-go-count')).toHaveText('1장')
+  await expect(page.locator('.go-new .home-go-count')).toHaveText('1개')
 })
 
-test('the tab bar is a white surface with rounded top corners on every tab; the tab you are on has its icon filled pink', async ({ page }) => {
+test('the tab bar is a white surface with a hairline on top; the tab you are on has its icon filled pink; 기록 is the bar-rect icon', async ({ page }) => {
   await open(page, { state: user({ target: 4, includeLower: true }, { cards: cards(718, 0) }) })
   await homeShown(page)
   const tabbar = page.locator('.tabbar')
@@ -230,13 +230,15 @@ test('the tab bar is a white surface with rounded top corners on every tab; the 
     await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible()
     const css = await tabbar.evaluate((el) => {
       const cs = getComputedStyle(el)
-      return [cs.backgroundColor, cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomLeftRadius]
+      return [cs.backgroundColor, cs.borderTopWidth, cs.borderTopLeftRadius]
     })
-    expect(css).toEqual(['rgb(255, 255, 255)', '24px', '24px', '0px'])
+    expect(css).toEqual(['rgb(255, 255, 255)', '1px', '0px'])
     const on = tabbar.locator('a[aria-current="page"]')
     await expect(on).toHaveText(tab)
     expect(await on.locator('svg').evaluate((el) => getComputedStyle(el).fill)).toBe(rgb('#f7c6d0'))
+    expect(await on.locator('svg').evaluate((el) => getComputedStyle(el).stroke)).toBe(rgb('#6b665d'))
     expect(await on.evaluate((el) => getComputedStyle(el).color)).toBe(rgb('#2d2a26'))
     expect(await tabbar.locator('a:not([aria-current]) svg').first().evaluate((el) => getComputedStyle(el).fill)).toBe('none')
   }
+  await expect(tabbar.getByRole('link', { name: '기록' }).locator('svg rect')).toHaveCount(3)
 })

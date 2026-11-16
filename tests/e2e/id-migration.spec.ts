@@ -20,6 +20,11 @@
 // A sixth (2026-11-16, Home in names and numbers): the same counts without the helper lines — the buttons read
 // "복습 134장" and "새 단어 25개" (the 8 words in their first steps are in the button's name only), and the 오늘 card
 // reads "오늘 26분 남음 37 / 196장"; `home` edited by hand from the above.
+// A seventh (2026-11-16, the final design; the reading cards removed): re-recorded with RECORD_LEGACY=1 on the new
+// screens. The fast-track's reading cards are folded into their words' cards on load: the 7 words above that had only a
+// (resting) reading card count as met again (2,776 → 2,783 of 5,431); every other count is as before — the sessions'
+// 복습 134장 and 새 단어 25개, the bookmarks, the weak words. Each level is now read as its chapters and its first
+// chapter's words, the study card's top as "done / all".
 import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { homeShown, KEY, L, NOW, open, saved, user } from './fixtures'
@@ -37,32 +42,33 @@ const text = (page: Page, sel: string) =>
     .allInnerTexts()
     .then((t) => t.map((x) => x.replace(/\s+/g, ' ').trim()))
 
-/** What a learner sees of their records: home's plan, the words met on 기록, the first study card, the word lists, each level's breakdown. */
+/** What a learner sees of their records: home's plan, the words met on 기록, the bookmarks, the weak words, each level's chapters and first chapter, the first study card. */
 async function screens(page: Page) {
   const out: Record<string, unknown> = {}
   await homeShown(page)
-  // the counts are final once the studied levels' data has loaded: before that the 7 words the tag audit took off S
-  // still count as met (2,783 instead of 2,776; "(읽기만 n)", the old signal, is no longer on Home)
   // 17 new words today and the 8 still in their first steps: the new session's 25
-  await expect(page.locator('.plan .c-new b')).toHaveText('25')
+  await expect(page.locator('.go-new .home-go-count')).toHaveText('25개')
   await expect(page.getByRole('button', { name: /익히는 중 8개 포함$/ })).toHaveText('새 단어25개')
-  out.home = { plan: await text(page, '.plan'), progress: await text(page, '.today-figures') }
-  // the words met, on 기록 (they left Home with its word card)
+  out.home = { plan: await text(page, '.plan .btn'), foot: await text(page, '.home-foot') }
+  // the words met, on 기록
   await page.goto('./#/stats')
-  await expect(page.locator('.stamp-group')).toContainText('만난 단어 2,776 / 5,431')
-  out.words = await text(page, '.stamp-group .field-desc')
-  await page.goto('./#/words')
-  await page.getByRole('radio', { name: /^북마크/ }).click()
+  await expect(page.locator('.meter').first()).toContainText('2,783 / 5,431')
+  out.words = await text(page, '.meter')
+  await page.goto('./#/marks')
   await expect(page.locator('.word-row').first()).toBeVisible()
   out.bookmarks = await text(page, '.word-row')
-  await page.getByRole('radio', { name: /^약한 단어/ }).click()
+  await page.goto('./#/weak')
   await expect(page.locator('.word-row').first()).toBeVisible()
   out.weak = await text(page, '.word-row')
+  await page.goto('./#/words')
+  out.levels = await text(page, '.levels-card .level-row')
   for (const l of [5, 4, 3, 2, 1]) {
     await page.goto(`./#/level/${l}`)
-    await expect(page.getByRole('heading', { name: `JLPT N${l}` })).toBeVisible()
+    await expect(page.locator('.chapter-row').first()).toBeVisible()
+    out[`level${l}`] = { summary: await text(page, '.summary-card'), chapters: (await text(page, '.chapter-row')).slice(0, 12) }
+    await page.goto(`./#/level/${l}/1`)
     await expect(page.locator('.word-row').first()).toBeVisible()
-    out[`level${l}`] = { breakdown: await text(page, '.breakdown'), first: (await text(page, '.word-row')).slice(0, 30) }
+    out[`chapter${l}`] = await text(page, '.word-row')
   }
   await page.goto('./#/study')
   await expect(page.locator('.flash')).toBeVisible()
@@ -97,15 +103,14 @@ const review = (due: number, extra: Record<string, number> = {}) => ({ due, stab
 
 test('records whose word this version does not know are kept apart, and settings says so calmly (only then)', async ({ page }) => {
   const t = NOW.getTime()
-  await open(page, { state: user({}, { cards: { '5-0': review(t + DAY), '9-0': review(t + DAY), '5-718': review(t + DAY) } }), hash: '/settings' })
+  await open(page, { state: user({}, { kanji: false, cards: { '5-0': review(t + DAY), '9-0': review(t + DAY), '5-718': review(t + DAY) } }), hash: '/settings' })
   await expect(page.getByText('이 버전에 없는 단어의 기록 2개도 보관하고 백업에 담아요.', { exact: false })).toBeVisible()
   const s = await saved(page)
   expect(Object.keys(s.cards)).toEqual([L('5-0')])
   expect(Object.keys(s.orphans.cards)).toEqual(['9-0', '5-718'])
-  // and the home screen counts only the known word
-  await page.goto('./#/level/5')
-  await expect(page.locator('.breakdown .mature b')).toHaveText('1')
-  await expect(page.locator('.breakdown .new b')).toHaveText('717')
+  // and the counts are of the known word only
+  await page.goto('./#/words')
+  await expect(page.locator('.levels-card .level-count').first()).toHaveText('1 / 718')
 })
 
 test('no note without quarantined records', async ({ page }) => {
@@ -116,8 +121,8 @@ test('no note without quarantined records', async ({ page }) => {
 
 test('a tab still running the old version saves while this one is open: its records are merged in, nothing here is lost', async ({ page, context }) => {
   const t = NOW.getTime()
-  await open(page, { state: user({}, { cards: { '5-0': review(t + DAY), '5-1': review(t + DAY) }, rev: 3 }), hash: '/level/5' })
-  await expect(page.locator('.breakdown .mature b')).toHaveText('2')
+  await open(page, { state: user({}, { cards: { '5-0': review(t + DAY), '5-1': review(t + DAY) }, rev: 3 }), hash: '/words' })
+  await expect(page.locator('.levels-card .level-count').first()).toHaveText('2 / 718')
   expect(Object.keys((await saved(page)).cards)).toEqual([L('5-0'), L('5-1')])
   // the "old tab": same origin, writes only the old key, from its stale copy plus one more word
   const old = await context.newPage()
@@ -126,7 +131,7 @@ test('a tab still running the old version saves while this one is open: its reco
     ([k, v]) => localStorage.setItem(k, v),
     [LEGACY_KEY, JSON.stringify(user({}, { cards: { '5-0': review(t + DAY), '5-1': review(t + DAY), '5-2': review(t + DAY) }, rev: 4 }))],
   )
-  await expect(page.locator('.breakdown .mature b')).toHaveText('3')
+  await expect(page.locator('.levels-card .level-count').first()).toHaveText('3 / 718')
   await expect.poll(async () => Object.keys((await saved(page)).cards)).toEqual([L('5-0'), L('5-1'), L('5-2')])
   // the old key itself is left as that tab wrote it
   expect(JSON.parse((await old.evaluate((k) => localStorage.getItem(k), LEGACY_KEY))!).cards).toHaveProperty('5-2')
@@ -146,7 +151,7 @@ test('word data from another deploy (or none): an error until the data is there,
   expect((await saved(page)).cards).toEqual(before.cards)
 })
 
-test('migration time for a full state (8,130 words + 3,489 reading cards) at 4× CPU throttle', async ({ page, context }) => {
+test('migration time for a full state (8,130 words + 3,489 reading cards, folded) at 4× CPU throttle', async ({ page, context }) => {
   test.setTimeout(120_000)
   const rows = (l: number) => JSON.parse(readFileSync(new URL(`../../public/data/n${l}.json`, import.meta.url), 'utf8')) as unknown[][]
   const cards: Record<string, unknown> = {}
@@ -159,7 +164,7 @@ test('migration time for a full state (8,130 words + 3,489 reading cards) at 4×
     })
   const log: Record<string, unknown> = {}
   for (let d = 0; d < 365; d++) log[new Date(NOW.getTime() - d * DAY).toISOString().slice(0, 10)] = { c: 80, n: 20, r: 50, p: 45, ms: 640000, e: 44.5, xp: 800 }
-  const state = user({ target: 1, includeLower: true, dailyNew: 0 }, { cards, log, xp: 99999, rev: 40000, v: 3 })
+  const state = user({ target: 1, includeLower: true, dailyNew: 0 }, { cards, log, xp: 99999, rev: 40000, v: 3, kanji: false })
   const raw = JSON.stringify(state)
   const cdp = await context.newCDPSession(page)
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
@@ -186,5 +191,6 @@ test('migration time for a full state (8,130 words + 3,489 reading cards) at 4×
   console.log(`later launch at 4x CPU throttle: whole state load ${load.toFixed(0)} ms (read+parse alone ${parse.toFixed(0)} ms), of which old-copy check ${check.toFixed(0)} ms`)
   expect(check).toBeGreaterThanOrEqual(0)
   expect(await page.evaluate(() => performance.getEntriesByName('kasane.migrate').length)).toBe(0)
-  expect(Object.keys((await saved(page)).cards)).toHaveLength(8130 + 3489)
+  // every reading card's word has its own card here: the reading cards are folded away
+  expect(Object.keys((await saved(page)).cards)).toHaveLength(8130)
 })

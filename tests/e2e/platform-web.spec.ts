@@ -10,7 +10,7 @@ test('no native code or native-only UI on the web', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '설정' })).toBeVisible()
   expect(await page.evaluate(() => 'Capacitor' in window)).toBe(false)
   await expect(page.getByRole('heading', { name: '알림 · 진동 · 발음' })).toHaveCount(0)
-  await expect(page.getByText('학습 기록은 이 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.')).toBeVisible()
+  await expect(page.getByText('기록은 이 브라우저에만 저장돼요', { exact: true })).toBeVisible()
   // only the app's own scripts were loaded: no native chunk
   const scripts = await page.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => /native|capacitor/i.test(n)))
   expect(scripts).toEqual([])
@@ -50,6 +50,7 @@ test('backup is a browser download (without the app-only save counter) and impor
 test('licence links still open in a new browser window', async ({ page, context }) => {
   await context.route('https://github.com/**', (r) => r.fulfill({ body: 'ok', contentType: 'text/plain' }))
   await open(page, { state: user(), hash: '/settings' })
+  await page.getByText('출처 · 라이선스').click()
   const [popup] = await Promise.all([page.waitForEvent('popup'), page.getByRole('link', { name: 'wordfreq' }).click()])
   expect(popup.url()).toBe('https://github.com/rspeer/wordfreq')
   expect(page.url()).toContain('#/settings')
@@ -58,7 +59,7 @@ test('licence links still open in a new browser window', async ({ page, context 
 test('settings › 정보: the version, and the privacy policy and support pages open as pages of the site in a new window', async ({ page }) => {
   await open(page, { state: user(), hash: '/settings' })
   const version = JSON.parse(await readFile(new URL('../../package.json', import.meta.url), 'utf8')).version
-  await expect(page.getByText(`버전 ${version}`)).toBeVisible()
+  await expect(page.locator('.about-foot')).toHaveText(`JLPT 루마 ${version} · JF·JEES와 무관한 비공식 앱`)
   const [privacy] = await Promise.all([page.waitForEvent('popup'), page.getByRole('link', { name: '개인정보 처리방침' }).click()])
   await privacy.waitForLoadState()
   expect(new URL(privacy.url()).pathname).toBe('/privacy/')

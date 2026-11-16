@@ -1,26 +1,26 @@
 // Regressions from the second QA round (docs/plan/13-qa-round2.md): each failed before its fix.
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { answer, homeShown, L, NOW, open, READ_MS, rightChoice, saved, todayLog, user } from './fixtures'
+import { homeShown, L, NOW, open, READ_MS, saved, todayLog, user } from './fixtures'
 
 const DAY = 86400_000
 const review = (due: number) => ({ due, stability: 5, difficulty: 5, elapsed_days: 5, scheduled_days: 5, learning_steps: 0, reps: 3, lapses: 0, state: 2, last_review: due - 5 * DAY })
 const due3 = () => ({ [L('5-1')]: review(NOW.getTime() - DAY), [L('5-2')]: review(NOW.getTime() - DAY), [L('5-3')]: review(NOW.getTime() - DAY) })
 
 test.describe('Space/Enter after a tap or click (Q1)', () => {
-  test('a clicked “다음” keeps focus, but Space on the next card only opens it', async ({ page }) => {
+  test('a clicked “모르겠어요” keeps focus, but Space on the next card only opens it', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 0 }, { cards: due3() }), hash: '/study' })
     await expect(page.locator('.flash')).toBeVisible()
     await page.waitForTimeout(READ_MS)
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: '다음', exact: true }).click()
+    await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await expect.poll(async () => (await todayLog(page))?.c).toBe(1)
     await page.waitForTimeout(READ_MS)
     // the button that was clicked is now the next card's "모르겠어요", still focused
     await page.keyboard.press('Space')
     await expect(page.locator('.flash-meaning')).toBeVisible()
-    await expect(page.locator('.flash.missed')).toHaveCount(0)
+    expect((await todayLog(page))?.c).toBe(1)
     await page.waitForTimeout(READ_MS)
     await page.keyboard.press('2')
     await expect.poll(async () => (await todayLog(page))?.p).toBe(1) // remembered, not forgotten
@@ -56,37 +56,31 @@ test.describe('accessibility (Q7, Q8)', () => {
     })
   }
 
-  test('the first run on home: every step of Ruma’s questions, and the first session offer', async ({ page }) => {
+  test('the first run: the level cards, the three intro pages, and the first session offer', async ({ page }) => {
     await open(page)
-    await expect(page.getByRole('button', { name: 'N5' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'N5 시작하기' })).toBeVisible()
     expect(await violations(page)).toEqual([])
-    await page.getByRole('button', { name: 'N3' }).click()
-    await expect(page.getByRole('button', { name: '첫 학습 시작' })).toBeVisible()
+    await page.getByRole('button', { name: 'N5 시작하기' }).click()
+    for (const title of ['단어를 보고 뜻을 떠올려요', '기억난 만큼 눌러요', '하루 새 단어']) {
+      await expect(page.getByRole('heading', { name: title })).toBeVisible()
+      expect(await violations(page)).toEqual([])
+      await page.getByRole('button', { name: title === '하루 새 단어' ? '시작하기' : '다음', exact: true }).click()
+    }
+    await expect(page.getByRole('button', { name: /^첫 학습 시작/ })).toBeVisible()
     expect(await violations(page)).toEqual([])
   })
 
-  test('the study card with its toggles open, after “모르겠어요”, and a reading card before and after its answer', async ({ page }) => {
-    await open(page, { state: { ...user({ fastTrack: true, dailyNew: 20 }), v: 4 }, hash: '/study' })
+  test('the study card with its toggles open, after “모르겠어요”, and a kanji card closed and open', async ({ page }) => {
+    await open(page, { state: { ...user({ dailyNew: 20 }, { kanji: false }), v: 4 }, hash: '/study' })
     await expect(page.locator('.flash')).toBeVisible()
-    for (let i = 0; i < 20 && (await page.locator('.reading-card').count()); i++) await answer(page, '알아요')
     await page.keyboard.press('Space')
     await expect(page.getByRole('button', { name: '의미', exact: true })).toHaveAttribute('aria-pressed', 'true')
     expect(await violations(page)).toEqual([])
+    await page.goto('./#/study/kanji')
+    await expect(page.locator('.flash.kanji-card')).toBeVisible()
+    expect(await violations(page)).toEqual([])
     await page.waitForTimeout(READ_MS)
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
-    await expect(page.locator('.flash.missed')).toBeVisible()
-    expect(await violations(page)).toEqual([])
-    await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: '다음', exact: true }).click()
-    for (let i = 0; i < 20; i++) {
-      await expect(page.locator('.flash')).toBeVisible()
-      if (await page.locator('.reading-card').count()) break
-      await answer(page, '알아요')
-    }
-    await expect(page.locator('.reading-card')).toBeVisible()
-    expect(await violations(page)).toEqual([])
-    await page.waitForTimeout(READ_MS)
-    await (await rightChoice(page)).click()
     await expect(page.locator('.flash-meaning')).toBeVisible()
     expect(await violations(page)).toEqual([])
   })
