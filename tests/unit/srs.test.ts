@@ -411,24 +411,6 @@ describe('streak', () => {
   })
 })
 
-describe('weekDays', () => {
-  it('Sunday-first week with today and future marked', async () => {
-    const { srs } = await bootUser(NOW)
-    // 2026-11-13 is a Friday
-    const w = srs.weekDays({ '2026-11-08': log({ c: 1 }), '2026-11-13': log({ c: 2 }), '2026-11-07': log({ c: 1 }) }, at(NOW))
-    expect(w.map((d) => d.done)).toEqual([true, false, false, false, false, true, false])
-    expect(w.map((d) => d.today)).toEqual([false, false, false, false, false, true, false])
-    expect(w.map((d) => d.future)).toEqual([false, false, false, false, false, false, true])
-  })
-
-  it('on a Sunday only that day is past-or-today', async () => {
-    const { srs } = await bootUser(NOW)
-    const w = srs.weekDays({}, at('2026-11-15T10:00:00'))
-    expect(w[0].today).toBe(true)
-    expect(w.filter((d) => d.future)).toHaveLength(6)
-  })
-})
-
 describe('formatInterval / leechIds', () => {
   it('formats durations', async () => {
     const { srs } = await bootUser(NOW)

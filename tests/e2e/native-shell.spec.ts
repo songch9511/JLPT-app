@@ -182,7 +182,7 @@ test('the privacy policy and support pages open inside the app, from the bundled
 
 test('finishing the day: haptics, then the reminder offer; permission is asked only on “알림 받기”, then reminders are scheduled', async ({ page }) => {
   await openShell(page, { state: user({ dailyNew: 1 }) })
-  await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+  await page.getByRole('button', { name: '새 단어 시작' }).click()
   await answer(page, '쉬워요')
   await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
   expect((await calls(page, 'Haptics', 'impact')).length).toBe(1)
@@ -201,7 +201,7 @@ test('finishing the day: haptics, then the reminder offer; permission is asked o
 
 test('the offer is not repeated once answered “나중에”', async ({ page }) => {
   await openShell(page, { state: user({ dailyNew: 1 }) })
-  await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+  await page.getByRole('button', { name: '새 단어 시작' }).click()
   await answer(page, '쉬워요')
   await page.getByRole('region', { name: '복습할 날 알려 드릴까요?' }).getByRole('button', { name: '나중에' }).click()
   await expect(page.getByRole('region', { name: '복습할 날 알려 드릴까요?' })).toHaveCount(0)

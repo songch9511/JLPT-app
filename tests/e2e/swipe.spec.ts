@@ -208,8 +208,8 @@ test.describe('another grade on an earlier card', () => {
 
     // Home and 기록 show the same as the study screen
     await page.getByRole('button', { name: /나가기/ }).click()
-    await expect(page.locator('.home-counts .c-review b')).toHaveText('2')
-    await expect(page.locator('.home-counts .c-learning')).toHaveCount(0)
+    await expect(page.locator('.plan .c-review b')).toHaveText('2')
+    await expect(page.locator('.plan .c-learning')).toHaveCount(0)
     await page.goto('./#/stats')
     await expect(page.locator('.stat', { hasText: 'XP' }).locator('b')).toHaveText('30')
   })

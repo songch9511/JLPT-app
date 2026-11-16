@@ -1,6 +1,5 @@
 import { COUNTS, LEVELS, type Level } from '../data'
 import type { Breakdown } from '../srs'
-import { Icon } from './Icon'
 import { Group } from './ui'
 
 export function StageBar({ b, total }: { b: Breakdown; total: number }) {
@@ -13,7 +12,7 @@ export function StageBar({ b, total }: { b: Breakdown; total: number }) {
   )
 }
 
-/** One row per level with its memory stages, on the ground with a hairline below; the target level says "목표". */
+/** One row per level in a white card: its name, its memory stages as a bar, how many words were met; the target level says "목표". */
 export function LevelList({ all, target }: { all: Record<Level, Breakdown>; target: Level }) {
   return (
     <Group title="급수별 기억 상태" id="levels-title" className="level-group">
@@ -38,7 +37,6 @@ export function LevelList({ all, target }: { all: Record<Level, Breakdown>; targ
             <span className="level-count">
               {(COUNTS[l] - all[l].new).toLocaleString()} / {COUNTS[l].toLocaleString()}
             </span>
-            <Icon name="chevron" size={18} />
           </a>
         ))}
       </div>

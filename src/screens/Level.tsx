@@ -51,7 +51,7 @@ export function LevelScreen({ level }: { level: Level }) {
         )}
       </header>
 
-      {/* the level's memory on the ground: one line, the stage bar, four figures in the body ink */}
+      {/* the level's memory in a white card: one line, the stage bar, four figures in the body ink */}
       <section className="level-summary" aria-label={`N${level} 기억 상태`}>
         {words && (
           <p className="fast-count">

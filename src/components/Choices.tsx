@@ -5,9 +5,9 @@ import { Icon } from './Icon'
 export type ChoiceState = '' | 'right' | 'wrong' | 'dim'
 
 /**
- * One of a reading card's four choices (Study.tsx, PastCard.tsx). Before the answer it is pressable (a flat face on a
- * shallow edge). Answered, every choice loses the edge; the right one is a soft 緑青 tint with ✓, the one picked wrong
- * keeps the plain face with ✕, struck through in 弁柄 — the marks and the names carry it, never the colour alone.
+ * One of a reading card's four choices (Study.tsx, PastCard.tsx). Before the answer it is pressable (a white face on
+ * its edge). Answered, every choice loses the edge; the right one is a green tint with ✓, the one picked wrong keeps
+ * the plain face with ✕, struck through in red ink — the marks and the names carry it, never the colour alone.
  */
 export function ReadingChoice({ text, state, disabled, onClick }: { text: string; state: ChoiceState; disabled: boolean; onClick?: (e: MouseEvent<HTMLButtonElement>) => void }) {
   return (

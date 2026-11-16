@@ -61,7 +61,7 @@ function Forecast({ counts, today }: { counts: number[]; today: Date }) {
   )
 }
 
-/** Vermilion 済 seals, one per 50 words met; the next one is outlined. */
+/** 済 seals, one per 50 words met; the next one is outlined. */
 function Stamps({ met, total }: { met: number; total: number }) {
   const n = Math.ceil(total / STAMP_STEP)
   // the last seal is earned with the list's last word, however few words that leg has
@@ -86,7 +86,7 @@ export function Stats() {
   const s = useStore((x) => x)
   useClock()
   const today = new Date()
-  // the same counts as Home's word card and the 단어장 level rows
+  // the same counts as the 단어장 level rows
   const { levels, total, met } = studyProgress(s)
   const range = levels.length === 1 ? `N${levels[0]}` : `N${levels[0]}~N${levels[levels.length - 1]}`
 
@@ -100,10 +100,10 @@ export function Stats() {
         <h1>기록</h1>
       </header>
 
-      {/* groups on the ground, a heading each; the figures as one line, not tiles (docs/design-system.md §4 "표면") */}
-      <Group title="도장 여정" id="stamps-title" aside={`만난 단어 ${STAMP_STEP}개마다`}>
+      {/* each group in a white card under its heading; the three figures as three tiles (docs/design-system.md §4 "표면") */}
+      <Group title="도장 여정" id="stamps-title" className="stamp-group" aside={`만난 단어 ${STAMP_STEP}개마다`}>
         <Stamps met={met} total={total} />
-        {/* the same short label as Home's word row; read as a sentence */}
+        {/* a short label; read as a sentence */}
         <p className="field-desc">
           <span aria-hidden="true">
             {range} 만난 단어 <b className="num">{met.toLocaleString()}</b> / {total.toLocaleString()}

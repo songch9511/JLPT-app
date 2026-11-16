@@ -13,6 +13,10 @@
 // "계속하기" — and the word line without the long-term count and the "(읽기만 6)" note; rewritten by hand from the above.
 // A fourth (2026-11-14, copy pass, docs/copy-inventory.md): same counts, new formatting — the level breakdowns with
 // thousands separators (1,068 · 1,583 · 2,299) and the study bar's "159장 남음" (was "남은 159장"); edited by hand.
+// A fifth (2026-11-16, Home's two sessions): the same 159 cards as two buttons — 복습 134장 (130 reviews + the 4 cards
+// being relearned) and 새 단어 25개 (17 new + the 8 words still in their first steps) — with "오늘 37 / 196장" above
+// them; the word card left Home, so the words met (2,776 / 5,431) are read on 기록. Only `home` and `words` were
+// re-recorded (RECORD_LEGACY=1); every other recorded text came out identical.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { homeShown, KEY, L, NOW, open, saved, user } from './fixtures'
@@ -30,15 +34,20 @@ const text = (page: Page, sel: string) =>
     .allInnerTexts()
     .then((t) => t.map((x) => x.replace(/\s+/g, ' ').trim()))
 
-/** What a learner sees of their records: home plan and word card, the first study card, the word lists, each level's breakdown. */
+/** What a learner sees of their records: home's plan, the words met on 기록, the first study card, the word lists, each level's breakdown. */
 async function screens(page: Page) {
   const out: Record<string, unknown> = {}
   await homeShown(page)
   // the counts are final once the studied levels' data has loaded: before that the 7 words the tag audit took off S
   // still count as met (2,783 instead of 2,776; "(읽기만 n)", the old signal, is no longer on Home)
-  await expect(page.locator('.plan .c-new b')).toHaveText('17')
-  await expect(page.locator('.home-words')).toContainText('2,776 / 5,431')
-  out.home = { plan: await text(page, '.plan'), words: await text(page, '.home-words') }
+  // 17 new words today and the 8 still in their first steps: the new session's 25
+  await expect(page.locator('.plan .c-new b')).toHaveText('25')
+  await expect(page.locator('.plan .c-learning')).toHaveText('익히는 중 8개 포함')
+  out.home = { plan: await text(page, '.plan'), progress: await text(page, '.home-progress-text') }
+  // the words met, on 기록 (they left Home with its word card)
+  await page.goto('./#/stats')
+  await expect(page.locator('.stamp-group')).toContainText('만난 단어 2,776 / 5,431')
+  out.words = await text(page, '.stamp-group .field-desc')
   await page.goto('./#/words')
   await page.getByRole('radio', { name: /^북마크/ }).click()
   await expect(page.locator('.word-row').first()).toBeVisible()

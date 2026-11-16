@@ -1,5 +1,5 @@
-// Ruma's first run on Home (src/guide.ts): in the sky Ruma says hello and asks the level; the answers are the sheet's
-// buttons. Then the plan offers the first session. Ruma's line later carries the one in-context tip.
+// Ruma's first run on Home (src/guide.ts): Ruma says hello and asks the level; the answers are five buttons in the
+// thumb zone. Then Home offers the first session. Ruma's line later carries the one in-context tip.
 import { Announce, Button } from '../components/ui'
 import { LEVELS } from '../data'
 import { chooseLevel, type Tip } from '../guide'
@@ -12,7 +12,7 @@ export function LevelAnswers({ labelledBy }: { labelledBy: string }) {
   return (
     <div className="guide-answers level-answers" role="group" aria-labelledby={labelledBy}>
       {LEVELS.map((l) => (
-        <Button key={l} label={`N${l}`} onClick={() => chooseLevel(l)} />
+        <Button key={l} label={`N${l}`} size="lg" onClick={() => chooseLevel(l)} />
       ))}
     </div>
   )

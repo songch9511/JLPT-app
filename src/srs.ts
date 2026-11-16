@@ -550,7 +550,7 @@ export function breakdowns(s: CardsView): Record<Level, Breakdown> {
 
 /**
  * The studied levels' words (`studyLevels`): how many there are, how many were met (introduced) and how many of those
- * are in long-term memory — the sums of the 단어장 level rows (`breakdowns`). Home's word card, the 기록 stamps and the
+ * are in long-term memory — the sums of the 단어장 level rows (`breakdowns`). The 기록 stamps and the
  * widget show these.
  */
 export function studyProgress(s: CardsView & { settings: Pick<State['settings'], 'target' | 'includeLower'> }) {
@@ -674,12 +674,4 @@ export function quests(s: State, now: Date): Quest[] {
   const q = buildQueue(s, now)
   const cleared = log.c > 0 && !q.next && q.waiting === 0
   return [{ title: '오늘 분량 끝내기', have: cleared ? 1 : 0, need: 1, xp: 50 }].map((x) => ({ ...x, done: x.have >= x.need }))
-}
-
-/** Sun..Sat of the current week: whether the user studied that day. */
-export function weekDays(log: State['log'], today: Date): { done: boolean; today: boolean; future: boolean }[] {
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = addDays(today, i - today.getDay())
-    return { done: !!log[dayKey(d)]?.c, today: i === today.getDay(), future: i > today.getDay() }
-  })
 }

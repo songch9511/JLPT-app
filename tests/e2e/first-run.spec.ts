@@ -1,5 +1,5 @@
-// Ruma's first run on home (src/guide.ts, src/screens/HomeGuide.tsx): no onboarding page; Ruma asks the level in the
-// sky and the answers are the sheet's buttons, then the first session is offered; the tips come once each, in context; learners from before it see
+// Ruma's first run on home (src/guide.ts, src/screens/HomeGuide.tsx): no onboarding page; Ruma asks the level and
+// the answers are five buttons in the thumb zone, then the first session is offered; the tips come once each, in context; learners from before it see
 // none of it. (Until 2026-11-14 the exam date was asked after the level; that step is gone.)
 import { expect, test } from '@playwright/test'
 import { answer, homeShown, KEY, open, saved, user } from './fixtures'
@@ -10,12 +10,13 @@ test('a new learner lands on home: level, then the first session; the tips appea
   await expect(page.locator('#launch')).toHaveCount(0)
   // nothing that looks like a result before the level is chosen
   await expect(page.getByRole('heading', { name: 'JLPT 루마', level: 1 })).toBeVisible()
-  await expect(page.locator('.plan-counts')).toHaveCount(0)
+  await expect(page.locator('.home-go')).toHaveCount(0)
+  await expect(page.locator('.home-progress')).toHaveCount(0)
   await expect(page.locator('.home-words')).toHaveCount(0)
   await expect(page.locator('.streak')).toHaveCount(0)
-  // Ruma says hello and asks, asleep in the plain sky; the legal line is small at the foot
+  // Ruma says hello and asks, asleep in the beige circle; the legal line is small at the foot
   await expect(page.locator('.ruma-line')).toHaveText('반가워요, 루마예요어느 급수를 준비해요?')
-  await expect(page.locator('.home-sky')).toHaveAttribute('data-sky', 'rest')
+  await expect(page.locator('.home-ruma')).toHaveAttribute('data-mood', 'rest')
   await expect(page.locator('.first-note')).toHaveText('JF·JEES와 무관한 비공식 앱')
   await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(0)
   const level = page.getByRole('group', { name: /어느 급수를 준비해요\?/ })
@@ -26,11 +27,11 @@ test('a new learner lands on home: level, then the first session; the tips appea
   const line = page.locator('.ruma-line')
   await expect(line).toBeFocused()
   await expect(line).toHaveText('깨워 줄래요?')
-  await expect(page.locator('.home-sky')).toHaveAttribute('data-sky', 'sleep')
-  await expect(page.locator('.big')).toHaveText('20장')
+  await expect(page.locator('.home-ruma')).toHaveAttribute('data-mood', 'sleep')
+  await expect(page.locator('.home-progress-text > :first-child')).toHaveText('오늘 0 / 20장')
   await expect(page.getByRole('heading', { name: '오늘', level: 1 })).toBeVisible()
   await expect(page.locator('.home-head .subtitle')).toHaveText('11월 13일 금요일 · N3')
-  await expect(page.locator('.plan-counts .c-new b')).toHaveText('20')
+  await expect(page.locator('.plan .c-new b')).toHaveText('20')
   await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
   await expect(page.getByRole('button', { name: '급수 다시 고르기' })).toBeVisible()
   // nothing about an exam, anywhere in the conversation
@@ -60,9 +61,9 @@ test('a new learner lands on home: level, then the first session; the tips appea
   // back home: the first-run card is gone, and Ruma explains spaced repetition in its usual place, once
   await page.getByRole('button', { name: /나가기/ }).click()
   await expect(page.getByRole('button', { name: '급수 다시 고르기' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '이어서 하기' })).toHaveText('계속하기')
-  await expect(page.locator('.home-sky')).toHaveAttribute('data-sky', 'wake')
-  const tip = page.locator('.home-sky .ruma-line.tip')
+  await expect(page.getByRole('button', { name: /^새 단어 이어서 하기, \d+개 남음/ })).toBeVisible()
+  await expect(page.locator('.home-ruma')).toHaveAttribute('data-mood', 'wake')
+  const tip = page.locator('.ruma-line.tip')
   await expect(tip).toContainText('본 단어는 잊을 때쯤 돌아와요. 기억할수록 간격이 길어져요.')
   await expect(page.getByRole('status').filter({ hasText: '루마: 본 단어는' })).toHaveCount(1)
   await page.getByRole('button', { name: '알겠어요' }).click()
@@ -83,7 +84,7 @@ test('a learner saved at the removed exam-date question lands on the first sessi
   await expect(page.getByRole('button', { name: '첫 학습 시작' })).toBeVisible()
   await expect(page.getByText(/시험|아직 몰라요/)).toHaveCount(0)
   await page.getByRole('button', { name: '첫 학습 시작' }).click()
-  await expect(page).toHaveURL(/#\/study$/)
+  await expect(page).toHaveURL(/#\/study\/new$/)
   // the next save writes the state as it is now: onboarded, without the exam date
   await answer(page, '알아요')
   const s = await saved(page)
@@ -98,7 +99,7 @@ test('one who had answered it, or the readiness tip, is where they were; the ret
   await expect(page.locator('.ruma-line.tip')).toHaveCount(0)
   await expect(page.locator('.ruma-line')).toHaveText(/^(깨워 줄래요\?|자고 있어요)$/)
   await expect(page.getByText(/시험/)).toHaveCount(0)
-  await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+  await page.getByRole('button', { name: '새 단어 시작' }).click()
   await answer(page, '알아요')
   expect((await saved(page)).guide).toEqual({ done: ['level', 'srs', 'reading'] })
 })
@@ -127,16 +128,16 @@ test('works with the keyboard alone', async ({ page }) => {
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: '첫 학습 시작' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/#\/study$/)
+  await expect(page).toHaveURL(/#\/study\/new$/)
 })
 
 test('an existing learner sees nothing of the first run: no questions, no tips, also with reading cards', async ({ page }) => {
   await open(page, { state: user({ fastTrack: true, dailyNew: 20 }) })
   await homeShown(page)
   await expect(page.getByRole('button', { name: '급수 다시 고르기' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '오늘의 학습 시작' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '새 단어 시작' })).toBeVisible()
   await expect(page.locator('.ruma-line')).toHaveText(/^(깨워 줄래요\?|자고 있어요)$/)
-  await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+  await page.getByRole('button', { name: '새 단어 시작' }).click()
   let readingCards = 0
   for (let i = 0; i < 12; i++) {
     await expect(page.locator('.flash')).toBeVisible()

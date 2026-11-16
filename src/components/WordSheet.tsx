@@ -48,26 +48,27 @@ function WordDetails({ word, onClose }: { word: Word; onClose: () => void }) {
         />
         <IconButton label="닫기" icon={<Icon name="close" />} onClick={onClose} />
       </div>
+      {/* the reading over the headword, as a textbook prints it; the two round buttons at the right */}
       <div className="sheet-title">
-        <p lang="ja" className="sheet-word">
-          {word.w}
-        </p>
-        <span className="grow" />
-        <IconButton label="발음 듣기" icon={<Icon name="speaker" />} onClick={() => speak(word.r || word.w)} />
+        <div className="sheet-headword grow">
+          {word.r && (
+            <p lang="ja" className="sheet-reading">
+              {word.r}
+            </p>
+          )}
+          <p lang="ja" className="sheet-word">
+            {word.w}
+          </p>
+        </div>
+        <IconButton label="발음 듣기" className="round" icon={<Icon name="speaker" />} onClick={() => speak(word.r || word.w)} />
         <IconButton
           label="북마크"
-
-          className={marked ? 'marked' : undefined}
+          className={marked ? 'round marked' : 'round'}
           aria-pressed={marked}
           icon={<Icon name="mark" fill={marked} />}
           onClick={() => toggleMark(word.id)}
         />
       </div>
-      {word.r && (
-        <p lang="ja" className="sheet-reading">
-          {word.r}
-        </p>
-      )}
       <p className="sheet-meaning">{meaning(word)}</p>
       {word.ko && <p className="sheet-gloss">{word.en}</p>}
       <div className="sheet-notes">

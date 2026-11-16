@@ -24,7 +24,7 @@ test('pronunciation uses the browser’s speech synthesis in Japanese', async ({
     })
   })
   await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+  await page.getByRole('button', { name: '새 단어 시작' }).click()
   await page.getByRole('button', { name: '발음 듣기' }).click()
   const spoken = await page.evaluate(() => (window as unknown as { __spoken: { text: string; lang: string; rate: number }[] }).__spoken)
   expect(spoken).toHaveLength(1)
@@ -79,7 +79,7 @@ test('settings › 정보: the version, and the privacy policy and support pages
 
 test('finishing the day on the web: no reminder offer', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 1 }) })
-  await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+  await page.getByRole('button', { name: '새 단어 시작' }).click()
   await answer(page, '쉬워요')
   await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
   await page.waitForTimeout(300)

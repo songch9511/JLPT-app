@@ -115,7 +115,7 @@ test.describe('accessibility (Q7, Q8)', () => {
           await open(page, { state: state(theme) })
           await homeShown(page)
           await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-          await expect(page.locator('.home-words')).toBeVisible()
+          await expect(page.getByRole('progressbar', { name: '오늘 학습' })).toBeVisible()
           expect(await violations(page)).toEqual([])
           expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
           expect(await page.locator('.btn[data-variant="primary"]').count()).toBeLessThanOrEqual(1)
@@ -134,8 +134,8 @@ test.describe('accessibility (Q7, Q8)', () => {
     })
     await page.waitForTimeout(200)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
-    // the sky folds into one row, so the start button stays on the first screen
-    const box = (await page.getByRole('button', { name: /^오늘의 학습 시작/ }).boundingBox())!
+    // Ruma's circle shrinks, so the start button stays on the first screen
+    const box = (await page.getByRole('button', { name: /^새 단어 시작/ }).boundingBox())!
     const tabbar = (await page.locator('.tabbar').boundingBox())!
     expect(box.y + box.height).toBeLessThanOrEqual(tabbar.y)
   })

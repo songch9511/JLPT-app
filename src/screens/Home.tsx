@@ -1,41 +1,25 @@
-// Home, "루마의 하늘" (docs/design-system.md §3 "홈"): the top band is Ruma's sky, whose colour follows Ruma's state
-// (asleep → one eye → both eyes, or a day off); the day's plan is a sheet rising over it. What the screen does is the
-// same as before the redesign: the queue, the backlog policy, the counts and every button's action are unchanged.
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { go, syncThemeColor } from '../App'
-import { Announce, Button } from '../components/ui'
+// Home (docs/design-system.md §3 "홈"): Ruma in a tinted circle with one line, the day's progress, and in the thumb zone
+// the day's two sessions as two big buttons — 복습하기 (reviews due today) and 새 단어 (today's new words). Each button's
+// number is what its session will show (srs.ts `StudyMode`); the two always add up to the day's cards.
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { go } from '../App'
+import { Announce, Button, ProgressBar } from '../components/ui'
 import { Ruma } from '../components/Ruma'
-import { Waves } from '../components/Waves'
 import { Icon } from '../components/Icon'
 import { askLevelAgain, homeTip, markDone, phase as guidePhase, type Phase, type Tip } from '../guide'
 import { LevelAnswers, QUESTION, TIPS, TipLine } from './HomeGuide'
 import { UNOFFICIAL_LINE } from '../brand'
-import { LEVELS, type Level } from '../data'
-import {
-  breakdowns,
-  buildQueue,
-  minutesFor,
-  MORE_REVIEWS,
-  newWordsLeft,
-  secondsPerAnswer,
-  streak,
-  studyProgress,
-  unlockMoreNew,
-  unlockMoreReviews,
-  weekDays,
-} from '../srs'
+import { LEVELS } from '../data'
+import { breakdowns, buildQueue, cardsLeft, minutesFor, MORE_REVIEWS, newWordsLeft, secondsPerAnswer, streak, unlockMoreNew, unlockMoreReviews } from '../srs'
 import { update, useStore, type State } from '../store'
 import { dayKey, useClock } from '../util'
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
-/** The week's seals: the day names as a Japanese calendar writes them. */
-const DAY_SEALS = ['日', '月', '火', '水', '木', '金', '土']
 
-const levelsLabel = (levels: Level[]) => (levels.length === 1 ? `N${levels[0]}` : `N${levels[0]}~N${levels[levels.length - 1]}`)
 const f = (n: number) => n.toLocaleString('ko-KR')
 
-/** Ruma's sky: asleep before today's study (dawn), one eye open (sunrise), both eyes (day), nothing to do (rest). */
-export type Sky = 'sleep' | 'wake' | 'day' | 'rest'
+/** Ruma's state, which tints its circle: asleep before today's study, one eye open, both eyes, nothing to do. */
+export type Mood = 'sleep' | 'wake' | 'day' | 'rest'
 
 /**
  * Ruma's one line for a state. Where a state has two, the line changes once a day (never while the screen is open),
@@ -47,10 +31,7 @@ function rumaLine(lines: string[], today: Date) {
   return lines[day % lines.length]
 }
 
-/** The sky Home showed last, so the colour cross-fades when Home comes back in a new state (after studying). */
-let lastSky: Sky | null = null
-
-/** Top line, in the sky: the day and the level, the streak at the right; while Ruma asks the level, the app's name. */
+/** Top line: the day and the level, the streak at the right; while Ruma asks the level, the app's name. */
 function HomeHeader({ s, today, first }: { s: State; today: Date; first: Phase }) {
   if (first === 'level')
     return (
@@ -71,7 +52,7 @@ function HomeHeader({ s, today, first }: { s: State; today: Date; first: Phase }
       {/* no streak before anything was studied */}
       {first !== 'start' && (
         <span className={`streak ${lit ? 'lit' : ''}`} role="img" aria-label={lit || !days ? `연속 ${days}일` : `연속 ${days}일, 오늘 하면 ${days + 1}일`}>
-          <Icon name="flame" size={20} fill={lit} />
+          <Icon name="flame" size={18} fill={lit} strokeWidth={2.4} />
           <span className="num">{days}</span>
         </span>
       )}
@@ -79,53 +60,18 @@ function HomeHeader({ s, today, first }: { s: State; today: Date; first: Phase }
   )
 }
 
-/** The week as seven seals (日…土 in mincho): a studied day is stamped in vermilion ink, today is outlined in 藍. */
-function WeekSeals({ s, today }: { s: State; today: Date }) {
-  const week = weekDays(s.log, today)
+/**
+ * One of Home's big buttons: what it starts at the left (with an optional line under it), how much at the right. The
+ * first of the group is the one ink primary (76px); the other is white (64px).
+ */
+function BigButton({ label, title, sub, count, primary, className, onClick }: { label: string; title: string; sub?: ReactNode; count: ReactNode; primary?: boolean; className?: string; onClick: () => void }) {
   return (
-    <div className="seals" role="img" aria-label={`이번 주 ${week.filter((d) => d.done).length}일 공부함`}>
-      {week.map((d, i) => (
-        <span key={i} lang="ja" className={[d.done ? 'done' : d.future ? 'future' : 'miss', d.today && 'today'].filter(Boolean).join(' ')}>
-          {DAY_SEALS[i]}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-/** The words of the studied levels met so far (the 단어장 level rows, summed): a link to 기록. */
-function WordsLink({ s }: { s: State }) {
-  const { levels, total, met } = studyProgress(s)
-  const b = breakdowns(s)
-  return (
-    <a className="home-words" href="#/stats" aria-label={`${levelsLabel(levels)} 단어 ${f(total)}개 중 ${f(met)}개 만남, 기록 보기`}>
-      <span className={`level-seals ${levels.length > 3 ? 'many' : ''}`} aria-hidden="true">
-        {levels.map((l) => (
-          <span key={l} className={b[l].new === 0 ? 'full' : ''}>
-            N{l}
-          </span>
-        ))}
+    <Button label={label} variant={primary ? 'primary' : 'secondary'} size="lg" width="100%" className={`home-go ${className ?? ''}`} onClick={onClick}>
+      <span className="home-go-text">
+        <span className="home-go-title">{title}</span>
+        {sub && <span className="home-go-sub">{sub}</span>}
       </span>
-      <span className="home-words-text" aria-hidden="true">
-        <span className="home-words-title">만난 단어</span>
-        <span>
-          <b className="num">{f(met)}</b>
-          <span className="muted"> / {f(total)}</span>
-        </span>
-      </span>
-      <Icon name="chevron" size={18} />
-      <span className="home-words-bar" aria-hidden="true">
-        <i style={{ width: `${total > 0 ? Math.min(100, (met / total) * 100) : 0}%` }} />
-      </span>
-    </a>
-  )
-}
-
-/** A quiet text action under the primary ("50장 더 ›"): the accent ink, no box. */
-function Quiet({ label, text, onClick, alone }: { label: string; text: string; onClick: () => void; alone?: boolean }) {
-  return (
-    <Button label={label} variant="ghost" className={`text-action home-quiet ${alone ? 'alone' : ''}`} endContent={<Icon name="chevron" size={16} />} onClick={onClick}>
-      {text}
+      <span className="home-go-count num">{count}</span>
     </Button>
   )
 }
@@ -136,11 +82,17 @@ export function Home() {
   const today = new Date()
 
   const { target } = s.settings
+  // the day as a whole, and its two sessions: the numbers on the buttons are the sessions' own queues
   const q = buildQueue(s, today)
+  const qr = buildQueue(s, today, undefined, { mode: 'review' })
+  const qn = buildQueue(s, today, undefined, { mode: 'new' })
+  const reviews = cardsLeft(qr)
+  const fresh = cardsLeft(qn)
   const all = breakdowns(s)
   const todayLog = s.log[dayKey(today)]
-  const todo = q.learning + q.review + q.fresh
-  const started = !!todayLog?.c
+  const done = todayLog?.c ?? 0
+  const todo = reviews + fresh
+  const started = done > 0
   const cleared = started && todo === 0
   const unseen = newWordsLeft(s)
   const levelDone = unseen === 0
@@ -168,9 +120,8 @@ export function Home() {
 
   // the mascot opens one eye once today's study starts, both when today's share is done; a day with nothing to do
   // sleeps rather than looking done without any study
-  const progress = cleared ? 1 : started ? (todayLog?.c ?? 0) / ((todayLog?.c ?? 0) + todo) : 0
-  const sky: Sky = first === 'level' ? 'rest' : cleared ? 'day' : started ? 'wake' : todo > 0 || first ? 'sleep' : 'rest'
-  const mood = sky === 'day' ? 'cheer' : sky === 'wake' ? 'idle' : 'sleep'
+  const progress = cleared ? 1 : started ? done / (done + todo) : 0
+  const mood: Mood = first === 'level' ? 'rest' : cleared ? 'day' : started ? 'wake' : todo > 0 || first ? 'sleep' : 'rest'
   const line =
     first === 'level'
       ? '반가워요, 루마예요'
@@ -179,48 +130,27 @@ export function Home() {
         : todo === 0 && nextLevel
           ? `다음은 N${nextLevel}예요`
           : rumaLine(
-              sky === 'day'
+              mood === 'day'
                 ? ['두 눈 다 떴어요', '내일 봐요']
-                : sky === 'wake'
+                : mood === 'wake'
                   ? ['한쪽 눈 떴어요']
                   : behind
                     ? ['보고 싶었어요', '같이 치워요']
-                    : sky === 'sleep'
+                    : mood === 'sleep'
                       ? ['깨워 줄래요?', '자고 있어요']
                       : ['오늘은 쉬어요'],
               today,
             )
   const showTip = !first && tip === 'srs'
 
-  // the sky's colour: the band cross-fades from the sky Home showed last; <html data-sky> paints the ground behind the
-  // page (overscroll) and the browser's status bar colour (theme-color) in the same colour, before the first paint
-  const [shown, setShown] = useState<Sky>(() => lastSky ?? sky)
-  useEffect(() => {
-    lastSky = sky
-    if (shown === sky) return
-    const r = requestAnimationFrame(() => setShown(sky))
-    return () => cancelAnimationFrame(r)
-  }, [sky, shown])
-  useLayoutEffect(() => {
-    document.documentElement.dataset.sky = sky
-    syncThemeColor()
-  }, [sky])
-  useLayoutEffect(
-    () => () => {
-      delete document.documentElement.dataset.sky
-      syncThemeColor()
-    },
-    [],
-  )
-
   // one polite announcement when Ruma's state changes while Home is open (not when it opens)
-  const said = useRef(sky)
+  const said = useRef(mood)
   const [announce, setAnnounce] = useState('')
   useEffect(() => {
-    if (said.current === sky) return
-    said.current = sky
+    if (said.current === mood) return
+    said.current = mood
     setAnnounce(`루마: ${line}`)
-  }, [sky, line])
+  }, [mood, line])
 
   // the level answer replaces the buttons that had focus: focus goes to Ruma's line, which now holds what comes next
   // (not when Home opens: that is the learner's to start)
@@ -233,104 +163,122 @@ export function Home() {
   }, [first])
 
   const qid = useId()
-  const counts = (
-    <span className="home-counts">
-      {q.learning > 0 && (
-        <span className="c-learning">
-          익히는 중 <b className="num">{q.learning}</b>
-        </span>
-      )}
-      {/* a count that is 0 is left out (the first session has no reviews; a waiting day no new words) */}
-      {q.review > 0 && (
-        <span className="c-review">
-          복습 <b className="num">{f(q.review)}</b>
-        </span>
-      )}
-      {q.fresh > 0 && (
-        <span className="c-new">
-          새 단어 <b className="num">{q.fresh}</b>
-        </span>
-      )}
-    </span>
-  )
+  const total = done + todo
+  // 복습하기 once a review was answered today reads "계속"; 새 단어 once a new word was met
+  const reviewing = (todayLog?.r ?? 0) > 0
+  const learningNew = (todayLog?.n ?? 0) > 0
   const backlogTag = behind && (
     <span className="backlog-tag" role="img" aria-label={`밀린 복습 ${f(q.held)}장`}>
       밀린 <b className="num">{f(q.held)}</b>
     </span>
   )
+  const moreNew = () => {
+    unlockMoreNew(10)
+    go('/study/new')
+  }
 
   return (
     <>
-      <div className="home-sky" data-sky={shown}>
-        <Waves />
-        <HomeHeader s={s} today={today} first={first} />
-        <div className="sky-ruma">
-          <Ruma progress={sky === 'rest' ? 0 : progress} mood={mood} size={136} />
+      <HomeHeader s={s} today={today} first={first} />
+
+      <div className="home-center">
+        <div className="home-ruma" data-mood={mood}>
+          <Ruma progress={mood === 'rest' ? 0 : progress} mood={mood === 'day' ? 'cheer' : mood === 'wake' ? 'idle' : 'sleep'} size={172} />
         </div>
         {showTip ? (
           <TipLine text={TIPS.srs} onClose={() => setTip(null)} />
         ) : (
           <p className="ruma-line" ref={lineRef} tabIndex={first ? -1 : undefined}>
-            {line}
-            {first === 'level' && (
-              <b className="ruma-ask" id={qid}>
-                {QUESTION}
-              </b>
+            {first === 'level' ? (
+              <>
+                <span className="ruma-hello">{line}</span>
+                <b className="ruma-ask" id={qid}>
+                  {QUESTION}
+                </b>
+              </>
+            ) : (
+              line
             )}
           </p>
         )}
-        {!first && <WeekSeals s={s} today={today} />}
+        {first !== 'level' && (
+          <div className="home-progress">
+            <p className="home-progress-text">
+              <span>
+                오늘 <b className="num">{f(done)}</b> / {f(total)}장
+              </span>
+              {waitMin !== null ? (
+                <span className="plan-time" role="img" aria-label={`익히는 중인 ${q.waiting}장이 ${waitMin}분 뒤에 돌아와요`}>
+                  {waitMin}분 뒤
+                </span>
+              ) : todo > 0 ? (
+                <span className="plan-time" role="img" aria-label={started ? `약 ${minutes}분 남음` : `약 ${minutes}분`}>
+                  약 {minutes}분{started && ' 남음'}
+                </span>
+              ) : (
+                cleared &&
+                (todayLog?.ms ?? 0) >= 30_000 && (
+                  <span className="plan-time" role="img" aria-label={`${Math.round(todayLog!.ms! / 60_000)}분 걸림`}>
+                    {Math.round(todayLog!.ms! / 60_000)}분
+                  </span>
+                )
+              )}
+            </p>
+            <ProgressBar label="오늘 학습" value={done} max={Math.max(1, total)} valueText={`오늘 ${f(total)}장 중 ${f(done)}장`} />
+          </div>
+        )}
         {announce && <Announce text={announce} />}
       </div>
 
       {first === 'level' ? (
-        <section className="home-sheet ask" aria-labelledby={qid}>
+        <section className="home-actions ask" aria-labelledby={qid}>
           <LevelAnswers labelledBy={qid} />
+          <p className="level-scale" aria-hidden="true">
+            <span>쉬움</span>
+            <span>어려움</span>
+          </p>
           <p className="first-note">{UNOFFICIAL_LINE}</p>
         </section>
       ) : (
-        <section className="home-sheet plan" role="region" aria-labelledby="plan-title">
+        <section className="home-actions plan" role="region" aria-labelledby="plan-title">
           <h2 id="plan-title" className="sr-only">
             오늘의 계획
           </h2>
           {todo > 0 ? (
             <>
-              <div className="plan-figure">
-                <p className="big">
-                  <b className="num">{f(todo)}</b>
-                  <span className="unit">{started ? '장 남음' : '장'}</span>
-                </p>
-                <p className="plan-side">
-                  {waitMin !== null ? (
-                    <span className="plan-time" role="img" aria-label={`익히는 중인 ${q.waiting}장이 ${waitMin}분 뒤에 돌아와요`}>
-                      <b className="num">{waitMin}</b>분 뒤
+              {/* a session with nothing in it today has no button; the first of the two is the one primary */}
+              {reviews > 0 && (
+                <BigButton
+                  primary
+                  className="go-review"
+                  label={reviewing ? `복습 이어서 하기, ${f(reviews)}장 남음` : `복습 시작, ${f(reviews)}장`}
+                  title={reviewing ? '복습 계속하기' : '복습하기'}
+                  sub={reviewing ? `${f(todayLog!.r)}장 끝냄` : '오늘 돌아온 단어'}
+                  count={
+                    <span className="c-review">
+                      <b>{f(reviews)}</b>장
                     </span>
-                  ) : (
-                    <span className="plan-time" role="img" aria-label={`약 ${minutes}분`}>
-                      <b className="num">{minutes}</b>분
+                  }
+                  onClick={() => go('/study/review')}
+                />
+              )}
+              {fresh > 0 && (
+                <BigButton
+                  primary={reviews === 0}
+                  className="go-new"
+                  label={
+                    (first === 'start' ? `첫 학습 시작, 새 단어 ${fresh}개` : learningNew ? `새 단어 이어서 하기, ${fresh}개 남음` : `새 단어 시작, ${fresh}개`) +
+                    (qn.learning > 0 ? `, 익히는 중 ${qn.learning}개 포함` : '')
+                  }
+                  title="새 단어"
+                  sub={qn.learning > 0 ? <span className="c-learning">익히는 중 {qn.learning}개 포함</span> : undefined}
+                  count={
+                    <span className="c-new">
+                      <b>{fresh}</b>개
                     </span>
-                  )}
-                  <span className="plan-counts">
-                    {counts}
-                    {backlogTag}
-                  </span>
-                </p>
-              </div>
-              {first === 'start' ? (
-                <Button label={`첫 학습 시작, 새 단어 ${q.fresh}개`} variant="primary" size="lg" width="100%" className="home-go" onClick={() => go('/study')}>
-                  시작하기
-                </Button>
-              ) : (
-                <Button
-                  label={started ? `이어서 하기, ${f(todo)}장 남음` : `오늘의 학습 시작, ${f(todo)}장`}
-                  variant="primary"
-                  size="lg"
-                  width="100%"
-                  className="home-go"
-                  onClick={() => go('/study')}
-                >
-                  {started ? '계속하기' : '시작하기'}
-                </Button>
+                  }
+                  onClick={() => go('/study/new')}
+                />
               )}
               {first === 'start' ? (
                 <Button label="급수 다시 고르기" variant="ghost" className="text-action home-quiet" onClick={askLevelAgain} />
@@ -349,102 +297,74 @@ export function Home() {
                 </p>
               ) : (
                 behind && (
-                  <Quiet
-                    label={`밀린 복습 ${more}장 더 하기`}
-                    text={`${more}장 더`}
-                    onClick={() => {
-                      unlockMoreReviews(more)
-                      setAdded(more)
-                    }}
-                  />
+                  <p className="plan-lever">
+                    {backlogTag}
+                    <Button
+                      label={`밀린 복습 ${more}장 더 하기`}
+                      variant="ghost"
+                      className="text-action"
+                      endContent={<Icon name="chevron" size={16} />}
+                      onClick={() => {
+                        unlockMoreReviews(more)
+                        setAdded(more)
+                      }}
+                    >
+                      {more}장 더
+                    </Button>
+                  </p>
                 )
               )}
             </>
           ) : (
             <>
-              <div className="plan-figure">
-                {/* the day's count with its name beside it, on the figure's baseline */}
-                <p className="big">
-                  <b className="num">{f(cleared ? (todayLog?.c ?? 0) : 0)}</b>
-                  <span className="unit">장</span>
-                  {cleared && <span className="plan-eyebrow">오늘 끝</span>}
-                </p>
-                <p className="plan-side">
-                  {cleared && (todayLog?.ms ?? 0) >= 30_000 && (
-                    <span className="plan-time" role="img" aria-label={`${Math.round(todayLog!.ms! / 60_000)}분 걸림`}>
-                      <b className="num">{Math.round(todayLog!.ms! / 60_000)}</b>분
-                    </span>
-                  )}
-                  <span className="plan-counts">
-                    {cleared && (todayLog?.n ?? 0) > 0 && (
-                      <span className="home-counts">
-                        <span>
-                          새 단어 <b className="num">{todayLog!.n}</b>
-                        </span>
-                      </span>
+              {cleared && (
+                <p className="home-done">
+                  <Icon name="check" size={18} strokeWidth={2.6} />
+                  <span>
+                    <span className="plan-eyebrow">오늘 끝</span>
+                    {(todayLog?.n ?? 0) > 0 && (
+                      <>
+                        {' · '}새 단어 <b className="num">{todayLog!.n}</b>
+                      </>
                     )}
-                    {backlogTag}
                   </span>
+                  {backlogTag}
                 </p>
-              </div>
+              )}
               {behind ? (
-                <Quiet
+                // the same button as the study screen's done screen: short on screen, the whole action as its name
+                <Button
                   label={`밀린 복습 ${more}장 더 하기`}
-                  text={`${more}장 더`}
-                  alone
+                  size="lg"
+                  width="100%"
+                  className="home-go more"
                   onClick={() => {
                     unlockMoreReviews(more)
-                    go('/study')
+                    go('/study/review')
                   }}
-                />
+                >
+                  {more}장 더
+                </Button>
               ) : unseen > 0 ? (
-                cleared ? (
-                  <Quiet
-                    label="새 단어 10개 더 하기"
-                    text="새 단어 10개 더"
-                    alone
-                    onClick={() => {
-                      unlockMoreNew(10)
-                      go('/study')
-                    }}
-                  />
-                ) : (
-                  <Button
-                    label="새 단어 10개 더 하기"
-                    variant="primary"
-                    size="lg"
-                    width="100%"
-                    className="home-go"
-                    onClick={() => {
-                      unlockMoreNew(10)
-                      go('/study')
-                    }}
-                  >
-                    새 단어 10개 더
-                  </Button>
-                )
+                // after a finished day more is an offer (white); on a day with nothing planned it is the one thing to do
+                <BigButton primary={!cleared} label="새 단어 10개 더 하기" title="새 단어 더" count="10개" onClick={moreNew} />
               ) : (
                 nextLevel && (
-                  <Button
+                  <BigButton
+                    primary
                     label={`다음 급수 N${nextLevel} 시작하기`}
-                    variant="primary"
-                    size="lg"
-                    width="100%"
-                    className="home-go"
+                    title={`N${nextLevel} 시작하기`}
+                    count=""
                     onClick={() => {
                       update((d) => void (d.settings.target = nextLevel))
-                      go('/study')
+                      go('/study/new')
                     }}
-                  >
-                    N{nextLevel} 시작하기
-                  </Button>
+                  />
                 )
               )}
             </>
           )}
-
-          {/* until the first session there is nothing met yet: the line would only say 0 */}
-          {first ? <p className="first-note">{UNOFFICIAL_LINE}</p> : <WordsLink s={s} />}
+          {first && <p className="first-note">{UNOFFICIAL_LINE}</p>}
         </section>
       )}
     </>

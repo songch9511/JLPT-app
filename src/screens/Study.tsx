@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { go, syncThemeColor } from '../App'
+import { go } from '../App'
 import { requestPersist } from '../backup'
 import { Ruma } from '../components/Ruma'
 import { PastBar, PastCard } from '../components/PastCard'
@@ -7,7 +7,6 @@ import { useSwipe } from '../components/useSwipe'
 import { Session, type Entry } from '../session'
 import { Icon } from '../components/Icon'
 import { Announce, Button, IconButton, Meta, ProgressBar, Result, Skeleton } from '../components/ui'
-import { Waves } from '../components/Waves'
 import { ReadingChoice } from '../components/Choices'
 import { done as guideDone, markDone } from '../guide'
 import { Bridge, FalseFriend, SoundHints, TypeLine } from '../components/WordNotes'
@@ -17,6 +16,7 @@ import { readingOf, readingQuestion } from '../distractors'
 import {
   breakdowns,
   buildQueue,
+  cardsLeft,
   gradeReading,
   formatInterval,
   previewIntervals,
@@ -28,6 +28,7 @@ import {
   unlockMoreReviews,
   type Grade,
   type Queue,
+  type StudyMode,
 } from '../srs'
 import { platform } from '../platform'
 import { getState, toggleMark, useStore } from '../store'
@@ -51,7 +52,8 @@ const afterText = (interval: string) => (interval.endsWith('이내') ? interval 
 
 /**
  * One answer button of the bar under the card: 60px high on both steps, so the thumb never moves. The interval it sets
- * is shown under the label and read as part of its name ("알아요, 26일 뒤 다시"). Only the one primary is filled.
+ * is a small label above the button and read as part of its name ("알아요, 26일 뒤 다시"); the label's line is kept
+ * when there is none. Only the one primary is filled.
  */
 function Grade({
   label,
@@ -69,17 +71,14 @@ function Grade({
   onClick: () => void
 }) {
   return (
-    <Button
-      label={answerLabel(label, interval)}
-      variant={primary ? 'primary' : 'secondary'}
-      size="lg"
-      className={`grade ${className ?? ''}`}
-      isDisabled={isDisabled}
-      onClick={onClick}
-    >
-      <span className="grade-label">{label}</span>
-      {interval && <small>{interval}</small>}
-    </Button>
+    <div className={`grade-cell ${className ?? ''}`}>
+      <span className="grade-after" aria-hidden="true">
+        {interval}
+      </span>
+      <Button label={answerLabel(label, interval)} variant={primary ? 'primary' : 'secondary'} size="lg" className="grade" isDisabled={isDisabled} onClick={onClick}>
+        <span className="grade-label">{label}</span>
+      </Button>
+    </div>
   )
 }
 
@@ -115,7 +114,11 @@ function useActiveTime(cardKey: string, paused = false) {
   return () => t.current.acc + (t.current.since === null ? 0 : Date.now() - t.current.since)
 }
 
-export function Study() {
+/**
+ * One study session. `mode` is which of the day's cards it shows (srs.ts `StudyMode`): Home's 복습하기 and 새 단어 open
+ * `review` and `new`; `all` is the whole day in one queue (the plain `#/study` route).
+ */
+export function Study({ mode = 'all' }: { mode?: StudyMode }) {
   const s = useStore((x) => x)
   const [revealed, setRevealed] = useState(false)
   const [missed, setMissed] = useState(false)
@@ -150,9 +153,9 @@ export function Study() {
   // Recomputed after every answer; `now` is taken then so waiting cards become due as time passes.
   const { q, now } = useMemo(() => {
     const now = new Date()
-    const q = buildQueue(s, now, last, { finishNow })
+    const q = buildQueue(s, now, last, { finishNow, mode })
     return { q: redo ? { ...q, next: redo } : q, now }
-  }, [s, last, redo, tick, wake, finishNow, levels.ready])
+  }, [s, last, redo, tick, wake, finishNow, levels.ready, mode])
   useEffect(() => setIdle(!q.next), [q.next])
   // …and wake up exactly when the first waiting card is due, not only on the next minute tick
   useEffect(() => {
@@ -210,26 +213,15 @@ export function Study() {
   }, [undoChip])
 
   const todayCount = s.log[dayKey(now)]?.c ?? 0
-  const finished = !q.next && q.waiting === 0 && todayCount > 0
+  // the day as a whole: a session can end while the other one still has cards
+  const day = useMemo(() => (mode === 'all' ? q : buildQueue(s, now)), [mode, q, s, now])
+  const finished = !day.next && day.waiting === 0 && todayCount > 0
   // the first finished day is when there is something worth protecting from storage eviction
   useEffect(() => {
     if (finished) requestPersist()
     // the day was finished in this session (not merely reopened afterwards): a success tap in the app
     if (finished && answered > 0) platform.haptic('done')
   }, [finished])
-
-  // the done screen stands under Ruma's sky, like Home: the ground behind the page and the browser's status bar take the
-  // sky's colour (styles.css `:root[data-sky] body`), and give it back when the screen changes
-  const doneSky = levels.ready && !q.next ? (q.waiting === 0 ? 'day' : 'wake') : null
-  useLayoutEffect(() => {
-    if (!doneSky) return
-    document.documentElement.dataset.sky = doneSky
-    syncThemeColor()
-    return () => {
-      delete document.documentElement.dataset.sky
-      syncThemeColor()
-    }
-  }, [doneSky])
 
   /** `fromButton`: the grade buttons appear where "정답 보기" was, so a double tap on it must not answer. */
   const reveal = useCallback(
@@ -428,30 +420,31 @@ export function Study() {
   if (levels.ready && !q.next) {
     const moreNew = breakdowns(s)[s.settings.target].new > 0
     const log = s.log[dayKey(now)]
+    // this session has nothing left / the whole day has nothing left
     const cleared = q.waiting === 0
+    const dayCleared = cleared && !day.next && day.waiting === 0
     const inMin = q.nextDue === null ? 0 : Math.max(1, Math.ceil((q.nextDue - now.getTime()) / 60_000))
+    // what the other session still holds, when this one is done first
+    const rest = cleared && !dayCleared ? cardsLeft(day) : 0
+    const more = Math.min(MORE_REVIEWS, q.held)
     return (
       <main className="study done-screen">
-        {/* Home's language: Ruma under its sky (both eyes and the day sky when the day is done, one eye while cards
-            wait), the result on a sheet rising over it */}
-        <div className="home-sky done-sky" data-sky={cleared ? 'day' : 'wake'}>
-          <Waves />
-          <div className="sky-ruma done-mascot">
-            <Ruma progress={cleared ? 1 : (log?.c ?? 0) / ((log?.c ?? 0) + q.waiting)} mood={cleared ? 'cheer' : 'idle'} size={132} />
-            {cleared && (
-              <span className="seal" aria-hidden="true" lang="ja">
-                済
-              </span>
-            )}
+        {/* Home's language: Ruma in its tinted circle (both eyes when the day is done, one eye while cards remain),
+            the day's figures as three tiles, the buttons at the thumb */}
+        <section className="done-body" aria-labelledby="done-title">
+          <div className="home-ruma done-mascot" data-mood={dayCleared ? 'day' : 'wake'}>
+            <Ruma progress={dayCleared ? 1 : (log?.c ?? 0) / Math.max(1, (log?.c ?? 0) + cardsLeft(day))} mood={dayCleared ? 'cheer' : 'idle'} size={160} />
           </div>
-        </div>
-        <section className="home-sheet done-sheet" aria-labelledby="done-title">
-          <h1 id="done-title">{cleared ? '오늘 끝' : '쉬어 가요'}</h1>
-          {/* Ruma's eyes and the seal say the day is done; only what the screen cannot show is said in words */}
-          {(!cleared || q.held > 0) && (
-            <p className="done-text">{cleared ? `밀린 복습 ${q.held.toLocaleString()}장은 내일부터 나눠서 나와요.` : `익히는 중 ${q.waiting}장이 ${inMin}분 뒤에 돌아와요.`}</p>
+          <h1 id="done-title">{dayCleared ? '오늘 끝' : !cleared ? '쉬어 가요' : mode === 'review' ? '복습 끝' : '새 단어 끝'}</h1>
+          {/* Ruma's eyes say the day is done; only what the screen cannot show is said in words */}
+          {!cleared ? (
+            <p className="done-text">{`익히는 중 ${q.waiting}장이 ${inMin}분 뒤에 돌아와요.`}</p>
+          ) : rest > 0 ? (
+            <p className="done-text">{mode === 'review' ? `새 단어 ${rest}개가 남았어요.` : `복습 ${rest.toLocaleString()}장이 남았어요.`}</p>
+          ) : (
+            q.held > 0 && <p className="done-text">{`밀린 복습 ${q.held.toLocaleString()}장은 내일부터 나눠서 나와요.`}</p>
           )}
-          {/* the day in one line of figures (labels as before: 본 카드 · 연속 학습 · 오늘 XP) */}
+          {/* the day in three figures (labels as before: 본 카드 · 연속 학습 · 오늘 XP) */}
           <dl className="done-figures">
             <div className="t-cards">
               <dt>본 카드</dt>
@@ -472,42 +465,55 @@ export function Study() {
               </dd>
             </div>
           </dl>
-          <div className="done-actions">
-            {!cleared && <Button label={`${q.waiting}장 지금 하기`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
-            <Button label="홈으로" variant={cleared ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
-            {/* while reviews are held for later days, more reviews rather than more new words (03 §5.1, §5.3) */}
-            {cleared && q.held > 0 ? (
-              // the same labels as Home's quiet buttons: short on screen, the whole action as the name
-              <Button
-                label={`밀린 복습 ${Math.min(MORE_REVIEWS, q.held)}장 더 하기`}
-                size="lg"
-                width="100%"
-                onClick={() => unlockMoreReviews(Math.min(MORE_REVIEWS, q.held))}
-              >
-                {Math.min(MORE_REVIEWS, q.held)}장 더
-              </Button>
-            ) : (
-              cleared &&
-              moreNew && (
-                <Button label="새 단어 10개 더 하기" size="lg" width="100%" onClick={() => unlockMoreNew(10)}>
-                  새 단어 10개 더
-                </Button>
-              )
-            )}
-          </div>
-          {ReminderOffer && platform.native && cleared && (
+          {ReminderOffer && platform.native && dayCleared && (
             <Suspense fallback={null}>
               <ReminderOffer />
             </Suspense>
           )}
         </section>
+        <div className="done-actions">
+          {!cleared && <Button label={`${q.waiting}장 지금 하기`} variant="primary" size="lg" width="100%" onClick={() => setFinishNow(true)} />}
+          <Button label="홈으로" variant={cleared ? 'primary' : 'secondary'} size="lg" width="100%" onClick={() => go('/')} />
+          {/* while reviews are held for later days, more reviews rather than more new words (03 §5.1, §5.3). What is
+              let in belongs to one session: this one goes on, or the other one opens */}
+          {dayCleared && q.held > 0 ? (
+            // the same labels as Home's: short on screen, the whole action as the name
+            <Button
+              label={`밀린 복습 ${more}장 더 하기`}
+              size="lg"
+              width="100%"
+              onClick={() => {
+                unlockMoreReviews(more)
+                if (mode === 'new') go('/study/review')
+              }}
+            >
+              {more}장 더
+            </Button>
+          ) : (
+            dayCleared &&
+            moreNew && (
+              <Button
+                label="새 단어 10개 더 하기"
+                size="lg"
+                width="100%"
+                onClick={() => {
+                  unlockMoreNew(10)
+                  if (mode === 'review') go('/study/new')
+                }}
+              >
+                새 단어 10개 더
+              </Button>
+            )
+          )}
+        </div>
       </main>
     )
   }
 
-  const left = q.learning + q.review + q.fresh
+  const left = cardsLeft(q)
   const next = q.next
-  // measured against the whole day, like the home screen, so resuming does not start from zero
+  // measured against the day's answers so far, like the home screen, so resuming does not start from zero; the
+  // session's own cards are what is left
   const dayTotal = Math.max(1, todayCount + left)
   const marked = word ? s.marks.includes(word.id) : false
   const lower = !!next && levelOf(next.id) !== s.settings.target

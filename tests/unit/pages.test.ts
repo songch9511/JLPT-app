@@ -50,7 +50,7 @@ describe('public pages', () => {
     expect(page('public/support/index.html')).toContain('<a href="../privacy/">개인정보 처리방침</a>')
     expect(page('public/privacy/index.html')).toContain('<a href="en/" lang="en" hreflang="en">English</a>')
     // light and dark, from the ruma palette
-    expect(page('public/privacy/index.html')).toMatch(/--bg:#fbfaf5;[\s\S]*prefers-color-scheme:dark\)\{:root\{--bg:#1b1a18;/)
+    expect(page('public/privacy/index.html')).toMatch(/--bg:#faf8f5;[\s\S]*prefers-color-scheme:dark\)\{:root\{--bg:#1c1a17;/)
   })
 
   it('render the Markdown the sources use', () => {

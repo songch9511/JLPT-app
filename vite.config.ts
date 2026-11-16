@@ -97,8 +97,8 @@ export default defineConfig(({ mode }) => {
                 lang: 'ko',
                 display: 'standalone',
                 orientation: 'portrait',
-                background_color: '#fbfaf5',
-                theme_color: '#fbfaf5',
+                background_color: '#faf8f5',
+                theme_color: '#faf8f5',
                 start_url: '.',
                 icons: [
                   { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },

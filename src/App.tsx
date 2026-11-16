@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldNudge, useMeta } from './backup'
 import { Icon, type IconName } from './components/Icon'
 import { SaveWarning } from './components/Notices'
@@ -10,11 +10,14 @@ import { Settings } from './screens/Settings'
 import { Stats } from './screens/Stats'
 import { Study } from './screens/Study'
 import { Words } from './screens/Words'
-import { studyLevels } from './srs'
+import { studyLevels, type StudyMode } from './srs'
 import { getLoadError, useStore } from './store'
 
 type Route =
-  | { name: 'home' | 'study' | 'stats' | 'settings' }
+  | { name: 'home' | 'stats' | 'settings' }
+  // `#/study/review` and `#/study/new` are Home's two sessions; plain `#/study` is the whole day in one queue (the
+  // reminder notification, the widget and older links open it)
+  | { name: 'study'; mode: StudyMode }
   | { name: 'words'; tab?: 'weak' }
   | { name: 'level'; level: Level }
   | { name: 'doc'; doc: DocName }
@@ -24,7 +27,8 @@ function parse(hash: string): Route {
   if (a === 'level' && ['1', '2', '3', '4', '5'].includes(b)) return { name: 'level', level: Number(b) as Level }
   if (a === 'doc' && isDoc(b)) return { name: 'doc', doc: b }
   if (a === 'words') return b === 'weak' ? { name: 'words', tab: 'weak' } : { name: 'words' }
-  if (a === 'study' || a === 'stats' || a === 'settings') return { name: a }
+  if (a === 'study') return { name: 'study', mode: b === 'review' || b === 'new' ? b : 'all' }
+  if (a === 'stats' || a === 'settings') return { name: a }
   return { name: 'home' }
 }
 
@@ -32,28 +36,32 @@ export const go = (path: string) => {
   location.hash = path
 }
 
-/**
- * The browser's own chrome (Safari's status bar and toolbar tint, the PWA title bar) follows the page's ground: the
- * body colour, which is Ruma's sky on Home (styles.css `:root[data-sky] body`).
- */
-export function syncThemeColor() {
+/** The browser's own chrome (Safari's status bar and toolbar tint, the PWA title bar) follows the page's ground. */
+function syncThemeColor() {
   const bg = getComputedStyle(document.body).backgroundColor
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)
 }
 
-/** The tab bar's height as `--tabbar-h` (it grows with the reader's text size), so pages keep clear of it. */
+/**
+ * The tab bar's height as `--tabbar-h` (it grows with the reader's text size), so pages keep clear of it. The bar is
+ * not there on the study screen: it is measured again each time it comes back (a ref callback), and a bar that has
+ * left the page is never measured.
+ */
 function useTabbarHeight() {
-  const ref = useRef<HTMLElement>(null)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    const set = () => document.documentElement.style.setProperty('--tabbar-h', `${Math.ceil(el.getBoundingClientRect().height)}px`)
+  const observer = useRef<ResizeObserver | null>(null)
+  return useCallback((el: HTMLElement | null) => {
+    observer.current?.disconnect()
+    observer.current = null
+    if (!el) return
+    const set = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height)
+      if (h > 0) document.documentElement.style.setProperty('--tabbar-h', `${h}px`)
+    }
     set()
-    const ro = new ResizeObserver(set)
-    ro.observe(el)
-    return () => ro.disconnect()
+    if (typeof ResizeObserver === 'undefined') return
+    observer.current = new ResizeObserver(set)
+    observer.current.observe(el)
   }, [])
-  return ref
 }
 
 const TABS: { path: string; name: Route['name']; label: string; icon: IconName }[] = [
@@ -98,14 +106,15 @@ export default function App() {
     return (
       <>
         <SaveWarning />
-        <Study />
+        {/* a session is one opening of the study screen in one mode: another mode is another session */}
+        <Study key={route.mode} mode={route.mode} />
       </>
     )
 
   // a level's word list belongs to the 단어장 tab, where the level rows are; the privacy and support pages to 설정
   const tab = route.name === 'level' ? 'words' : route.name === 'doc' ? 'settings' : route.name === 'study' ? 'home' : route.name
   return (
-    <div className={`app ${tab === 'home' ? 'at-home' : ''}`}>
+    <div className="app">
       <SaveWarning />
       <main className={`page ${tab === 'home' ? 'home' : ''}`}>
         {(route.name === 'home' || route.name === 'study') && <Home />}

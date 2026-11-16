@@ -73,7 +73,7 @@ const LABEL: Partial<Record<Grade, string>> = { [Rating.Again]: '모르겠어요
 /**
  * The grades of a card answered earlier: the same buttons as when it was answered (a reading card asked with choices
  * has 모르겠어요 · 알아요, as its choice counted), each with the interval it gives from the time of that answer. The
- * grade given looks pressed — sunk onto its edge, the 白藍 tint and 藍 ink, a ✓ and `aria-pressed` — never a second
+ * grade given looks pressed — sunk onto its edge, the green tint and ink with a green line, a ✓ and `aria-pressed` — never a second
  * filled primary; another one changes the answer.
  */
 export function PastBar({ entry, onGrade }: { entry: Entry; onGrade: (g: Grade) => void }) {
@@ -85,21 +85,17 @@ export function PastBar({ entry, onGrade }: { entry: Entry; onGrade: (g: Grade) 
         const on = entry.grade === g
         const after = intervals[g].endsWith('이내') ? intervals[g] : `${intervals[g]} 뒤`
         return (
-          <Button
-            key={g}
-            label={`${LABEL[g]}, ${after} 다시`}
-            variant="secondary"
-            size="lg"
-            className="grade"
-            aria-pressed={on}
-            onClick={() => onGrade(g)}
-          >
-            <span className="grade-label">
-              {on && <Icon name="check" size={16} />}
-              {LABEL[g]}
+          <div key={g} className="grade-cell">
+            <span className="grade-after" aria-hidden="true">
+              {intervals[g]}
             </span>
-            <small>{intervals[g]}</small>
-          </Button>
+            <Button label={`${LABEL[g]}, ${after} 다시`} variant="secondary" size="lg" className="grade" aria-pressed={on} onClick={() => onGrade(g)}>
+              <span className="grade-label">
+                {on && <Icon name="check" size={16} strokeWidth={2.6} />}
+                {LABEL[g]}
+              </span>
+            </Button>
+          </div>
         )
       })}
     </footer>
