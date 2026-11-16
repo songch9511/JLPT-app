@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import { fromLegacy, legacySeed } from '../../src/ids'
 import type { SCard, State } from '../../src/store'
+import { KANJI_BY_LEVEL } from '../../src/generated/content'
 
 /** Where the state is saved since stable word ids (v4). */
 export const KEY = 'kasane.state.v4'
@@ -101,3 +102,10 @@ export function card(p: Partial<SCard> & { due: number }): SCard {
     ...p,
   }
 }
+
+/**
+ * Every kanji as a review card due at `due` (far ahead by default): for tests about the words' day, so that new kanji
+ * (the 한자 session, part of the day since 2026-11-16) do not keep the day from being done.
+ */
+export const knownKanji = (levels: (1 | 2 | 3 | 4 | 5)[] = [5, 4, 3, 2, 1], due = Date.parse('2027-06-01T09:00:00')): Record<string, SCard> =>
+  Object.fromEntries(levels.flatMap((l) => [...KANJI_BY_LEVEL[l]].map((k) => [`k${k}`, card({ due })])))

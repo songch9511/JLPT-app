@@ -3,7 +3,7 @@
 // answer. Touch is driven with real touch points (CDP), so `touch-action` and pointer capture behave as on a phone.
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
-import { answer, axeViolations, currentWord, L, NOW, open, READ_MS, rightChoice, saved, todayLog, user } from './fixtures'
+import { answer, axeViolations, currentWord, L, NOW, open, READ_MS, saved, todayLog, user } from './fixtures'
 
 const DAY = 86400_000
 const review = (due: number, extra: Record<string, number> = {}) => ({ due, stability: 5, difficulty: 5, elapsed_days: 5, scheduled_days: 5, learning_steps: 0, reps: 3, lapses: 0, state: 2, last_review: due - 5 * DAY, ...extra })
@@ -61,21 +61,21 @@ test.describe('swiping between the cards of the session', () => {
     const [a, b, c] = await studyThree(page)
     const d = await currentWord(page)
     const before = JSON.stringify(await saved(page))
-    // the card to answer: a swipe left only stretches and springs back, and is not a tap (the answer stays hidden)
+    // the card to answer: a swipe left only stretches and springs back, and opens nothing
     await touchSwipe(page, -220)
     await expect(shown(page)).toHaveText(d)
-    await expect(page.locator('.flash-meaning')).toHaveCount(0)
+    await expect(page.locator('.card-slot:not([inert]) .flash-meaning')).not.toBeVisible()
 
     await back(page)
     await expect(shown(page)).toHaveText(c)
-    await expect(pastBadge(page)).toHaveText('이전 3/3')
+    await expect(pastBadge(page)).toHaveText('이전 3 / 3')
     await expect(page.locator('.card-slot:not([inert]) .flash-meaning')).toBeVisible() // shown with its answer
     await expect(pressed(page)).toHaveCount(1)
     await expect(pressed(page)).toContainText('알아요')
     await back(page)
     await back(page)
     await expect(shown(page)).toHaveText(a)
-    await expect(pastBadge(page)).toHaveText('이전 1/3')
+    await expect(pastBadge(page)).toHaveText('이전 1 / 3')
     // nothing before the first: it stretches and springs back
     await back(page)
     await expect(shown(page)).toHaveText(a)
@@ -138,15 +138,21 @@ test.describe('swiping between the cards of the session', () => {
     const box = (await stage(page).boundingBox())!
     await touchSwipe(page, 220, { at: { x: 6, y: box.y + box.height / 2 } })
     await expect(shown(page)).toHaveText(d)
-    // a tap that moves a few pixels is still a tap: it shows the answer
+    // a press that moves a few pixels is not a swipe: the card stays (and a tap on the card opens nothing)…
     await touchSwipe(page, 5, { steps: 2 })
+    await expect(shown(page)).toHaveText(d)
+    await expect(page.locator('.flash.past')).toHaveCount(0)
+    await expect(page.locator('.card-slot:not([inert]) .flash-meaning')).not.toBeVisible()
+    // …and on the 의미 toggle it is a tap that opens the meaning
+    const toggle = (await page.getByRole('button', { name: '의미', exact: true }).boundingBox())!
+    await touchSwipe(page, 5, { steps: 2, at: { x: toggle.x + toggle.width / 2, y: toggle.y + toggle.height / 2 } })
     await expect(page.locator('.flash-meaning')).toBeVisible()
     expect((await todayLog(page)).c).toBe(3)
     await back(page)
     await expect(shown(page)).toHaveText(c)
   })
 
-  test('mouse: dragging works too, and the click at the end of a drag does not reveal the card', async ({ page }) => {
+  test('mouse: dragging works too, and the click at the end of a drag opens nothing', async ({ page }) => {
     await studyThree(page)
     const d = await currentWord(page)
     const box = (await stage(page).boundingBox())!
@@ -156,7 +162,7 @@ test.describe('swiping between the cards of the session', () => {
     await page.mouse.up()
     await page.waitForTimeout(400)
     await expect(shown(page)).toHaveText(d)
-    await expect(page.locator('.flash-meaning')).toHaveCount(0)
+    await expect(page.locator('.flash-meaning')).not.toBeVisible()
     await page.mouse.move(box.x + 40, box.y + box.height / 2)
     await page.mouse.down()
     for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + 40 + i * 24, box.y + box.height / 2, { steps: 1 })
@@ -170,7 +176,7 @@ test.describe('another grade on an earlier card', () => {
   test('알아요 → 모르겠어요 and back: the log, the queue, Home and 기록 follow; the card to answer stays', async ({ page }) => {
     const [a] = await studyThree(page)
     const d = await currentWord(page)
-    await expect(page.locator('.left-count')).toHaveText('2장 남음')
+    await expect(page.locator('.left-count')).toHaveAttribute('data-left', '2')
     expect(await todayLog(page)).toMatchObject({ c: 3, r: 3, p: 3, xp: 30 })
     await back(page)
     await back(page)
@@ -186,7 +192,7 @@ test.describe('another grade on an earlier card', () => {
     expect(s.log['2026-11-13']).toMatchObject({ c: 3, r: 3, p: 2, xp: 30 })
     expect(s.cards[L('5-1')]).toMatchObject({ state: 3, lapses: 1 })
     // the forgotten card is back in today's queue (a relearning step, shown ahead)
-    await expect(page.locator('.left-count')).toHaveText('3장 남음')
+    await expect(page.locator('.left-count')).toHaveAttribute('data-left', '3')
     for (let i = 0; i < 3; i++) await forward(page)
     await expect(shown(page)).toHaveText(d) // not replaced by the card that came back
     // the same grade again does nothing
@@ -201,15 +207,15 @@ test.describe('another grade on an earlier card', () => {
     await page.waitForTimeout(READ_MS)
     await page.getByRole('button', { name: /^알아요/ }).click()
     await expect(pressed(page)).toContainText('알아요')
-    await expect(page.locator('.left-count')).toHaveText('2장 남음')
+    await expect(page.locator('.left-count')).toHaveAttribute('data-left', '2')
     s = await saved(page)
     expect(s.log['2026-11-13']).toMatchObject({ c: 3, r: 3, p: 3, xp: 30 })
     expect(s.cards[L('5-1')]).toMatchObject({ state: 2, lapses: 0 })
 
     // Home and 기록 show the same as the study screen
     await page.getByRole('button', { name: /나가기/ }).click()
-    await expect(page.locator('.home-counts .c-review b')).toHaveText('2')
-    await expect(page.locator('.home-counts .c-learning')).toHaveCount(0)
+    await expect(page.locator('.go-review .home-go-count')).toHaveText('2장')
+    await expect(page.getByRole('button', { name: /익히는 중/ })).toHaveCount(0)
     await page.goto('./#/stats')
     await expect(page.locator('.stat', { hasText: 'XP' }).locator('b')).toHaveText('30')
   })
@@ -235,12 +241,12 @@ test.describe('another grade on an earlier card', () => {
     const before = await todayLog(page)
     expect(before).toMatchObject({ c: 3, n: 2 })
     for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowLeft')
-    await expect(pastBadge(page)).toHaveText('이전 1/3')
+    await expect(pastBadge(page)).toHaveText('이전 1 / 3')
     await expect(shown(page)).toHaveText(a)
     await page.getByRole('button', { name: /^쉬워요/ }).click()
     await expect(pressed(page)).toContainText('쉬워요')
     // as if 쉬워요 had been the answer: a graduated at once, its second step never happened
-    await expect(pastBadge(page)).toHaveText('이전 1/2')
+    await expect(pastBadge(page)).toHaveText('이전 1 / 2')
     const s = await saved(page)
     expect(s.log['2026-11-13']).toMatchObject({ c: 2, n: 2, xp: 20 })
     const graduated = Object.values(s.cards as Record<string, { state: number; reps: number }>).filter((x) => x.state === 2 && x.reps === 1)
@@ -248,44 +254,32 @@ test.describe('another grade on an earlier card', () => {
   })
 })
 
-test.describe('reading cards', () => {
-  test('an earlier reading card shows the choices with the answer and the pick; its grade is 모르겠어요 · 알아요', async ({ page }) => {
-    // a reading card (警官, read like its Korean hanja word) due for review, then a meaning card
+test.describe('kanji cards', () => {
+  test('an earlier kanji card shows everything open; another grade changes its answer', async ({ page }) => {
     const t = NOW.getTime()
-    const r = 'w00o:r'
-    const state = { ...user({ fastTrack: true, dailyNew: 0 }), v: 4, cards: { [r]: review(t - DAY), w01a: review(t - DAY + 60_000) } }
-    await open(page, { state, hash: '/study' })
-    await expect(page.locator('.reading-card')).toBeVisible()
-    const word = await currentWord(page)
-    // pick a wrong reading
-    const right = await (await rightChoice(page)).innerText()
-    const wrong = page.locator('.choice').filter({ hasNotText: right }).first()
-    const wrongText = await wrong.innerText()
+    const state = { ...user({ dailyNew: 0 }, { kanji: false }), v: 4, cards: { 'k日': review(t - DAY), 'k月': review(t - DAY + 60_000) } }
+    await open(page, { state, hash: '/study/kanji' })
+    await expect(page.locator('.flash.kanji-card')).toBeVisible()
+    const kanji = await page.locator('.flash-kanji').innerText()
     await page.waitForTimeout(READ_MS)
-    await wrong.click()
+    await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: /^다음,/ }).click()
+    await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await expect.poll(async () => (await todayLog(page))?.c).toBe(1)
-    expect((await saved(page)).cards[r]).toMatchObject({ state: 3, lapses: 1 })
+    expect((await saved(page)).cards[`k${kanji}`]).toMatchObject({ state: 3, lapses: 1 })
     await back(page)
-    await expect(shown(page)).toHaveText(word)
     const card = page.locator('.card-slot:not([inert]) .flash.past')
-    await expect(card.locator('.choice.right')).toHaveText(right)
-    await expect(card.locator('.choice.wrong')).toHaveText(wrongText)
-    await expect(card.getByRole('button', { name: `${wrongText.trim()}, 고른 답, 오답` })).toBeVisible()
-    await expect(page.locator('.past-bar button')).toHaveCount(2)
+    await expect(card.locator('.flash-kanji')).toHaveText(kanji)
+    await expect(card.locator('.flash-meta')).toHaveText('이전 1 / 1 · 1번 잊음')
+    await expect(card.locator('.kanji-words')).toBeVisible()
     await expect(pressed(page)).toContainText('모르겠어요')
     expect(await axeViolations(page)).toEqual([])
     await page.getByRole('button', { name: /^알아요/ }).click()
     await expect(pressed(page)).toContainText('알아요')
     const s = await saved(page)
-    // remembered after all: a review again, no lapse, counted as remembered; no meaning card appears
-    expect(s.cards[r]).toMatchObject({ state: 2, lapses: 0 })
-    expect(s.cards[r].due).toBeGreaterThan(t + DAY)
-    expect(s.log['2026-11-13']).toMatchObject({ c: 1, r: 1, p: 1 })
-    expect(s.cards.w00o).toBeUndefined()
-    // the pick is on record as it was
-    await expect(card.locator('.choice.wrong')).toHaveText(wrongText)
+    expect(s.cards[`k${kanji}`]).toMatchObject({ state: 2, lapses: 0 })
+    // kanji answers keep their own counts
+    expect(s.log['2026-11-13']).toMatchObject({ c: 1, r: 0, kr: 1, kp: 1 })
   })
 })
 
@@ -305,7 +299,7 @@ test.describe('undo, keyboard, screen readers, motion, sizes', () => {
     for (let i = 0; i < 3; i++) await forward(page)
     await expect(shown(page)).toHaveText(d)
     await expect(undo).not.toHaveAttribute('aria-disabled', 'true')
-    await undo.click()
+    await undo.press('Enter')
     // c (the last answer) comes back; a keeps 쉬워요
     await expect(page.locator('.flash-word')).toHaveText(c)
     const s = await saved(page)
@@ -314,7 +308,7 @@ test.describe('undo, keyboard, screen readers, motion, sizes', () => {
     // only that one answer can be undone, and the history now ends at b
     await expect(undo).toHaveAttribute('aria-disabled', 'true')
     await back(page)
-    await expect(pastBadge(page)).toHaveText('이전 2/2')
+    await expect(pastBadge(page)).toHaveText('이전 2 / 2')
   })
 
   test('keyboard: ← / → with the same limits, 1–3 re-grade an earlier card, Space on the card to answer still reveals', async ({ page }) => {
@@ -331,7 +325,7 @@ test.describe('undo, keyboard, screen readers, motion, sizes', () => {
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft') // first card: stays
-    await expect(pastBadge(page)).toHaveText('이전 1/3')
+    await expect(pastBadge(page)).toHaveText('이전 1 / 3')
     for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight')
     await expect(shown(page)).toHaveText(d)
     await expect(page.locator('.flash.past')).toHaveCount(0)
@@ -417,7 +411,7 @@ test.describe('undo, keyboard, screen readers, motion, sizes', () => {
     await back(page)
     await expect(shown(page)).toHaveText(d)
     await expect(page.locator('.flash.past')).toHaveCount(0)
-    await expect(page.getByRole('group', { name: '카드 넘기기' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '이전 카드' })).toBeDisabled()
   })
 
   test('the largest saved state: moving between cards and re-grading stay quick', async ({ page }) => {
@@ -432,7 +426,7 @@ test.describe('undo, keyboard, screen readers, motion, sizes', () => {
       }
       return performance.now() - t
     })
-    await expect(pastBadge(page)).toHaveText('이전 1/3')
+    await expect(pastBadge(page)).toHaveText('이전 1 / 3')
     expect(ms).toBeLessThan(1500)
     const t0 = Date.now()
     await page.waitForTimeout(READ_MS)

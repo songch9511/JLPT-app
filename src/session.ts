@@ -19,15 +19,8 @@ import { applyAnswer, endOfDay, type Grade, type Kind } from './srs'
 import { getState, update, type DayLog, type SCard, type State } from './store'
 import { dayKey } from './util'
 
-/** A reading card asked with choices: what was offered and what the learner picked (-1: "모르겠어요"). */
-export interface QuizRecord {
-  choices: string[]
-  answer: number
-  picked: number
-}
-
 export interface Entry {
-  /** card id (`w0k3`, `w0k3:r`) */
+  /** card id (`w0k3`, a kanji `k強`) */
   id: string
   /** how the queue offered the card; shown as it was if the answer is undone */
   kind: Kind
@@ -36,7 +29,6 @@ export interface Entry {
   at: number
   /** time the card was on screen before the answer (DayLog.ms) */
   ms?: number
-  quiz?: QuizRecord
   /** the card before this answer (undefined: a new word) */
   before?: SCard
   /** the card right after it */
@@ -47,7 +39,7 @@ export interface Entry {
   gained: number
 }
 
-export type Answer = Pick<Entry, 'id' | 'kind' | 'grade' | 'at' | 'ms' | 'quiz'>
+export type Answer = Pick<Entry, 'id' | 'kind' | 'grade' | 'at' | 'ms'>
 
 const sameCard = (a: SCard | undefined, b: SCard | undefined) =>
   a === b ||
@@ -71,7 +63,6 @@ function apply(d: State, a: Answer): Entry {
   const gained = applyAnswer(d, a.id, a.grade, new Date(a.at), a.ms)
   const e: Entry = { id: a.id, kind: a.kind, grade: a.grade, at: a.at, after: d.cards[a.id], gained }
   if (a.ms !== undefined) e.ms = a.ms
-  if (a.quiz) e.quiz = a.quiz
   if (before) e.before = before
   if (logBefore) e.logBefore = logBefore
   return e

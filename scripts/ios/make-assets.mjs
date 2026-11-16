@@ -24,10 +24,10 @@ const assets = join(root, 'ios/App/App/Assets.xcassets')
 const svg = readFileSync(join(root, 'public/icon.svg'), 'utf8')
 const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
 
-const LIGHT_BG = '#fbfaf5' // 生成り kinari, the theme's --color-background-body
-const DARK_BG = '#1b1a18' // its dark value
-const LIGHT = { bg: LIGHT_BG, ink: '#2d2a26', accent: '#165e83' }
-const DARK = { bg: DARK_BG, ink: '#ece7db', accent: '#86aecf' }
+const LIGHT_BG = '#faf8f5' // the theme's --color-background-body
+const DARK_BG = '#1c1a17' // its dark value
+const LIGHT = { bg: LIGHT_BG, ink: '#2d2a26', accent: '#8f3550' }
+const DARK = { bg: DARK_BG, ink: '#ece7db', accent: '#f0b3c1' }
 // the launch screen's Ruma and wordmark, exactly as index.html draws them
 const indexHtml = readFileSync(join(root, 'index.html'), 'utf8')
 const launchSvg = indexHtml.match(/<div id="launch"[^>]*>\s*(<svg[\s\S]*?<\/svg>)/)?.[1]

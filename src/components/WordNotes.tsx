@@ -3,7 +3,7 @@ import { soundHints } from '../sound'
 import { Icon } from './Icon'
 
 /**
- * The false-friend warning (k = F), shown once the meaning is visible, never before: below a hairline, one 弁柄 line
+ * The false-friend warning (k = F), shown once the meaning is visible, never before: below a hairline, one red line
  * with its mark, then the note in the body ink. No tinted box.
  */
 export function FalseFriend({ word }: { word: Word }) {
@@ -19,7 +19,7 @@ export function FalseFriend({ word }: { word: Word }) {
 }
 
 /**
- * One quiet line: the word type and, for Sino words, the Korean hanja reading ("일본 한자어 · 심배").
+ * One small tag: the word type and, for Sino words, the Korean hanja reading ("일본 한자어 · 심배").
  * F words carry the warning instead; unlabelled words show nothing.
  */
 export function TypeLine({ word }: { word: Word }) {

@@ -14,7 +14,7 @@ async function downloadJson(page: Page, click: () => Promise<void>) {
 test.describe('error screen', () => {
   // a card that is not a card makes the home screen throw while rendering (an id outside every level no longer
   // does: since stable ids such a record is kept apart, see id-migration.spec.ts)
-  const broken = () => user({ apiKey: 'sk-ant-secret' }, { xp: 33, cards: { '5-0': null } })
+  const broken = () => user({ apiKey: 'sk-ant-secret' }, { xp: 33, kanji: false, cards: { '5-0': null } })
 
   test('a render error shows the recovery screen, which can export what is stored', async ({ page }) => {
     await open(page, { state: broken() })
@@ -36,7 +36,7 @@ test.describe('error screen', () => {
     await page.getByRole('button', { name: '모든 기록 초기화' }).click()
     await expect(page.getByText('되돌릴 수 없어요.')).toBeVisible()
     await page.getByRole('button', { name: '모두 지우기' }).click()
-    await expect(page.getByRole('group', { name: /어느 급수를 준비해요/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '준비하는 급수' })).toBeVisible()
     expect(await saved(page)).toBeNull()
   })
 
@@ -56,9 +56,8 @@ test.describe('saving fails', () => {
   }
   async function answerEasy(page: Page, left: number) {
     await page.waitForTimeout(READ_MS)
-    await page.locator('.flash').click()
     await page.getByRole('button', { name: /^쉬워요/ }).click()
-    await expect(page.locator('.left-count')).toHaveText(`${left}장 남음`)
+    await expect(page.locator('.left-count')).toHaveAttribute('data-left', String(left))
   }
 
   test('warns once, offers a backup, and warns again only after a save has worked', async ({ page }) => {
@@ -69,7 +68,7 @@ test.describe('saving fails', () => {
         return set.call(this, key, value)
       }
     }, KEY)
-    await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
+    await open(page, { state: user({ dailyNew: 5 }, { kanji: false }), hash: '/study' })
     const warning = page.getByRole('alert')
     await failSaves(page, true)
     await answerEasy(page, 4)
@@ -97,8 +96,8 @@ test.describe('saving fails', () => {
 test.describe('backups', () => {
   test('import can be undone in the same session', async ({ page }) => {
     await open(page, { state: user({}, { xp: 5 }), hash: '/settings' })
-    await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(user({ target: 3 }, { xp: 999 }))) })
-    await page.getByRole('button', { name: '백업으로 바꾸기' }).click()
+    await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(user({ target: 3 }, { xp: 999, kanji: false }))) })
+    await page.getByRole('button', { name: '바꾸기', exact: true }).click()
     await expect(page.getByText('백업 파일의 기록으로 바꿨어요.')).toBeVisible()
     expect((await saved(page)).xp).toBe(999)
     expect(JSON.parse((await page.evaluate(() => localStorage.getItem('kasane.state.prev')))!).xp).toBe(5)
@@ -111,7 +110,8 @@ test.describe('backups', () => {
 
   test('export is versioned and a versioned file imports; a newer format is refused', async ({ page }) => {
     await open(page, { state: user({}, { xp: 77 }), hash: '/settings' })
-    await expect(page.getByText('백업한 적이 없어요.')).toBeVisible()
+    await expect(page.getByText('기록은 이 브라우저에만 저장돼요')).toBeVisible()
+    await expect(page.getByText(/마지막 백업/)).toHaveCount(0)
     const { body } = await downloadJson(page, () => page.getByRole('button', { name: '백업 내보내기' }).click())
     expect(body).toMatchObject({ format: 'jlpt-luma-backup', formatVersion: 3, v: 4, xp: 77 })
     expect(typeof body.app).toBe('string')
@@ -123,14 +123,14 @@ test.describe('backups', () => {
     await d.getByRole('button', { name: '알겠어요' }).click()
 
     await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...body, xp: 78 })) })
-    await page.getByRole('button', { name: '백업으로 바꾸기' }).click()
+    await page.getByRole('button', { name: '바꾸기', exact: true }).click()
     await expect.poll(async () => (await saved(page)).xp).toBe(78)
     const s = await saved(page)
     for (const k of ['format', 'formatVersion', 'app', 'exportedAt']) expect(s).not.toHaveProperty(k)
   })
 
   test('the backup reminder waits in 설정 (a dot on the tab while it is due) and can be dismissed; home stays calm', async ({ page }) => {
-    await open(page, { state: user({}, { cards: manyCards(30) }) })
+    await open(page, { state: user({}, { kanji: false, cards: manyCards(30) }) })
     await homeShown(page)
     await expect(page.locator('.nudge')).toHaveCount(0)
     const tab = page.locator('.tabbar').getByRole('link', { name: '설정, 백업 권유 있음' })
@@ -148,7 +148,7 @@ test.describe('backups', () => {
   })
 
   test('backing up from the reminder hides it', async ({ page }) => {
-    await open(page, { state: user({}, { cards: manyCards(30) }), hash: '/settings' })
+    await open(page, { state: user({}, { kanji: false, cards: manyCards(30) }), hash: '/settings' })
     const nudge = page.locator('.nudge')
     await downloadJson(page, () => nudge.getByRole('button', { name: '백업하기' }).click())
     await expect(nudge).toBeHidden()
@@ -156,7 +156,7 @@ test.describe('backups', () => {
   })
 
   test('no reminder without real progress', async ({ page }) => {
-    await open(page, { state: user({}, { cards: manyCards(5) }), hash: '/settings' })
+    await open(page, { state: user({}, { kanji: false, cards: manyCards(5) }), hash: '/settings' })
     await expect(page.getByRole('heading', { name: '설정', level: 1 })).toBeVisible()
     await expect(page.locator('.nudge')).toHaveCount(0)
     await expect(page.locator('.tab-dot')).toHaveCount(0)
@@ -172,7 +172,6 @@ test.describe('backups', () => {
     const calls = () => page.evaluate(() => (window as unknown as { __persist: number }).__persist)
     for (let left = 1; left >= 0; left--) {
       await page.waitForTimeout(READ_MS)
-      await page.locator('.flash').click()
       await page.getByRole('button', { name: /^쉬워요/ }).click()
       if (left) expect(await calls()).toBe(0)
     }

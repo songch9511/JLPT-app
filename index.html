@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="JLPT 루마" />
-    <meta name="theme-color" content="#fbfaf5" />
+    <meta name="theme-color" content="#faf8f5" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <title>JLPT 루마 — 간격 반복 단어장</title>
@@ -22,12 +22,12 @@
     <style>
       /* The launch screen (docs/design-system.md §3 "첫 화면"): painted from this file before any script, shown only
          while the app loads and faded out by src/main.tsx as soon as the first screen is drawn (no minimum time).
-         Colours are the ruma theme's ground / ink / 藍 (src/themes/ruma/rumaTheme.ts), copied because the theme's CSS
+         Colours are the ruma theme's ground / ink / pink ink (src/themes/ruma/rumaTheme.ts), copied because the theme's CSS
          is not loaded yet; the iOS launch image (scripts/ios/make-assets.mjs) draws the same screen. */
-      :root { --launch-bg: #fbfaf5; --launch-ink: #2d2a26; --launch-accent: #165e83; background: var(--launch-bg); }
-      :root[data-theme='dark'] { --launch-bg: #1b1a18; --launch-ink: #ece7db; --launch-accent: #86aecf; }
+      :root { --launch-bg: #faf8f5; --launch-ink: #2d2a26; --launch-accent: #8f3550; background: var(--launch-bg); }
+      :root[data-theme='dark'] { --launch-bg: #1b1917; --launch-ink: #f1ede5; --launch-accent: #f4c3d0; }
       @media (prefers-color-scheme: dark) {
-        :root:not([data-theme='light']) { --launch-bg: #1b1a18; --launch-ink: #ece7db; --launch-accent: #86aecf; }
+        :root:not([data-theme='light']) { --launch-bg: #1b1917; --launch-ink: #f1ede5; --launch-accent: #f4c3d0; }
       }
       #launch {
         position: fixed; inset: 0; z-index: 100; pointer-events: none; background: var(--launch-bg);

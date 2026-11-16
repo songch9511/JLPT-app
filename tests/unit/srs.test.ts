@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { at, bootUser, card, DAY, HOUR, MIN, KEY, L } from './helpers'
+import { at, bootUser, card, DAY, HOUR, MIN, KEY, L, knownKanji } from './helpers'
 import type { DayLog, SCard } from '../../src/store'
 
 // Friday 2026-11-13, 09:00 in Seoul
@@ -233,7 +233,7 @@ describe('XP and quests', () => {
   })
 
   it('awards the one quest — finishing today’s plan — exactly once, at the answer that completes it', async () => {
-    const { srs, store } = await bootUser(NOW, { dailyNew: 5 })
+    const { srs, store } = await bootUser(NOW, { dailyNew: 5 }, { cards: knownKanji() })
     const gains: number[] = []
     // 5 new words, all “쉬워요”: the 5th clears the day
     for (let i = 0; i < 5; i++) gains.push(srs.answer(L(`5-${i}`), srs.Rating.Easy, new Date(T + i * MIN)))
@@ -263,7 +263,7 @@ describe('XP and quests', () => {
 
 describe('undo (snapshot / restore)', () => {
   it('restores cards, the day log (incl. quest flags) and XP exactly', async () => {
-    const { srs, store } = await bootUser(NOW, { dailyNew: 5 })
+    const { srs, store } = await bootUser(NOW, { dailyNew: 5 }, { cards: knownKanji() })
     for (let i = 0; i < 4; i++) srs.answer(L(`5-${i}`), srs.Rating.Easy, at(NOW))
     const before = structuredClone({ cards: store.getState().cards, log: store.getState().log, xp: store.getState().xp })
     const snap = srs.snapshot()
@@ -408,24 +408,6 @@ describe('streak', () => {
     const { srs } = await bootUser(NOW)
     expect(srs.streak(days('2026-11-02', '2026-11-01', '2026-10-31'), new Date(2026, 10, 2, 0, 30))).toBe(3)
     expect(srs.streak(days('2026-03-09', '2026-03-08', '2026-03-07'), new Date(2026, 2, 9, 23, 30))).toBe(3)
-  })
-})
-
-describe('weekDays', () => {
-  it('Sunday-first week with today and future marked', async () => {
-    const { srs } = await bootUser(NOW)
-    // 2026-11-13 is a Friday
-    const w = srs.weekDays({ '2026-11-08': log({ c: 1 }), '2026-11-13': log({ c: 2 }), '2026-11-07': log({ c: 1 }) }, at(NOW))
-    expect(w.map((d) => d.done)).toEqual([true, false, false, false, false, true, false])
-    expect(w.map((d) => d.today)).toEqual([false, false, false, false, false, true, false])
-    expect(w.map((d) => d.future)).toEqual([false, false, false, false, false, false, true])
-  })
-
-  it('on a Sunday only that day is past-or-today', async () => {
-    const { srs } = await bootUser(NOW)
-    const w = srs.weekDays({}, at('2026-11-15T10:00:00'))
-    expect(w[0].today).toBe(true)
-    expect(w.filter((d) => d.future)).toHaveLength(6)
   })
 })
 

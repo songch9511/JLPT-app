@@ -1,14 +1,17 @@
-import { lazy, Suspense, useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState, type KeyboardEvent } from 'react'
 import { exportBackup, readBackup, useMeta } from '../backup'
-import { APP_VERSION, TITLE, UNOFFICIAL_NOTICE } from '../brand'
-import { Banner, Button, Choice, ConfirmDialog, Field, Group, MessageDialog, RowLink, Switch } from '../components/ui'
+import { APP_VERSION, BRAND, UNOFFICIAL_NOTICE } from '../brand'
+import { Banner, Button, Choice, Field, Group, MessageDialog, RowLink, Sheet, Switch } from '../components/ui'
+import { Icon } from '../components/Icon'
+import { DAILY_NEW } from './Intro'
 import { BackupNudge } from '../components/Notices'
-import { LEVELS } from '../data'
-import { replayTips } from '../guide'
-import { canUndoImport, importState, MAX_DAILY_NEW, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
+import { LEVELS, type Level } from '../data'
+import { isKanjiId } from '../kanji'
+import { canUndoImport, DAILY_KANJI, getState, importState, orphanCount, resetAll, undoImport, update, useStore, type State } from '../store'
 import { platform } from '../platform'
 import { docHref, type DocName } from './Doc'
-import { formatDay } from '../util'
+import { dayKey, formatDay } from '../util'
+import { UNOFFICIAL_LINE } from '../brand'
 
 // reminders, haptics and voice: only in the iOS app (not even in the web bundle, see src/platform/index.ts)
 const NativeSettings = import.meta.env.MODE === 'native' ? lazy(() => import('../platform/NativeSettings')) : null
@@ -21,6 +24,51 @@ function DocLink({ doc, label }: { doc: DocName; label: string }) {
   return platform.native ? <RowLink href={`#/doc/${doc}`} label={label} /> : <RowLink href={docHref(doc)} label={label} newWindow />
 }
 
+/** 준비하는 급수: five segments, each in its level's colour; the chosen one is outlined in its ink with a ✓. */
+function LevelChoice({ value, onChange }: { value: Level; onChange: (l: Level) => void }) {
+  const onKey = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]
+    if (!step) return
+    e.preventDefault()
+    const to = (i + step + LEVELS.length) % LEVELS.length
+    onChange(LEVELS[to])
+    ;(e.currentTarget.parentElement?.children[to] as HTMLElement | undefined)?.focus()
+  }
+  return (
+    <div className="segmented level-choice" role="radiogroup" aria-label="준비하는 급수">
+      {LEVELS.map((l, i) => (
+        <button key={l} type="button" role="radio" data-level={l} aria-checked={l === value} tabIndex={l === value ? 0 : -1} onClick={() => onChange(l)} onKeyDown={(e) => onKey(e, i)}>
+          {l === value && <Icon name="check" size={14} strokeWidth={3.2} />}N{l}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Words and kanji with a record in a state ("단어 2,460개, 한자 1,096자"). */
+const recordCounts = (s: Pick<State, 'cards'>) => {
+  let words = 0
+  let kanji = 0
+  for (const id in s.cards) isKanjiId(id) ? kanji++ : words++
+  return { words, kanji }
+}
+
+/** Asks before acting, from the bottom: a title, what happens, the action, 취소. */
+function ConfirmSheet({ isOpen, title, children, action, danger, onAction, onClose }: { isOpen: boolean; title: string; children: React.ReactNode; action: string; danger?: boolean; onAction: () => void; onClose: () => void }) {
+  return (
+    <Sheet isOpen={isOpen} onClose={onClose} label={title}>
+      <div className="sheet confirm-sheet">
+        <h2 className="confirm-title">{title}</h2>
+        {children}
+        <div className="confirm-actions">
+          <Button label={action} variant={danger ? 'destructive' : 'primary'} size="lg" width="100%" className={danger ? 'danger' : undefined} onClick={onAction} />
+          <Button label="취소" size="lg" width="100%" onClick={onClose} />
+        </div>
+      </div>
+    </Sheet>
+  )
+}
+
 export function Settings() {
   const st = useStore((s) => s.settings)
   const meta = useMeta()
@@ -29,10 +77,8 @@ export function Settings() {
   const set = (patch: Partial<State['settings']>) => update((d) => void Object.assign(d.settings, patch))
   /** in-app dialogs instead of the browser's confirm()/alert() (05 batch 4) */
   const [confirmReset, setConfirmReset] = useState(false)
-  const [pending, setPending] = useState<State | null>(null)
+  const [pending, setPending] = useState<{ state: State; exportedAt?: string } | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
-  const onboarded = useStore((s) => s.onboarded)
-  const [replayed, setReplayed] = useState(false)
 
   const importData = async (f: File) => importText(await f.text())
   const importText = (text: string) => {
@@ -53,7 +99,7 @@ export function Settings() {
       )
       return
     }
-    setPending(read.state)
+    setPending({ state: read.state, exportedAt: read.exportedAt })
   }
 
   return (
@@ -64,47 +110,22 @@ export function Settings() {
 
       {/* groups on the ground: a heading, then rows divided by hairlines (docs/design-system.md §4 "표면") */}
       <Group title="학습 계획" id="learn-title">
-        <Field label="목표 급수">
-          <Choice label="목표 급수" value={st.target} options={LEVELS.map((l) => [l, `N${l}`])} onChange={(target) => set({ target })} />
+        <Field label="준비하는 급수">
+          <LevelChoice value={st.target} onChange={(target) => set({ target })} />
         </Field>
         {st.target < 5 && (
-          <Switch
-            label={`아래 급수 단어도 함께 (N${LEVELS.filter((l) => l > st.target).join('·N')})`}
-            description="켜면 새 단어가 쉬운 급수부터 나와요."
-            value={st.includeLower}
-            onChange={(includeLower) => set({ includeLower })}
-          />
+          <Switch label={`아래 급수 단어도 함께 (N${LEVELS.filter((l) => l > st.target).join('·N')})`} value={st.includeLower} onChange={(includeLower) => set({ includeLower })} />
         )}
-        <Field label="하루 새 단어" description="새 단어가 많을수록 며칠 뒤 복습이 늘어나요.">
-          <Choice label="하루 새 단어" value={st.dailyNew} options={[5, 10, 20, 30, MAX_DAILY_NEW].map((n) => [n, String(n)])} onChange={(dailyNew) => set({ dailyNew })} />
+        <Field label="하루 새 단어" description="많을수록 며칠 뒤 복습이 늘어나요">
+          <Choice label="하루 새 단어" value={st.dailyNew} options={DAILY_NEW.map((n) => [n, String(n)])} onChange={(dailyNew) => set({ dailyNew })} />
+        </Field>
+        <Field label="하루 새 한자">
+          <Choice label="하루 새 한자" value={st.dailyKanji} options={DAILY_KANJI.map((n) => [n, String(n)])} onChange={(dailyKanji) => set({ dailyKanji })} />
         </Field>
       </Group>
 
       <Group title="학습 방식" id="method-title">
-        <Switch
-          label="한자어 빠른 통과"
-          description="뜻 같은 한자어(産業 = 산업)는 읽기만 물어요. 끄면 모든 단어를 뜻 카드로 배워요."
-          value={st.fastTrack}
-          onChange={(fastTrack) => set({ fastTrack })}
-        />
-        {onboarded && (
-          <p className="replay-tips" role="status">
-            {replayed ? (
-              // the same inset as the text button it replaces, so the line does not jump left
-              <span className="replay-done">루마의 안내를 다시 켰어요.</span>
-            ) : (
-              <Button
-                label="루마의 안내 다시 보기"
-                variant="ghost"
-                className="text-action"
-                onClick={() => {
-                  replayTips()
-                  setReplayed(true)
-                }}
-              />
-            )}
-          </p>
-        )}
+        <RowLink href="#/intro" label="처음 안내 다시 보기" />
       </Group>
 
       <Group title="화면 · 소리" id="display-title">
@@ -135,12 +156,8 @@ export function Settings() {
 
       <Group title="데이터" id="data-title">
         <div className="data-facts">
-          <p className="last-backup">{meta.lastExport ? `마지막 백업 ${formatDay(meta.lastExport)}` : '백업한 적이 없어요.'}</p>
-          <p className="field-desc">
-            {platform.native
-              ? '학습 기록은 이 기기에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'
-              : '학습 기록은 이 브라우저에만 저장돼요. 기기를 바꾸기 전에 백업해 두세요.'}
-          </p>
+          <p className="field-desc">{platform.native ? '기록은 이 기기에만 저장돼요' : '기록은 이 브라우저에만 저장돼요'}</p>
+          {meta.lastExport && <p className="field-desc last-backup">마지막 백업 {formatDay(meta.lastExport)}</p>}
           {orphans > 0 && (
             // records whose words this version does not know (store.ts `orphans`): kept, exported, never shown
             <p className="field-desc orphans-note">이 버전에 없는 단어의 기록 {orphans.toLocaleString()}개도 보관하고 백업에 담아요.</p>
@@ -176,19 +193,17 @@ export function Settings() {
           />
         </div>
         <div className="data-reset">
-          <Button label="모든 기록 초기화" variant="destructive" onClick={() => setConfirmReset(true)} />
+          <Button label="모든 기록 초기화" variant="destructive" size="lg" onClick={() => setConfirmReset(true)} />
         </div>
       </Group>
 
       <Group title="정보" id="about-title" className="about">
-        <p className="about-app">
-          <b>{TITLE}</b> <span className="field-desc">버전 {APP_VERSION}</span>
-        </p>
         <nav className="about-links" aria-label="개인정보 처리방침과 도움말">
           <DocLink doc="privacy" label="개인정보 처리방침" />
           <DocLink doc="support" label="도움말 · 문의" />
         </nav>
-        <div className="about-notes">
+        <details className="about-notes">
+        <summary>출처 · 라이선스</summary>
         <p className="unofficial">{UNOFFICIAL_NOTICE}</p>
         <ul className="credits">
           <li>단어 목록: open-anki-jlpt-decks (MIT, tanos.co.uk 기반). JLPT는 공식 어휘 목록을 공개하지 않아 비공식 목록이에요.</li>
@@ -242,32 +257,52 @@ export function Settings() {
             ).
           </li>
         </ul>
-        </div>
+        </details>
       </Group>
+      <p className="about-foot">
+        {BRAND} {APP_VERSION} · {UNOFFICIAL_LINE}
+      </p>
 
-      <ConfirmDialog
+      <ConfirmSheet
         isOpen={confirmReset}
-        onClose={() => setConfirmReset(false)}
         title="모든 기록을 지울까요?"
-        description="이 기기의 학습 기록과 설정을 모두 지워요. 되돌릴 수 없어요."
-        actionLabel="모두 지우기"
+        action="지우기"
+        danger
+        onClose={() => setConfirmReset(false)}
         onAction={() => {
           setConfirmReset(false)
           resetAll()
         }}
-      />
-      <ConfirmDialog
+      >
+        <p className="confirm-desc">
+          {(() => {
+            const c = recordCounts(getState())
+            return `단어 ${c.words.toLocaleString()}개, 한자 ${c.kanji.toLocaleString()}자 기록이 사라져요.`
+          })()}
+          <br />
+          되돌릴 수 없어요.
+        </p>
+      </ConfirmSheet>
+      <ConfirmSheet
         isOpen={pending !== null}
+        title="이 백업으로 바꿀까요?"
+        action="바꾸기"
         onClose={() => setPending(null)}
-        title="백업으로 바꿀까요?"
-        description="지금 기록이 백업 파일의 기록으로 바뀌어요. 바꾼 뒤 이 화면에서 되돌릴 수 있어요."
-        actionLabel="백업으로 바꾸기"
-        actionVariant="primary"
         onAction={() => {
-          if (pending) importState(pending)
+          if (pending) importState(pending.state)
           setPending(null)
         }}
-      />
+      >
+        {pending && (
+          <div className="confirm-box">
+            <b>{pending.exportedAt ? `${formatDay(dayKey(new Date(pending.exportedAt)))} 백업` : '백업 파일'}</b>
+            <span>
+              단어 {recordCounts(pending.state).words.toLocaleString()}개 · 한자 {recordCounts(pending.state).kanji.toLocaleString()}자
+            </span>
+          </div>
+        )}
+        <p className="confirm-desc">지금 기록은 이 백업으로 바뀌어요.</p>
+      </ConfirmSheet>
       <MessageDialog title="가져오지 못했어요" message={problem} onClose={() => setProblem(null)} />
     </>
   )

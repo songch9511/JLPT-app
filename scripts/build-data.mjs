@@ -9,7 +9,10 @@
 //   node scripts/build-data.mjs --assign-ids    issue ids to source words that have none (new words), then build
 //   node scripts/build-data.mjs --check         check the registry and inputs, write nothing
 //
-// Every build also writes src/generated/word-ids.ts (the app's id table, from data/ids.json).
+// Every build also writes src/generated/word-ids.ts (the app's id table, from data/ids.json); for each level that has
+// them, the example sentences of data/examples/n{l}.json as public/data/examples-n{l}.json (checked first); the kanji
+// of the word lists as public/data/kanji.json (`kanjiRows`); and src/generated/content.ts, which tells the app which
+// levels have examples and which kanji belong to each level.
 //
 // Word ids (docs/plan/08-word-data.md §7) come from data/ids.json and never from a word's position. The build
 // fails, writing nothing, when a source word has no registered id, when two words would share one, when an
@@ -188,6 +191,112 @@ export function levelRows(words, inputs, extras) {
   return { rows: out, missing, note }
 }
 
+// ---- example sentences (data/examples/n{l}.json, data/examples/README.md) ----
+// { "<word id>": { "seg": [[text] | [text, reading], …], "ko": "<Korean translation>" } }: joining the segments' texts
+// gives the Japanese sentence; a segment with kanji carries its reading in hiragana (the app's furigana), a kana
+// segment none. Only some levels have them (N5 for now); a level without a file shows no example.
+const KANJI = /[\u3400-\u9fff々〆ヶ]/
+const HIRAGANA = /^[\u3041-\u3096ー]+$/
+const HANGUL = /[가-힣]/
+
+/** The example files there are: { [level]: { "<id>": example } }. */
+export function readExamples() {
+  const out = {}
+  for (const l of LEVELS) {
+    const f = `${root}data/examples/n${l}.json`
+    if (existsSync(f)) out[l] = JSON.parse(readFileSync(f, 'utf8'))
+  }
+  return out
+}
+
+/** The problems with one level's examples (every id a live word of that level, every segment well formed). */
+export function checkExamples(l, examples, words) {
+  const problems = []
+  const ids = new Set(words.map((w) => w.id))
+  if (!examples || typeof examples !== 'object' || Array.isArray(examples)) return [`data/examples/n${l}.json: not an object`]
+  for (const [id, e] of Object.entries(examples)) {
+    const at = `data/examples/n${l}.json ${id}`
+    if (!ids.has(id)) problems.push(`${at}: not a word of N${l}`)
+    if (!e || typeof e !== 'object' || !Array.isArray(e.seg) || !e.seg.length) { problems.push(`${at}: no segments`); continue }
+    if (Object.keys(e).some((k) => k !== 'seg' && k !== 'ko')) problems.push(`${at}: only seg and ko`)
+    for (const g of e.seg) {
+      if (!Array.isArray(g) || g.length < 1 || g.length > 2 || g.some((x) => typeof x !== 'string' || !x)) { problems.push(`${at}: bad segment ${JSON.stringify(g)}`); continue }
+      const kanji = KANJI.test(g[0])
+      if (kanji && g.length < 2) problems.push(`${at}: no reading for ${g[0]}`)
+      // a reading belongs to the kanji it is over: okurigana and particles are segments of their own
+      if (kanji && /[\u3041-\u3096]/.test(g[0])) problems.push(`${at}: kana inside a kanji segment ${g[0]}`)
+      if (!kanji && g.length === 2) problems.push(`${at}: a reading on kana ${g[0]}`)
+      if (g.length === 2 && !HIRAGANA.test(g[1])) problems.push(`${at}: reading not in hiragana: ${g[1]}`)
+    }
+    const ja = e.seg.map((g) => (Array.isArray(g) ? g[0] : '')).join('')
+    if (!/[。？]$/.test(ja)) problems.push(`${at}: the sentence does not end in 。 or ？`)
+    if (typeof e.ko !== 'string' || !HANGUL.test(e.ko) || e.ko !== e.ko.trim()) problems.push(`${at}: no Korean translation`)
+  }
+  return problems
+}
+
+/** public/data/examples-n{l}.json: the same entries, in the level's id order, one line. */
+export const exampleFile = (examples) => JSON.stringify(Object.fromEntries(Object.keys(examples).sort().map((id) => [id, examples[id]])))
+
+// ---- kanji (public/data/kanji.json) ----
+// Every kanji that appears in the word lists, given to the first level (N5 → N1) whose words contain it, in the order
+// the level's words are introduced (data/freq/order-n{l}.json). Readings come from data/hanja/kanji.tsv; the Korean
+// 훈음 from data/hanja/hun.json ({ "強": { "hun": "강할", "eum": "강" } }) when that file exists, else the first
+// Korean reading of the table (Unihan, then KANJIDIC2) with an empty 훈.
+//
+//   row: [kanji, level, hun, eum, on, kun, ko, wordIds]
+//   on   on'yomi in katakana, space-separated (KANJIDIC2)
+//   kun  kun'yomi in hiragana, KANJIDIC2 notation ("つよ.い": okurigana after the dot), space-separated
+//   ko   every Korean reading the table gives, space-separated (search by 음)
+//   wordIds  the words containing it, easiest level first, then in introduction order
+const HAN = /\p{Script=Han}/u
+const isKanji = (ch) => HAN.test(ch) && ch !== '々' && ch !== '〆'
+
+/** data/hanja/hun.json, or null when it is not there yet. */
+export function readHun() {
+  const f = `${root}data/hanja/hun.json`
+  return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null
+}
+
+/** The kanji rows, easiest level first: { rows, counts: { [level]: n } }. */
+export function kanjiRows(levels, order, table = (kanjiTable ??= loadKanjiTable()), hun = readHun()) {
+  const level = new Map()
+  const words = new Map()
+  for (const l of LEVELS) {
+    const byId = new Map(levels[l].map((w) => [w.id, w]))
+    for (const id of order[l]) {
+      const w = byId.get(id)
+      for (const ch of new Set(w.w)) {
+        if (!isKanji(ch)) continue
+        if (!level.has(ch)) level.set(ch, l)
+        words.set(ch, [...(words.get(ch) ?? []), id])
+      }
+    }
+  }
+  const counts = Object.fromEntries(LEVELS.map((l) => [l, 0]))
+  const rows = [...level].map(([k, l]) => {
+    counts[l]++
+    const t = table.get(k) ?? { ko: [], on: [], kun: [] }
+    const h = hun?.[k]
+    const eum = typeof h?.eum === 'string' && h.eum ? h.eum : (t.ko[0] ?? '')
+    return [k, l, typeof h?.hun === 'string' ? h.hun : '', eum, t.on.join(' '), t.kun.join(' '), [...new Set(t.ko)].join(' '), words.get(k)]
+  })
+  return { rows, counts }
+}
+
+/** src/generated/content.ts: the levels with example sentences, and each level's kanji in introduction order. */
+export function contentModule(exampleLevels, rows) {
+  const by = Object.fromEntries(LEVELS.map((l) => [l, rows.filter((r) => r[1] === l).map((r) => r[0]).join('')]))
+  return `// GENERATED by scripts/build-data.mjs. Do not edit.
+
+/** Levels with example sentences (public/data/examples-n{l}.json, from data/examples/n{l}.json). */
+export const EXAMPLE_LEVELS: readonly (1 | 2 | 3 | 4 | 5)[] = ${JSON.stringify(exampleLevels)}
+
+/** Each level's kanji, in introduction order (public/data/kanji.json has their readings and words). */
+export const KANJI_BY_LEVEL: Record<1 | 2 | 3 | 4 | 5, string> = ${JSON.stringify(by)}
+`
+}
+
 /** src/generated/word-ids.ts: which level each live id belongs to, and the frozen positional → stable map. */
 export function idModule(reg) {
   const runs = []
@@ -248,6 +357,12 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
     console.error(`enrichment inputs do not match the word ids:\n  ${inputs.problems.slice(0, 40).join('\n  ')}`)
     process.exit(1)
   }
+  const examples = readExamples()
+  const exampleProblems = Object.entries(examples).flatMap(([l, e]) => checkExamples(Number(l), e, levels[l]))
+  if (exampleProblems.length) {
+    console.error(`example sentences do not check:\n  ${exampleProblems.slice(0, 40).join('\n  ')}`)
+    process.exit(1)
+  }
   const dropped = LEVELS.flatMap((l) => readSource(l).dropped.map((d) => `N${l} ${d.w}|${d.r}`))
   if (dropped.length) console.log(`duplicate source rows merged (first kept): ${dropped.join(', ')}`)
   const out = LEVELS.map((l) => [l, levelRows(levels[l], inputs, extras)])
@@ -260,7 +375,15 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
     writeFileSync(`${outDir}words-n${l}.json`, JSON.stringify(rows))
     console.log(`N${l}: ${rows.length} words, ${missing} without Korean${note}`)
   }
+  for (const [l, e] of Object.entries(examples)) {
+    writeFileSync(`${outDir}examples-n${l}.json`, exampleFile(e))
+    console.log(`N${l}: ${Object.keys(e).length} example sentences`)
+  }
+  const { rows: kanji, counts } = kanjiRows(levels, inputs.order)
+  writeFileSync(`${outDir}kanji.json`, JSON.stringify(kanji))
+  console.log(`kanji: ${kanji.length} (${LEVELS.map((l) => `N${l} ${counts[l]}`).join(', ')})${readHun() ? '' : ', no data/hanja/hun.json yet: 훈 empty'}`)
   mkdirSync(`${root}src/generated`, { recursive: true })
   writeFileSync(`${root}src/generated/word-ids.ts`, idModule(reg))
-  console.log('src/generated/word-ids.ts written')
+  writeFileSync(`${root}src/generated/content.ts`, contentModule(Object.keys(examples).map(Number).sort((a, b) => b - a), kanji))
+  console.log('src/generated/word-ids.ts, src/generated/content.ts written')
 }

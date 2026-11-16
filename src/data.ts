@@ -48,21 +48,13 @@ export interface Word {
   rt: string
   /** for on-read Sino words: the reading cut per kanji ("さん|ぎょう"), '' when not known for sure */
   a: string
-  /** for reading-card words: other readings the dictionary gives the written form, space-separated ('' if none) */
-  x?: string
 }
 
 export const meaning = (w: Word) => w.ko || w.en
 /** The level of a word or card id; undefined for an id this version does not know (store.ts keeps those apart). */
 export const levelOf = (id: string): Level | undefined => levelOfId(id)
 
-/**
- * Card ids (03 §3 C): the meaning card keeps the word id (`w0k3`); the reading card of the cognate fast-track is
- * `w0k3:r`. Each is its own FSRS card.
- */
-export const READING = ':r'
-export const readingId = (word: string) => word + READING
-export const isReadingCard = (id: string) => id.endsWith(READING)
+/** The word a card id belongs to (word cards are the word id itself; kept for ids read from older records). */
 export const wordOfCard = (id: string) => {
   const i = id.indexOf(':')
   return i < 0 ? id : id.slice(0, i)
@@ -72,35 +64,31 @@ export const wordOfCard = (id: string) => {
 export interface LevelInfo {
   /** word ids in introduction order */
   order: string[]
-  /** ids of words tagged S (fast-track: reading card instead of meaning card) */
-  fast: Set<string>
 }
 const infos = new Map<Level, LevelInfo>()
 let infoVersion = 0
-/** Introduction order and fast-track words of a level, once its data has loaded (null before). */
+/** Introduction order of a level, once its data has loaded (null before). */
 export const levelInfo = (l: Level): LevelInfo | null => infos.get(l) ?? null
 /** Changes whenever a level's data is registered: results that depend on `levelInfo` are memoised on it. */
 export const levelInfoVersion = () => infoVersion
 
-export function setLevelInfo(l: Level, words: Pick<Word, 'id' | 'idx' | 'o' | 'k'>[]) {
+export function setLevelInfo(l: Level, words: Pick<Word, 'id' | 'idx' | 'o'>[]) {
   const order = words
     .slice()
     .sort((a, b) => a.o - b.o || a.idx - b.idx)
     .map((w) => w.id)
-  infos.set(l, { order, fast: new Set(words.filter((w) => w.k === 'S').map((w) => w.id)) })
+  infos.set(l, { order })
   infoVersion++
 }
 
-/**
- * Whether the loaded data says this word no longer takes a reading card: its level has loaded and the word is not
- * tagged S (any more — tags are corrected, docs/plan/12). A reading card learned while it was S then rests like
- * one with the fast-track off: kept, not shown, not counted, and the word is introduced with its meaning card.
- * False until the level's data has loaded (nothing is known yet, so the card is left as it is).
- */
-export const readingRetired = (word: string): boolean => {
-  const l = levelOf(word)
-  const info = l === undefined ? null : levelInfo(l)
-  return !!info && !info.fast.has(word)
+/** Words per chapter: a level's words in their introduction order (frequency), 50 at a time. */
+export const CHAPTER = 50
+/** A level's chapters: how many there are. */
+export const chapterCount = (l: Level) => Math.ceil(COUNTS[l] / CHAPTER)
+/** The word ids of a level's chapter `n` (1-based), in introduction order (id order until the level has loaded). */
+export function chapterIds(l: Level, n: number): string[] {
+  const order = levelInfo(l)?.order ?? fallbackOrder(l)
+  return order.slice((n - 1) * CHAPTER, n * CHAPTER)
 }
 
 /** A row of public/data/words-n{l}.json (scripts/build-data.mjs): the stable id, then the word's columns. */
@@ -109,7 +97,7 @@ const TYPES = new Set<string>(WORD_TYPES)
 
 /** One data row as a Word. Rows without the extra columns get file order and no type. */
 export function parseRow(l: Level, row: Row, idx: number): Word {
-  const [id, w, r, ko, en, o, f, k = '', sk = '', ff = '', rt = '', a = '', x = ''] = row
+  const [id, w, r, ko, en, o, f, k = '', sk = '', ff = '', rt = '', a = ''] = row
   return {
     id,
     level: l,
@@ -125,7 +113,6 @@ export function parseRow(l: Level, row: Row, idx: number): Word {
     ff,
     rt,
     a,
-    x,
   }
 }
 
@@ -172,7 +159,7 @@ export function loadLevel(l: Level): Promise<Word[]> {
   return p
 }
 
-/** All the given levels loaded (so the queue knows their order and fast-track words), or an error. */
+/** All the given levels loaded (so the queue knows their order), or an error. */
 export function useLevels(ls: Level[]): { ready: boolean; error: string | null; retry: () => void } {
   const key = ls.join(',')
   const [res, setRes] = useState<{ key: string; ready: boolean; error: string | null }>({ key, ready: false, error: null })

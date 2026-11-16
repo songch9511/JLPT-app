@@ -26,7 +26,7 @@ type ButtonProps = {
   /** the accessible name; also the visible text unless `children` draw it */
   label: string
   children?: ReactNode
-  /** one primary per group; secondary for the rest; destructive (soft vermilion) for what deletes; ghost for quiet */
+  /** one primary (ink) per group; secondary (white) for the rest; destructive (soft red) for what deletes; ghost for quiet */
   variant?: ButtonVariant
   size?: 'sm' | 'md' | 'lg'
   width?: '100%'
@@ -43,7 +43,7 @@ type ButtonProps = {
   'aria-pressed'?: boolean
 }
 
-/** A flat face on a shallow edge that sinks when pressed (styles.css `.btn`). */
+/** A flat face on a bottom edge that sinks when pressed (styles.css `.btn`). */
 export function Button({ label, children, variant = 'secondary', size = 'md', width, isDisabled, onClick, href, icon, endContent, className, ...aria }: ButtonProps) {
   const props = {
     className: cx('btn', width && 'full', className),
@@ -103,9 +103,8 @@ export function IconButton({
 }
 
 /**
- * A group on the ground (docs/design-system.md §4 "표면"): a heading and its rows, divided by hairlines — no card
- * surface. Only things you hold (the study card, sheets, dialogs) get a surface. `title` is the group's name and the
- * region's label.
+ * A group (docs/design-system.md §4 "표면"): a small heading, then its rows in one white card divided by hairlines.
+ * `title` is the group's name and the region's label. No card inside a card.
  */
 export function Group({ title, id, aside, className, children }: { title: string; id: string; aside?: ReactNode; className?: string; children: ReactNode }) {
   return (
@@ -114,7 +113,7 @@ export function Group({ title, id, aside, className, children }: { title: string
         {title}
         {aside && <span className="group-aside">{aside}</span>}
       </h2>
-      {children}
+      <div className="group-body">{children}</div>
     </section>
   )
 }
@@ -153,7 +152,7 @@ export function Result({ tone, children, className }: { tone: 'right' | 'wrong' 
 }
 
 /**
- * A plain row that goes somewhere: label, chevron, 48px, a hairline below (styles.css `.row-link`). `newWindow` for a
+ * A plain row that goes somewhere: label, chevron, 48px, a hairline between rows (styles.css `.row-link`). `newWindow` for a
  * page outside the app (the browser opens it beside the app).
  */
 export function RowLink({ label, href, newWindow, className }: { label: string; href: string; newWindow?: boolean; className?: string }) {
@@ -165,7 +164,10 @@ export function RowLink({ label, href, newWindow, className }: { label: string; 
   )
 }
 
-/** One of a few fixed choices (2–5, short labels): a segmented control, read as a radio group (arrow keys move). */
+/**
+ * One of a few fixed choices (2–5, short labels): a segmented control — a beige track, the chosen segment white — read
+ * as a radio group (arrow keys move).
+ */
 export function Choice<T extends string | number>({
   label,
   value,

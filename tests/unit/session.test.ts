@@ -1,7 +1,7 @@
 // The study session's history (src/session.ts): swiping back never changes anything; changing the grade of an earlier
 // answer gives the state the learner would have had with that grade from the start.
 import { describe, expect, it } from 'vitest'
-import { boot, card, DAY, L, MIN } from './helpers'
+import { boot, card, DAY, knownKanji, L, MIN } from './helpers'
 import type { SCard, State } from '../../src/store'
 import type { Grade } from '../../src/srs'
 
@@ -18,8 +18,9 @@ async function env(cards: Record<string, SCard> = {}, settings: Partial<State['s
   const start: State = {
     ...b.store.getState(),
     onboarded: true,
-    settings: { ...b.store.getState().settings, target: 5, includeLower: false, dailyNew: 0, fastTrack: true, ...settings },
-    cards,
+    settings: { ...b.store.getState().settings, target: 5, includeLower: false, dailyNew: 0, ...settings },
+    // no new kanji: the day is the words given here
+    cards: { ...knownKanji([5]), ...cards },
     log: {},
     xp: 0,
   }
@@ -234,19 +235,18 @@ describe('what a re-grade changes', () => {
     expect(st.log['2026-11-14'].q).toBe(1)
   })
 
-  it('reading cards (`:r`) and meaning cards keep their own books', async () => {
-    const r = L('5-3') + ':r'
-    const e = await env({ [r]: review(-DAY), [L('5-4')]: review(-DAY) })
+  it('kanji cards keep their own books: their answers never count as the words’ new words or reviews', async () => {
+    const k = 'k日'
+    const e = await env({ [k]: review(-DAY), [L('5-4')]: review(-DAY) })
     const s = new e.Session()
-    s.answer({ id: r, kind: 'review', grade: AGAIN, at: T, quiz: { choices: ['a', 'b', 'c', 'd'], answer: 1, picked: 2 } })
+    s.answer({ id: k, kind: 'review', grade: AGAIN, at: T })
     s.answer({ id: L('5-4'), kind: 'review', grade: GOOD, at: T + MIN })
+    expect(e.store.getState().log['2026-11-14']).toMatchObject({ c: 2, r: 1, p: 1, kr: 1 })
     s.regrade(0, GOOD)
     const st = e.store.getState()
-    expect(st.cards[r].state).toBe(2)
-    expect(st.cards[r].lapses).toBe(0)
-    expect(st.cards[L('5-3')]).toBeUndefined() // no meaning card appears
-    expect(s.entries[0].quiz).toEqual({ choices: ['a', 'b', 'c', 'd'], answer: 1, picked: 2 }) // what was picked stays on record
-    expect(st.log['2026-11-14']).toMatchObject({ c: 2, r: 2, p: 2 })
+    expect(st.cards[k].state).toBe(2)
+    expect(st.cards[k].lapses).toBe(0)
+    expect(st.log['2026-11-14']).toMatchObject({ c: 2, n: 0, r: 1, p: 1, kr: 1, kp: 1 })
   })
 
   it('the streak and the day: an answer re-graded keeps the day studied; across midnight each answer stays on its day', async () => {

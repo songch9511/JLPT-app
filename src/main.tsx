@@ -3,6 +3,12 @@ import { createRoot } from 'react-dom/client'
 // docs/design-system.md: reset → Astryx's token defaults → the ruma theme → the app's own styles, in that layer order.
 // The styles of the Astryx overlays (dialogs, sheets) load with them, lazily (src/components/overlays.tsx).
 import '@astryxdesign/core/reset.css'
+// the design's faces (docs/design-system.md §2): Noto Sans KR for the app, Noto Sans JP for Japanese, Klee One for
+// headwords. Each comes in unicode-range slices, so a page loads only the slices its text needs.
+import '@fontsource/noto-sans-kr/500.css'
+import '@fontsource/noto-sans-kr/700.css'
+import '@fontsource/noto-sans-jp/500.css'
+import '@fontsource/klee-one/600.css'
 import './themes/ruma/astryx-tokens.css'
 import './themes/ruma/ruma.css'
 import './styles.css'

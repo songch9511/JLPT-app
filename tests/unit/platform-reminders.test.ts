@@ -82,12 +82,10 @@ describe('planReminders', () => {
     expect(plan.map((p) => p.day)).toEqual(['2026-11-13', '2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19'])
   })
 
-  it('a word with a meaning and a reading card counts once on future days, and resting reading cards not at all', async () => {
+  it('future days count the words due, never the kanji cards', async () => {
     const due = at('2026-11-12T08:00:00').getTime()
-    const { store, r } = await setup({ cards: { [L('5-0')]: card({ due }), [L('5-0:r')]: card({ due }), [L('5-1:r')]: card({ due }) } }, { fastTrack: true })
+    const { store, r } = await setup({ cards: { [L('5-0')]: card({ due }), [L('5-1')]: card({ due }), 'k日': card({ due }) } })
     expect(r.workOn(store.getState(), at('2026-11-14T00:00:00'), at(NOW)).reviews).toBe(2)
-    store.update((d) => void (d.settings = { ...d.settings, fastTrack: false }))
-    expect(r.workOn(store.getState(), at('2026-11-14T00:00:00'), at(NOW)).reviews).toBe(1)
   })
 
   it('the message without new words', async () => {

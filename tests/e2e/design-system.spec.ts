@@ -22,26 +22,33 @@ test('reset and import confirm inside the app, never with confirm()/alert()', as
   await page.keyboard.press('Escape')
   await expect(problem).toBeHidden()
   // a real backup: asks first; the action is the primary, cancel is offered
-  await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(user({}, { xp: 70 }))) })
-  const ask = page.getByRole('alertdialog', { name: '백업으로 바꿀까요?' })
-  await expect(ask).toContainText('바꾼 뒤 이 화면에서 되돌릴 수 있어요.')
-  await expect(ask.getByRole('button', { name: '백업으로 바꾸기' })).toHaveAttribute('data-variant', 'primary')
-  await ask.getByRole('button', { name: '백업으로 바꾸기' }).click()
+  await page.locator('input[type=file]').setInputFiles({ name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(user({}, { xp: 70, kanji: false }))) })
+  // board 6-4: a sheet from the bottom with what the file holds; the action is the primary, cancel is offered
+  const ask = page.getByRole('dialog', { name: '이 백업으로 바꿀까요?' })
+  await expect(ask.locator('.confirm-box')).toContainText('백업 파일')
+  await expect(ask.locator('.confirm-box')).toContainText('단어 0개 · 한자 0자')
+  await expect(ask).toContainText('지금 기록은 이 백업으로 바뀌어요.')
+  await expect(ask.getByRole('button', { name: '바꾸기', exact: true })).toHaveAttribute('data-variant', 'primary')
+  await ask.getByRole('button', { name: '바꾸기', exact: true }).click()
   await expect.poll(async () => (await saved(page)).xp).toBe(70)
-  // the reset is destructive: its action is the destructive style, never the filled primary
+  // board 6-3: the reset is destructive: a red action, never the ink primary; what goes is counted
   await page.getByRole('button', { name: '모든 기록 초기화' }).click()
-  const reset = page.getByRole('alertdialog', { name: '모든 기록을 지울까요?' })
-  await expect(reset.getByRole('button', { name: '모두 지우기' })).toHaveAttribute('data-variant', 'destructive')
+  const reset = page.getByRole('dialog', { name: '모든 기록을 지울까요?' })
+  await expect(reset).toContainText('단어 0개, 한자 0자 기록이 사라져요.')
+  await expect(reset).toContainText('되돌릴 수 없어요.')
+  await expect(reset.getByRole('button', { name: '지우기', exact: true })).toHaveAttribute('data-variant', 'destructive')
+  expect(await reset.getByRole('button', { name: '지우기', exact: true }).evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(196, 85, 59)')
   await reset.getByRole('button', { name: '취소' }).click()
   expect((await saved(page)).xp).toBe(70)
 })
 
-test('a confirm dialog starts on the safe choice, keeps focus inside, and Escape returns focus to its button', async ({ page }) => {
+test('a confirm sheet keeps focus inside, and Escape returns focus to its button', async ({ page }) => {
   await open(page, { state: user({}, { xp: 7 }), hash: '/settings' })
   const opener = page.getByRole('button', { name: '모든 기록 초기화' })
   await opener.click()
-  const reset = page.getByRole('alertdialog', { name: '모든 기록을 지울까요?' })
-  await expect(reset.getByRole('button', { name: '취소' })).toBeFocused()
+  const reset = page.getByRole('dialog', { name: '모든 기록을 지울까요?' })
+  await expect(reset.getByRole('button', { name: '취소' })).toBeVisible()
+  await expect.poll(() => reset.evaluate((d) => d.contains(document.activeElement))).toBe(true)
   for (let i = 0; i < 5; i++) {
     await page.keyboard.press('Tab')
     expect(await reset.evaluate((d) => d.contains(document.activeElement))).toBe(true)
@@ -53,8 +60,8 @@ test('a confirm dialog starts on the safe choice, keeps focus inside, and Escape
 })
 
 test('the word sheet traps focus, closes on Escape and gives focus back to the row that opened it', async ({ page }) => {
-  await open(page, { state: user(), hash: '/words' })
-  await page.getByPlaceholder('일본어, 읽기, 뜻으로 검색').fill('学校')
+  await open(page, { state: user(), hash: '/search/word' })
+  await page.getByPlaceholder('단어 · 읽기 · 뜻').fill('学校')
   const row = page.locator('.word-row').filter({ hasText: 'がっこう' }).first()
   await row.focus()
   await page.keyboard.press('Enter')
@@ -69,49 +76,67 @@ test('the word sheet traps focus, closes on Escape and gives focus back to the r
   await expect(row).toBeFocused()
 })
 
-test('theme modes reach the controls: light, dark and system (following the OS); groups sit on the ground', async ({ page }) => {
+test('theme modes reach the controls: light, dark and system (following the OS); a group is a white card on the cream ground', async ({ page }) => {
   await open(page, { state: user({ theme: 'light' }), hash: '/settings' })
   const group = '.group'
-  // the chosen segment is the one raised surface in a group: 胡粉 (墨 in dark)
-  const segment = '[role="radio"][aria-checked="true"]'
+  const card = '.group-body'
+  // the chosen segment is white on the beige track, in the ink
+  const segment = '.segmented:not(.level-choice) [role="radio"][aria-checked="true"]'
   const ground = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-  // a group is not a card: no surface of its own, no line around it; the page's ground shows through (生成り)
+  const css = (selector: string, prop: string) => page.locator(selector).first().evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop)
+  // a group is a small heading and one card: the group itself has no surface, its rows sit in a white card with a
+  // 1px hairline all round and the 20px corner, on the cream ground
   expect(await bg(page, group)).toBe('rgba(0, 0, 0, 0)')
-  expect(await page.locator(group).first().evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('0px')
-  expect(await ground()).toBe('rgb(251, 250, 245)')
-  expect(await bg(page, segment)).toBe('rgb(255, 254, 251)')
-  expect(await page.locator(segment).first().evaluate((el) => getComputedStyle(el).color)).toBe('rgb(22, 94, 131)')
+  expect(await css(group, 'border-top-width')).toBe('0px')
+  expect(await ground()).toBe('rgb(250, 248, 245)')
+  expect(await bg(page, card)).toBe('rgb(255, 255, 255)')
+  expect(await css(card, 'border-top-width')).toBe('1px')
+  expect(await css(card, 'border-top-color')).toBe('rgb(233, 228, 217)')
+  expect(await css(card, 'border-top-left-radius')).toBe('20px')
+  expect(await css(card, 'box-shadow')).toBe('none')
+  expect(await bg(page, '.segmented:not(.level-choice)')).toBe('rgb(243, 239, 231)')
+  expect(await bg(page, segment)).toBe('rgb(255, 255, 255)')
+  expect(await css(segment, 'color')).toBe('rgb(45, 42, 38)')
+  // a switch that is on is the ink
+  await page.getByRole('switch', { name: '발음 자동 재생' }).check()
+  await expect.poll(() => bg(page, '.switch-input:checked')).toBe('rgb(45, 42, 38)')
   await page.getByRole('radio', { name: '다크' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
-  // 墨 ground and surface, light 藍 ink
-  await expect.poll(ground).toBe('rgb(27, 26, 24)')
-  await expect.poll(() => bg(page, segment)).toBe('rgb(37, 35, 33)')
+  // a warm dark ground, a lighter dark card, light ink (boards 7-1, 7-2)
+  await expect.poll(ground).toBe('rgb(27, 25, 23)')
+  await expect.poll(() => bg(page, card)).toBe('rgb(37, 34, 31)')
+  await expect.poll(() => bg(page, segment)).toBe('rgb(37, 34, 31)')
   expect(await bg(page, group)).toBe('rgba(0, 0, 0, 0)')
-  expect(await page.locator(segment).first().evaluate((el) => getComputedStyle(el).color)).toBe('rgb(134, 174, 207)')
+  expect(await css(segment, 'color')).toBe('rgb(241, 237, 229)')
   // system follows the OS setting
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.getByRole('radio', { name: '시스템' }).click()
   await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
-  expect(await ground()).toBe('rgb(27, 26, 24)')
-  // the primary button on home in dark: a deeper 藍 face, not the bright 藍 ink as a slab
+  expect(await ground()).toBe('rgb(27, 25, 23)')
+  // the primary button on home in dark: the light ink as its face with a dark label, readable on the dark ground
   await page.getByRole('link', { name: '홈' }).click()
   await homeShown(page)
-  await expect.poll(() => bg(page, 'button[data-variant="primary"]')).toBe('rgb(43, 88, 120)')
+  const primary = 'button[data-variant="primary"]'
+  await expect.poll(() => bg(page, primary)).toBe('rgb(241, 237, 229)')
+  expect(await css(primary, 'color')).toBe('rgb(27, 25, 23)')
   await page.emulateMedia({ colorScheme: 'light' })
-  // in light: the 藍 face
-  await expect.poll(() => bg(page, 'button[data-variant="primary"]')).toBe('rgb(22, 94, 131)')
+  // in light: the ink face, a white label, a 4px darker edge under it
+  await expect.poll(() => bg(page, primary)).toBe('rgb(45, 42, 38)')
+  expect(await css(primary, 'color')).toBe('rgb(255, 255, 255)')
+  await expect.poll(() => css(primary, 'box-shadow')).toContain('rgb(20, 18, 15) 0px 4px 0px 0px')
   await page.getByRole('link', { name: '설정' }).click()
-  await expect.poll(ground).toBe('rgb(251, 250, 245)')
+  await expect.poll(ground).toBe('rgb(250, 248, 245)')
 })
 
-test('with reduced motion nothing slides or fades: card entry, answer reveal and button press are instant', async ({ page }) => {
+test('with reduced motion nothing slides or fades: card entry, a toggle opening and button press are instant', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await open(page, { state: user({ dailyNew: 5 }), hash: '/study' })
   const card = page.locator('.flash')
   await expect(card).toBeVisible()
   expect(await card.evaluate((el) => getComputedStyle(el).animationName)).toBe('none')
-  await page.getByRole('button', { name: '정답 보기' }).click()
-  expect(await page.locator('.flash-answer').evaluate((el) => getComputedStyle(el).animationName)).toBe('none')
+  await page.getByRole('button', { name: '의미', exact: true }).click()
+  await expect(page.locator('.flash-meaning')).toBeVisible()
+  expect(await page.locator('.flash-meaning-slot').evaluate((el) => getComputedStyle(el).transitionDuration.split(',').every((d) => parseFloat(d) === 0))).toBe(true)
   const grade = page.getByRole('button', { name: /^알아요/ })
   expect(await grade.evaluate((el) => getComputedStyle(el).transitionDuration.split(',').every((d) => parseFloat(d) === 0))).toBe(true)
 })
@@ -127,7 +152,7 @@ test('touch targets: every button and link on home and in study is at least 44px
         .filter(([, h]) => h > 0 && h < 44),
     )
   expect(await small()).toEqual([])
-  await page.getByRole('button', { name: '오늘의 학습 시작' }).click()
+  await page.getByRole('button', { name: '새 단어 시작' }).click()
   await expect(page.locator('.flash')).toBeVisible()
   // measured after the card's entry motion (a translate): mid-motion the transformed boxes read 43.99999px
   await page.locator('.flash').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))

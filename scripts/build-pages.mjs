@@ -180,20 +180,20 @@ export function markdownToHtml(md, pagePath) {
 
 // ── the page ──
 
-/** The ruma palette's [light, dark] pairs by their traditional-colour names (rumaTheme.ts `const c`). */
+/** The ruma palette's [light, dark] pairs by name (rumaTheme.ts `const c`). */
 export function palette() {
   const src = readFileSync(join(ROOT, 'src/themes/ruma/rumaTheme.ts'), 'utf8')
   const out = {}
   for (const m of src.matchAll(/^\s*(\w+): \['(#[0-9a-f]{6})', '(#[0-9a-f]{6})'\]/gm)) out[m[1]] = [m[2], m[3]]
-  for (const k of ['kinari', 'gofun', 'shironeri', 'kaihaku', 'sumi', 'rikyu', 'ai', 'shiraai', 'odo', 'torinoko'])
+  for (const k of ['ground', 'surface', 'muted', 'line', 'ink', 'ink2', 'yellowInk', 'yellowTint'])
     if (!out[k]) throw new Error(`palette colour ${k} not found in rumaTheme.ts`)
   return out
 }
 
 function css(p) {
   const vars = (i) =>
-    `--bg:${p.kinari[i]};--surface:${p.gofun[i]};--muted:${p.shironeri[i]};--line:${p.kaihaku[i]};--text:${p.sumi[i]};` +
-    `--text2:${p.rikyu[i]};--accent:${p.ai[i]};--accent-tint:${p.shiraai[i]};--mark:${p.torinoko[i]};--mark-text:${p.odo[i]};`
+    `--bg:${p.ground[i]};--surface:${p.surface[i]};--muted:${p.muted[i]};--line:${p.line[i]};--text:${p.ink[i]};` +
+    `--text2:${p.ink2[i]};--accent:${p.ink[i]};--accent-tint:${p.muted[i]};--mark:${p.yellowTint[i]};--mark-text:${p.yellowInk[i]};`
   return [
     `:root{color-scheme:light dark;${vars(0)}}`,
     `@media (prefers-color-scheme:dark){:root{${vars(1)}}}`,
@@ -247,8 +247,8 @@ export function renderPage(page, md) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="${p.kinari[0]}" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="${p.kinari[1]}" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="${p.ground[0]}" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="${p.ground[1]}" media="(prefers-color-scheme: dark)">
 <title>${title}</title>
 <style>
 ${css(p)}

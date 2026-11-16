@@ -19,11 +19,12 @@ export default function NativeSettings() {
   }, [])
 
   return (
-    // a group on the ground like the others in 설정 (styles.css `.group`): a heading, rows divided by hairlines
+    // a group like the others in 설정 (styles.css `.group`): a heading, then a white card of rows divided by hairlines
     <section className="group form native-settings" aria-labelledby="native-title">
       <h2 className="group-title" id="native-title">
         알림 · 진동 · 발음
       </h2>
+      <div className="group-body">
       <div className="native-row">
       <label className="switch">
         <span>
@@ -103,6 +104,7 @@ export default function NativeSettings() {
       <button className="btn text-action" data-variant="ghost" onClick={() => speak('おはようございます')}>
         들어 보기
       </button>
+      </div>
       </div>
     </section>
   )

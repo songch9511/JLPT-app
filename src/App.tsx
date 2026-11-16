@@ -1,30 +1,53 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { shouldNudge, useMeta } from './backup'
 import { Icon, type IconName } from './components/Icon'
 import { SaveWarning } from './components/Notices'
 import { useLevels, type Level } from './data'
 import { Doc, isDoc, type DocName } from './screens/Doc'
 import { Home } from './screens/Home'
-import { LevelScreen } from './screens/Level'
+import { Intro } from './screens/Intro'
+import { Chapter, KanjiLevel, LevelScreen } from './screens/Level'
+import { Practice, type PracticeSet } from './screens/Practice'
 import { Settings } from './screens/Settings'
 import { Stats } from './screens/Stats'
 import { Study } from './screens/Study'
-import { Words } from './screens/Words'
-import { studyLevels } from './srs'
+import { Marks, Search, Weak, Words, type Kind } from './screens/Words'
+import { chapterCount } from './data'
+import { studyLevels, type StudyMode } from './srs'
 import { getLoadError, useStore } from './store'
 
 type Route =
-  | { name: 'home' | 'study' | 'stats' | 'settings' }
-  | { name: 'words'; tab?: 'weak' }
+  | { name: 'home' | 'stats' | 'settings' | 'intro' }
+  // `#/study/review`, `#/study/new` and `#/study/kanji` are Home's three sessions; plain `#/study` is the whole day in
+  // one queue (the reminder notification, the widget and older links open it)
+  | { name: 'study'; mode: StudyMode }
+  | { name: 'practice'; set: PracticeSet }
+  | { name: 'words' | 'search' | 'marks' | 'weak'; kind: Kind }
   | { name: 'level'; level: Level }
+  | { name: 'chapter'; level: Level; n: number }
+  | { name: 'kanji'; level: Level }
   | { name: 'doc'; doc: DocName }
 
+const LEVEL = /^[1-5]$/
+const lv = (x: string) => Number(x) as Level
+
 function parse(hash: string): Route {
-  const [, a, b] = hash.split('/')
-  if (a === 'level' && ['1', '2', '3', '4', '5'].includes(b)) return { name: 'level', level: Number(b) as Level }
+  const [, a, b, c, d] = hash.split('/')
+  if (a === 'level' && LEVEL.test(b ?? '')) {
+    const n = Number(c)
+    if (c !== undefined && Number.isInteger(n) && n >= 1 && n <= chapterCount(lv(b))) return { name: 'chapter', level: lv(b), n }
+    return { name: 'level', level: lv(b) }
+  }
+  if (a === 'kanji' && LEVEL.test(b ?? '')) return { name: 'kanji', level: lv(b) }
   if (a === 'doc' && isDoc(b)) return { name: 'doc', doc: b }
-  if (a === 'words') return b === 'weak' ? { name: 'words', tab: 'weak' } : { name: 'words' }
-  if (a === 'study' || a === 'stats' || a === 'settings') return { name: a }
+  if (a === 'words' || a === 'search' || a === 'marks' || a === 'weak') return { name: a, kind: b === 'kanji' ? 'kanji' : 'word' }
+  if (a === 'study') return { name: 'study', mode: b === 'review' || b === 'new' || b === 'kanji' ? b : 'all' }
+  if (a === 'practice') {
+    if (b === 'weak') return { name: 'practice', set: { kind: 'weak' } }
+    if (b === 'weak-kanji') return { name: 'practice', set: { kind: 'weak-kanji' } }
+    if (b === 'chapter' && LEVEL.test(c ?? '') && Number(d) >= 1 && Number(d) <= chapterCount(lv(c))) return { name: 'practice', set: { kind: 'chapter', level: lv(c), n: Number(d) } }
+  }
+  if (a === 'stats' || a === 'settings' || a === 'intro') return { name: a }
   return { name: 'home' }
 }
 
@@ -32,31 +55,35 @@ export const go = (path: string) => {
   location.hash = path
 }
 
-/**
- * The browser's own chrome (Safari's status bar and toolbar tint, the PWA title bar) follows the page's ground: the
- * body colour, which is Ruma's sky on Home (styles.css `:root[data-sky] body`).
- */
-export function syncThemeColor() {
+/** The browser's own chrome (Safari's status bar and toolbar tint, the PWA title bar) follows the page's ground. */
+function syncThemeColor() {
   const bg = getComputedStyle(document.body).backgroundColor
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)
 }
 
-/** The tab bar's height as `--tabbar-h` (it grows with the reader's text size), so pages keep clear of it. */
+/**
+ * The tab bar's height as `--tabbar-h` (it grows with the reader's text size), so pages keep clear of it. The bar is
+ * not there on the study screen: it is measured again each time it comes back (a ref callback), and a bar that has
+ * left the page is never measured.
+ */
 function useTabbarHeight() {
-  const ref = useRef<HTMLElement>(null)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    const set = () => document.documentElement.style.setProperty('--tabbar-h', `${Math.ceil(el.getBoundingClientRect().height)}px`)
+  const observer = useRef<ResizeObserver | null>(null)
+  return useCallback((el: HTMLElement | null) => {
+    observer.current?.disconnect()
+    observer.current = null
+    if (!el) return
+    const set = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height)
+      if (h > 0) document.documentElement.style.setProperty('--tabbar-h', `${h}px`)
+    }
     set()
-    const ro = new ResizeObserver(set)
-    ro.observe(el)
-    return () => ro.disconnect()
+    if (typeof ResizeObserver === 'undefined') return
+    observer.current = new ResizeObserver(set)
+    observer.current.observe(el)
   }, [])
-  return ref
 }
 
-const TABS: { path: string; name: Route['name']; label: string; icon: IconName }[] = [
+const TABS: { path: string; name: 'home' | 'words' | 'stats' | 'settings'; label: string; icon: IconName }[] = [
   { path: '/', name: 'home', label: '홈', icon: 'home' },
   { path: '/words', name: 'words', label: '단어장', icon: 'book' },
   { path: '/stats', name: 'stats', label: '기록', icon: 'chart' },
@@ -72,7 +99,7 @@ export default function App() {
   const theme = useStore((s) => s.settings.theme)
   const target = useStore((s) => s.settings.target)
   const includeLower = useStore((s) => s.settings.includeLower)
-  // the studied levels' data in the background: today's counts (new words, reading cards) follow its order. Also
+  // the studied levels' data in the background: today's new words follow its order. Also
   // before the first-run question is answered: Home shows the default level's counts as soon as one is chosen.
   useLevels(studyLevels({ target, includeLower }))
 
@@ -92,30 +119,46 @@ export default function App() {
   const meta = useMeta()
   const nudge = useStore((s) => shouldNudge(s, meta, new Date()))
 
-  // There is no onboarding page: a new learner starts on Home, where Ruma asks the level
-  // (screens/HomeGuide.tsx). Until it is answered there is nothing to study, so the study route shows Home.
-  if (route.name === 'study' && onboarded)
+  // Until the first run is through there is nothing to study, so the study routes show Home (which asks the level).
+  if ((route.name === 'study' || route.name === 'practice') && onboarded)
     return (
       <>
         <SaveWarning />
-        <Study />
+        {/* a session is one opening of the study screen in one mode: another mode is another session */}
+        {route.name === 'study' ? <Study key={route.mode} mode={route.mode} /> : <Practice key={JSON.stringify(route.set)} set={route.set} />}
       </>
     )
+  // the intro pages again (설정 › 처음 안내 다시 보기): a page of their own, without the tab bar
+  if (route.name === 'intro' && onboarded)
+    return (
+      <div className="app">
+        <main className="page first-page">
+          <Intro again />
+        </main>
+      </div>
+    )
 
-  // a level's word list belongs to the 단어장 tab, where the level rows are; the privacy and support pages to 설정
-  const tab = route.name === 'level' ? 'words' : route.name === 'doc' ? 'settings' : route.name === 'study' ? 'home' : route.name
+  const tab: (typeof TABS)[number]['name'] =
+    route.name === 'doc' ? 'settings' : route.name === 'stats' || route.name === 'settings' ? route.name : route.name === 'home' || route.name === 'study' || route.name === 'practice' || route.name === 'intro' ? 'home' : 'words'
+  const firstRun = !onboarded && tab === 'home'
   return (
-    <div className={`app ${tab === 'home' ? 'at-home' : ''}`}>
+    <div className="app">
       <SaveWarning />
-      <main className={`page ${tab === 'home' ? 'home' : ''}`}>
-        {(route.name === 'home' || route.name === 'study') && <Home />}
+      <main className={`page ${tab === 'home' ? 'home' : ''} ${firstRun ? 'first-page' : ''}`}>
+        {tab === 'home' && <Home />}
+        {route.name === 'words' && <Words kind={route.kind} />}
+        {route.name === 'search' && <Search key={route.kind} kind={route.kind} />}
+        {route.name === 'marks' && <Marks kind={route.kind} />}
+        {route.name === 'weak' && <Weak kind={route.kind} />}
         {route.name === 'level' && <LevelScreen level={route.level} />}
-        {route.name === 'words' && <Words key={route.tab ?? 'search'} initialTab={route.tab} />}
+        {route.name === 'chapter' && <Chapter level={route.level} n={route.n} />}
+        {route.name === 'kanji' && <KanjiLevel level={route.level} />}
         {route.name === 'stats' && <Stats />}
         {route.name === 'settings' && <Settings />}
         {route.name === 'doc' && <Doc name={route.doc} />}
       </main>
-      <nav className="tabbar" ref={tabbar}>
+      {!firstRun && (
+      <nav className="tabbar" ref={tabbar} aria-label="탭">
         {TABS.map((t) => (
           <a
             key={t.name}
@@ -125,13 +168,14 @@ export default function App() {
             aria-label={t.name === 'settings' && nudge ? `${t.label}, 백업 권유 있음` : undefined}
           >
             <span className="tab-icon">
-              <Icon name={t.icon} size={22} strokeWidth={tab === t.name ? 2.4 : 2} />
+              <Icon name={t.icon} size={24} strokeWidth={2.2} fill={tab === t.name} />
               {t.name === 'settings' && nudge && <i className="tab-dot" />}
             </span>
             <span>{t.label}</span>
           </a>
         ))}
       </nav>
+      )}
     </div>
   )
 }

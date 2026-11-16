@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { LEVELS, type Level } from './data'
 import { fromLegacy, isWordId, LEGACY_ID, WORD_ID } from './ids'
+import { isKanjiId, isKnownKanjiId } from './kanji'
 
 /** A scheduled card (ts-fsrs Card with timestamps as epoch ms). Words without an entry are still new. */
 export interface SCard {
@@ -36,14 +37,21 @@ export interface DayLog {
   q?: number
   /** active study time in ms: from a card appearing to its answer, at most 60 s per card (03 §5.1) */
   ms?: number
+  /** new kanji introduced (kanji answers never count in `n`, `r` or `p`: the word plan and its review quota are the words') */
+  kn?: number
+  /** answers on kanji cards that were in review */
+  kr?: number
+  /** …of which remembered */
+  kp?: number
   // `e` (the predicted recall of the day's review answers, for the removed exam-day estimate) is no longer written.
   // Logs saved before keep it: a count like the others, ignored, carried in backups and merges.
 }
 
 export interface State {
   /**
-   * 4 since stable word ids (docs/plan/08 §7: `w0k3`, `w0k3:r`); 3 since the cognate fast-track (reading cards
-   * `<id>:r`, `settings.fastTrack`); 2 before. v2 and v3 used positional ids (`3-17`) and are migrated on load.
+   * 4 since stable word ids (docs/plan/08 §7: `w0k3`); 3 had the cognate fast-track's reading cards (`<id>:r`,
+   * `settings.fastTrack`, both removed 2026-11-16: `migrateIds` folds them into the word's card); 2 before. v2 and v3
+   * used positional ids (`3-17`) and are migrated on load. Kanji cards (`k強`) were added within v4.
    */
   v: 4
   onboarded: boolean
@@ -54,14 +62,10 @@ export interface State {
     autoSpeak: boolean
     /** also study the levels below the target, e.g. N5·N4 for an N3 learner */
     includeLower: boolean
-    /**
-     * Cognate fast-track (02 F3, 03 §2.4): words that mean the same as their Korean hanja word (k = S) are
-     * learned with a reading card (`<id>:r`) instead of a meaning card. Off: every word uses a meaning card
-     * and reading cards made so far rest (kept, not shown, not counted).
-     */
-    fastTrack: boolean
+    /** new kanji a day (DAILY_KANJI) */
+    dailyKanji: number
   }
-  /** keys: stable word id (`w0k3`, src/ids.ts) meaning card, `w0k3:r` reading card; only ids this version knows (see `orphans`) */
+  /** keys: stable word id (`w0k3`, src/ids.ts) or kanji card (`k強`, src/kanji.ts); only ids this version knows (see `orphans`) */
   cards: Record<string, SCard>
   log: Record<string, DayLog>
   marks: string[]
@@ -86,17 +90,24 @@ export interface State {
    */
   legacy?: { h: string }
   /**
-   * Ruma's first-run guide on Home (src/guide.ts): the steps of the first-run conversation answered and the
-   * in-context tips already shown, by id. Only learners who started with this version have it: a state saved before
+   * The first run (src/guide.ts): the steps of it answered, by id ('level', 'intro'; retired ids are dropped on load,
+   * RETIRED_GUIDE). Only learners who started with the first run have it: a state saved before
    * it existed, or a backup of one, with `onboarded` true has none and never sees a first-run prompt. Added within
    * v4 (an optional field); carried in backups.
    */
   guide?: { done: string[] }
+  /**
+   * The day each word or kanji was first answered (`dayKey`), for 처음 본 날 in the word and kanji sheets. Added within
+   * v4 (2026-11-16): cards learned before have none. Carried in backups.
+   */
+  first?: Record<string, string>
 }
 
 // storage keys keep the app's former name (Kasane) so existing learners keep their records
 /** New words a day never go above this, whatever the setting or an older saved value says (03 §5.1). */
 export const MAX_DAILY_NEW = 40
+/** The choices of 하루 새 한자. */
+export const DAILY_KANJI = [3, 5, 10, 15] as const
 
 /**
  * Stable-id states (v4) live under their own key. A tab still running the version before stable ids reads and
@@ -121,7 +132,7 @@ function initial(): State {
     v: STATE_VERSION,
     onboarded: false,
     // new learners include the lower levels; states saved before this setting existed keep it off (normalize)
-    settings: { target: 5, dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, fastTrack: true },
+    settings: { target: 5, dailyNew: 20, dailyKanji: 5, theme: 'system', autoSpeak: false, includeLower: true },
     cards: {},
     log: {},
     marks: [],
@@ -131,7 +142,7 @@ function initial(): State {
 }
 
 /** A state as saved by this or an earlier version: `v: 2` before the fast-track, `v: 3` before stable ids. */
-export type StoredState = Omit<State, 'v' | 'settings'> & { v: 2 | 3 | 4; settings: Partial<State['settings']> & { target: Level } }
+export type StoredState = Omit<State, 'v' | 'settings'> & { v: 2 | 3 | 4; settings: Partial<State['settings']> & { target: Level; fastTrack?: boolean } }
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x)
 const isNum = (x: unknown) => typeof x === 'number' && Number.isFinite(x)
@@ -153,6 +164,7 @@ const later = (a: SCard, b: SCard) => lastReview(a) > lastReview(b) || (lastRevi
 
 /** The id a stored card or bookmark id has in this version, or undefined when this version does not know it. */
 function currentId(id: string): string | undefined {
+  if (isKanjiId(id)) return isKnownKanjiId(id) ? id : undefined
   // stable ids start with `w`; anything else is checked as a positional id (or is unknown)
   if (id.charCodeAt(0) !== 119) return LEGACY_ID.test(id) ? fromLegacy(id) : undefined
   const i = id.indexOf(':')
@@ -172,7 +184,7 @@ export function migrateIds(s: Pick<StoredState, 'cards' | 'marks' | 'orphans'>):
   // every launch of a migrated state: nothing to translate, nothing quarantined — keep the objects as they are
   if (isObj(s.cards) && Array.isArray(s.marks) && !s.orphans) {
     let same = true
-    for (const id in s.cards) if (currentId(id) !== id) { same = false; break }
+    for (const id in s.cards) if (currentId(id) !== id || id.includes(':')) { same = false; break }
     if (same && s.marks.every((m) => typeof m === 'string' && currentId(m) === m && !m.includes(':') && s.marks.indexOf(m) === s.marks.lastIndexOf(m)))
       return { cards: s.cards, marks: s.marks }
   }
@@ -201,6 +213,20 @@ export function migrateIds(s: Pick<StoredState, 'cards' | 'marks' | 'orphans'>):
   }
   for (const [id, c] of Object.entries(s.cards ?? {})) take(id, c)
   for (const [id, c] of Object.entries(s.orphans?.cards ?? {})) take(id, c)
+  // The reading cards of the removed fast-track (`w0k3:r`): a word that also has its own card keeps that card and the
+  // reading card goes; a word learned only with a reading card keeps that learning as its card. Never kept as `:r`.
+  if (Object.keys(cards).some((id) => id.endsWith(':r'))) {
+    const folded: Record<string, SCard> = {}
+    for (const [id, c] of Object.entries(cards)) {
+      if (!id.endsWith(':r')) folded[id] = c
+      else {
+        const word = id.slice(0, -2)
+        if (!cards[word] && !folded[word]) folded[word] = c
+      }
+    }
+    for (const k of Object.keys(cards)) delete cards[k]
+    Object.assign(cards, folded)
+  }
   const marks: string[] = []
   const orphanMarks: string[] = []
   for (const id of [...(Array.isArray(s.marks) ? s.marks : []), ...(s.orphans?.marks ?? [])]) {
@@ -220,8 +246,8 @@ export const orphanCount = (s: Pick<State, 'orphans'>) => Object.keys(s.orphans?
 /**
  * A saved or imported state, completed with defaults for fields added since it was written, at the current
  * version. v3 → v4 (stable ids): card and bookmark ids are translated (`migrateIds`), nothing else changes.
- * v2 → v3 (the fast-track): `fastTrack` defaults to on; cards keep their content, so words already learned with a
- * meaning card keep it and only words introduced from now on can get a reading card.
+ * The fast-track's reading cards (v3, v4) are folded into their words' cards and its setting is dropped (`migrateIds`,
+ * `normalize`).
  * Within v2 fields were only added: a missing `includeLower` means a learner from before the setting (kept off
  * so their plan does not suddenly grow); `dailyNew` is held to MAX_DAILY_NEW; the API key of the removed AI
  * feature and the removed exam settings (`RETIRED_SETTINGS`) are dropped.
@@ -238,8 +264,11 @@ export function migrate(s: StoredState): State {
  * next save; a backup without them still imports in the versions that had them (they fill in their defaults).
  */
 const RETIRED_SETTINGS = ['examDate', 'goal', 'apiKey'] as const
-/** First-run steps and tips that no longer exist: the exam-date question and its "아직 몰라요", the readiness tip. */
-const RETIRED_GUIDE = new Set(['exam', 'exam-unknown', 'ready'])
+/**
+ * First-run steps and tips that no longer exist: the exam-date question and its "아직 몰라요", the readiness tip, and
+ * Ruma's spaced-repetition and reading-card tips (2026-11-16: Ruma no longer speaks).
+ */
+const RETIRED_GUIDE = new Set(['exam', 'exam-unknown', 'ready', 'srs', 'reading'])
 
 function normalize(s: State): State {
   const base = initial()
@@ -250,18 +279,25 @@ function normalize(s: State): State {
   const daily = Number(settings.dailyNew)
   settings.dailyNew = Number.isFinite(daily) ? Math.min(MAX_DAILY_NEW, Math.max(0, Math.round(daily))) : base.settings.dailyNew
   settings.includeLower = settings.includeLower === true
-  settings.fastTrack = settings.fastTrack !== false
+  // the fast-track setting went with the reading cards (2026-11-16)
+  delete (settings as { fastTrack?: unknown }).fastTrack
+  if (!(DAILY_KANJI as readonly number[]).includes(Number(settings.dailyKanji))) settings.dailyKanji = base.settings.dailyKanji
   const { guide: _g, bestE: _b, ...rest } = { ...base, ...s, v: STATE_VERSION as typeof STATE_VERSION, settings } as State & { bestE?: unknown }
   const out: State = rest
+  // first-seen days: only day keys are kept
+  if (out.first !== undefined) {
+    const f = isObj(out.first) ? Object.fromEntries(Object.entries(out.first).filter(([, d]) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d))) : {}
+    if (Object.keys(f).length) out.first = f as Record<string, string>
+    else delete out.first
+  }
   // The first-run guide: kept (cleaned) where a state has one; a state without one gets it only if it never finished
   // the first run (an install that never got past the old onboarding page). An onboarded state without it — every
   // learner and backup from before the guide — stays without, so it never sees a first-run prompt.
   const g = s.guide
   if (isObj(g) && Array.isArray(g.done)) out.guide = { done: [...new Set(g.done.filter((x): x is string => typeof x === 'string' && !RETIRED_GUIDE.has(x)))] }
   else if (!s.onboarded) out.guide = { done: [] }
-  // The first run used to ask the exam date after the level; it now starts right after the level. A learner saved
-  // between the two questions (level answered, not yet onboarded) continues at the first session.
-  if (out.guide && !out.onboarded && out.guide.done.includes('level')) out.onboarded = true
+  // A learner saved between the level and the next step of the first run (once the exam date, now the intro pages)
+  // continues with the intro pages (src/guide.ts).
   return out
 }
 
@@ -315,8 +351,11 @@ export function mergeStates(cur: State, other: State): State {
   const orphanCards = { ...(cur.orphans?.cards ?? {}) }
   for (const [id, c] of Object.entries(other.orphans?.cards ?? {})) if (isCard(c) && (!isCard(orphanCards[id]) || later(c, orphanCards[id]))) orphanCards[id] = c
   const orphanMarks = [...(cur.orphans?.marks ?? []), ...(other.orphans?.marks ?? []).filter((m) => !cur.orphans?.marks.includes(m))]
+  const first = { ...(other.first ?? {}), ...(cur.first ?? {}) }
+  for (const [id, d] of Object.entries(other.first ?? {})) if (typeof d === 'string' && first[id] > d) first[id] = d
   const out: State = {
     ...cur,
+    ...(Object.keys(first).length ? { first } : {}),
     onboarded: cur.onboarded || other.onboarded,
     cards,
     log,
@@ -612,7 +651,8 @@ export function isBackup(x: unknown): x is StoredState {
   for (const [id, c] of Object.entries(x.cards)) {
     if (x.v === 4) {
       const i = id.indexOf(':')
-      if (!WORD_ID.test(i < 0 ? id : id.slice(0, i)) || (i >= 0 && id.slice(i) !== ':r')) return false
+      // a kanji card (`k強`), or a word id (with the reading card's suffix of the versions that had it)
+      if (!isKanjiId(id) && (!WORD_ID.test(i < 0 ? id : id.slice(0, i)) || (i >= 0 && id.slice(i) !== ':r'))) return false
     } else {
       // reading cards (`:r`) exist from v3 on
       const m = LEGACY_ID.exec(id)
