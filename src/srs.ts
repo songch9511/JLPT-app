@@ -48,6 +48,18 @@ const emptyLog = (): DayLog => ({ c: 0, n: 0, r: 0, p: 0 })
 // ── today's queue ───────────────────────────────────────────────────────────
 
 export type Kind = 'new' | 'learning' | 'review'
+/**
+ * Which of today's cards a study session shows. Home has two sessions: `review` (reviews due today, and cards being
+ * relearned after a forgotten review) and `new` (today's new words, and words still in their first learning steps).
+ * `all` is both together, as one queue: the plain `#/study` route (the reminder notification, the widget) and every
+ * count that speaks of the whole day.
+ *
+ * A learning card belongs to the session that put it into learning, read from its FSRS state (nothing is saved for
+ * it): `Learning` is a word introduced as new, `Relearning` a review answered "모르겠어요". So the two sessions split
+ * today's cards exactly — every card of `all` is in one of them, none in both — and a session never loses a card to
+ * the other while it is open.
+ */
+export type StudyMode = 'all' | 'review' | 'new'
 export interface Queue {
   learning: number
   /** today's reviews still to do (at most the day's review quota) */
@@ -199,15 +211,20 @@ const byDue = (a: [string, number], b: [string, number]) => a[1] - b[1] || (a[0]
  * `finishNow` shows learning cards that come back later today right away, so a session never has to wait
  * for them (03 §5.2 P7). When more reviews are due than today's review quota (`reviewQuota`), only the
  * oldest-due ones up to the quota are today's; the rest are `held` for the coming days (03 §5.3) and new
- * words are cut to NEW_WHILE_BEHIND.
+ * words are cut to NEW_WHILE_BEHIND. `mode` keeps one session's cards (`StudyMode`): the day is planned as a whole
+ * first (the quota, `held`, the cut of new words), then the other session's cards are left out, so the two sessions'
+ * counts always add up to the day's.
  */
-export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNow?: boolean } = {}): Queue {
+export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNow?: boolean; mode?: StudyMode } = {}): Queue {
   const t = now.getTime()
-  const { learning, review: due } = scanToday(s, now)
+  const mode = opts.mode ?? 'all'
+  const today = scanToday(s, now)
+  const due = today.review
   const quota = reviewQuota(s, now)
-  const review = due.slice(0, quota.left)
-  const held = due.length - review.length
-  const fresh = nextNewIds(s, newLeftToday(s, now, s.settings.dailyNew, held > 0))
+  const held = Math.max(0, due.length - quota.left)
+  const learning = mode === 'all' ? today.learning : today.learning.filter(([id]) => (s.cards[id].state === CardState.Relearning) === (mode === 'review'))
+  const review = mode === 'new' ? [] : due.slice(0, quota.left)
+  const fresh = mode === 'review' ? [] : nextNewIds(s, newLeftToday(s, now, s.settings.dailyNew, held > 0))
 
   const ready = opts.finishNow ? learning : learning.filter(([, due]) => due <= t + LEARN_AHEAD_MS)
   const dueNow = ready.filter(([, due]) => due <= t)
@@ -578,6 +595,9 @@ export function secondsPerAnswer(s: State, now: Date): number {
   }
   return c >= 50 ? ms / c / 1000 : 8
 }
+
+/** The cards a queue still holds: the number on Home's button for a session and the study screen's "남음". */
+export const cardsLeft = (q: Pick<Queue, 'review' | 'learning' | 'fresh'>) => q.review + q.learning + q.fresh
 
 /** Minutes the cards still due today should take: a new word is answered about three times on its first day. */
 export function minutesFor(q: Pick<Queue, 'review' | 'learning' | 'fresh'>, secPerAnswer: number): number {

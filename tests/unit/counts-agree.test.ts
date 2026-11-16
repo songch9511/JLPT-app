@@ -1,6 +1,6 @@
 // QA round 2 (docs/plan/13): every user-visible count that more than one screen shows must agree, whatever the
 // state. Home, Study (both `buildQueue`), the 기록 forecast, the level screen (word by word), the 단어장 level rows
-// (`breakdowns`), Home's word card and the 기록 stamps (`studyProgress`), Home's catch-up days (`spreadReviews`) and the
+// (`breakdowns`), Home's two session buttons (`buildQueue` by mode), the 기록 stamps (`studyProgress`), Home's catch-up days (`spreadReviews`) and the
 // iOS widget payload are computed by different functions; this checks them against each other on states that exercise
 // backlogs, reading cards (active, resting, re-tagged) and lower levels.
 import { readFileSync } from 'node:fs'
@@ -47,6 +47,18 @@ function agree({ store, srs, data, widget, reminders }: Env) {
   expect(today.fresh).toBe(q.fresh)
   const w = widget.widgetSnapshot(s, now)
   expect(w.days[0]).toMatchObject({ due: q.review + q.learning, fresh: q.fresh })
+  // Home's two buttons (복습하기 · 새 단어) split exactly what the day holds: nothing twice, nothing left out
+  const r = srs.buildQueue(s, now, undefined, { mode: 'review' })
+  const n = srs.buildQueue(s, now, undefined, { mode: 'new' })
+  expect({ review: r.review, fresh: r.fresh, held: r.held }).toEqual({ review: q.review, fresh: 0, held: q.held })
+  expect({ review: n.review, fresh: n.fresh, freshReading: n.freshReading, held: n.held }).toEqual({ review: 0, fresh: q.fresh, freshReading: q.freshReading, held: q.held })
+  expect(r.learning + n.learning).toBe(q.learning)
+  expect(r.waiting + n.waiting).toBe(q.waiting)
+  expect(srs.cardsLeft(r) + srs.cardsLeft(n)).toBe(srs.cardsLeft(q))
+  // a session has a card to show exactly when it counts one that is ready, and the day's queue when either has
+  expect(r.next === null).toBe(srs.cardsLeft(r) - r.waiting === 0)
+  expect(n.next === null).toBe(srs.cardsLeft(n) - n.waiting === 0)
+  expect(q.next === null).toBe(r.next === null && n.next === null)
   // Home's word card, the 기록 stamps and the widget: words of the studied levels, met, in long-term memory
   expect({ levels: w.levels, total: w.total, met: w.met, mature: w.mature }).toEqual({
     levels: levels.length === 1 ? `N${levels[0]}` : `N${levels[0]}~N${levels[levels.length - 1]}`,
@@ -163,5 +175,158 @@ describe('counts agree across screens', () => {
       expect(log.c).toBe(session.length)
       expect(log.xp).toBe(env.store.getState().xp)
     }
+  })
+})
+
+// Home's two sessions (srs.ts `StudyMode`): 복습하기 shows the reviews due today and the cards being relearned, 새 단어
+// today's new words and the words still in their first learning steps. The number on each button is what its session
+// then shows, the sessions never take each other's cards, and after both nothing of the day is left.
+describe('the two sessions', () => {
+  type Mode = 'review' | 'new'
+
+  /** A day with both kinds of work: reviews due, a relearning card, a learning card from an earlier day, new words. */
+  async function day(settings: Partial<State['settings']> = {}) {
+    const cards: Record<string, SCard> = {}
+    for (let i = 0; i < 24; i++) cards[L(`5-${i}`)] = due((i % 4) - 2, { lapses: i % 3 })
+    // forgotten in a review earlier today: comes back in the review session
+    cards[L('5-30')] = card({ due: T + 2 * MIN, state: 3, scheduled_days: 0, lapses: 1, last_review: T - 8 * MIN })
+    // introduced yesterday and still in its first steps: a new word still being learned
+    cards[L('5-31')] = card({ due: T - 20 * HOUR, state: 1, scheduled_days: 0, reps: 1, last_review: T - 21 * HOUR })
+    // …and one of each that comes back later today, beyond the learn-ahead window
+    cards[L('5-32')] = card({ due: T + 3 * HOUR, state: 3, scheduled_days: 0, lapses: 2, last_review: T - 10 * MIN })
+    cards[L('5-33')] = card({ due: T + 4 * HOUR, state: 1, scheduled_days: 0, reps: 1, last_review: T - 10 * MIN })
+    return setup({ dailyNew: 6, ...settings }, cards)
+  }
+
+  /** Follow one session to its end as the study screen does (the cards that wait are finished now), 20 s a card. */
+  function play(env: Env, mode: Mode, from: number, grades: readonly (1 | 3 | 4)[] = [3, 1, 3, 4, 3, 3, 1, 3]) {
+    const shown = new Set<string>()
+    const kinds = new Set<string>()
+    let last: string | undefined
+    let t = from
+    for (let i = 0; i < 2000; i++) {
+      const s = env.store.getState()
+      const q = env.srs.buildQueue(s, new Date(t), last, { mode, finishNow: true })
+      if (!q.next) return { shown, kinds, end: t, answers: i }
+      const prev = s.cards[q.next.id]
+      // what the session offers is its own: never a card of the other session
+      if (mode === 'review') expect(prev && (prev.state === 2 || prev.state === 3), `${q.next.id} in 복습하기`).toBe(true)
+      else expect(!prev || prev.state === 1, `${q.next.id} in 새 단어`).toBe(true)
+      shown.add(q.next.id)
+      kinds.add(q.next.kind)
+      const g = grades[i % grades.length]
+      env.srs.answer(q.next.id, q.next.id.endsWith(':r') && g === 4 ? 3 : g, new Date(t), 4000)
+      last = q.next.id
+      t += 20_000
+    }
+    throw new Error('the session did not end')
+  }
+
+  const counts = (env: Env, at: number) => {
+    const s = env.store.getState()
+    const q = (mode?: Mode) => env.srs.buildQueue(s, new Date(at), undefined, mode && { mode })
+    return { all: q(), review: q('review'), fresh: q('new') }
+  }
+
+  for (const order of [['review', 'new'], ['new', 'review']] as const)
+    it(`${order[0]} then ${order[1]}: each shows the cards its button counted, and together the whole day`, async () => {
+      const env = await day()
+      const before = counts(env, T)
+      agree(env)
+      expect(before.review.review).toBe(18)
+      expect(before.review.learning).toBe(2)
+      expect(before.fresh.fresh).toBe(6)
+      expect(before.fresh.learning).toBe(2)
+
+      const first = play(env, order[0], T)
+      const mid = counts(env, first.end)
+      // the session shown is finished; the other one's button still says what it said before
+      expect(env.srs.cardsLeft(mid[order[0] === 'review' ? 'review' : 'fresh'])).toBe(0)
+      const other = order[1] === 'review' ? 'review' : 'fresh'
+      expect(env.srs.cardsLeft(mid[other])).toBe(env.srs.cardsLeft(before[other]))
+      expect(first.shown.size).toBe(env.srs.cardsLeft(before[order[0] === 'review' ? 'review' : 'fresh']))
+
+      const second = play(env, order[1], first.end)
+      expect(second.shown.size).toBe(env.srs.cardsLeft(before[other]))
+      // no card was shown by both, and nothing of the day is left: not for either session, not for the plain route
+      expect([...first.shown].filter((id) => second.shown.has(id))).toEqual([])
+      const after = counts(env, second.end)
+      expect(env.srs.cardsLeft(after.all)).toBe(0)
+      expect(after.all.next).toBeNull()
+
+      const log = env.store.getState().log['2026-11-14']
+      expect(log.n).toBe(6)
+      expect(log.r).toBe(18)
+      // the review session met reviews and their relearning steps only; the new one new words and their steps only
+      const [rev, fresh] = order[0] === 'review' ? [first, second] : [second, first]
+      expect([...rev.kinds].sort()).toEqual(['learning', 'review'])
+      expect([...fresh.kinds].sort()).toEqual(['learning', 'new'])
+    })
+
+  it('the plain route still shows every card of both sessions in one queue', async () => {
+    const env = await day()
+    const before = counts(env, T)
+    const shown = new Set<string>()
+    let last: string | undefined
+    let t = T
+    for (let i = 0; i < 2000; i++) {
+      const q = env.srs.buildQueue(env.store.getState(), new Date(t), last, { finishNow: true })
+      if (!q.next) break
+      shown.add(q.next.id)
+      env.srs.answer(q.next.id, 3, new Date(t), 4000)
+      last = q.next.id
+      t += 20_000
+    }
+    expect(shown.size).toBe(env.srs.cardsLeft(before.all))
+    expect(env.srs.cardsLeft(before.all)).toBe(env.srs.cardsLeft(before.review) + env.srs.cardsLeft(before.fresh))
+  })
+
+  it('a backlog: the review session stops at the day’s quota, the new one keeps the cut of new words', async () => {
+    const cards: Record<string, SCard> = {}
+    for (let i = 0; i < 400; i++) cards[L(`5-${i}`)] = due(-1 - (i % 30))
+    const env = await setup({ target: 4, dailyNew: 30 }, cards)
+    const { q } = agree(env)
+    expect(q.held).toBeGreaterThan(0)
+    const before = counts(env, T)
+    expect(before.fresh.fresh).toBe(env.srs.NEW_WHILE_BEHIND)
+    const rev = play(env, 'review', T, [3])
+    expect(rev.shown.size).toBe(before.review.review)
+    // the held reviews are still held (none was let in by finishing today's), and the new words are untouched
+    const mid = counts(env, rev.end)
+    expect(mid.all.held).toBe(before.all.held)
+    expect(mid.review.next).toBeNull()
+    expect(mid.fresh.fresh).toBe(before.fresh.fresh)
+    // "50장 더" lets reviews in: they are the review session's
+    env.srs.unlockMoreReviews(50, new Date(rev.end))
+    const more = counts(env, rev.end)
+    expect(more.review.review).toBe(50)
+    expect(more.fresh.review).toBe(0)
+  })
+
+  it('fast-track: a new word introduced with a reading card stays in the new session through its steps', async () => {
+    const env = await setup({ dailyNew: 8 }, {})
+    const before = counts(env, T)
+    expect(before.fresh.freshReading).toBeGreaterThan(0)
+    expect(env.srs.cardsLeft(before.review)).toBe(0)
+    const n = play(env, 'new', T, [1, 3, 3])
+    expect(n.shown.size).toBe(8)
+    expect([...n.shown].some((id) => id.endsWith(':r'))).toBe(true)
+    // nothing spilled into the review session
+    expect(env.srs.cardsLeft(counts(env, n.end).review)).toBe(0)
+    agree(env)
+  })
+
+  it('a session keeps its learning cards while they wait: counted on its own button, not the other’s', async () => {
+    const env = await day({ dailyNew: 0 })
+    const s = env.store.getState()
+    const now = new Date(T)
+    const r = env.srs.buildQueue(s, now, undefined, { mode: 'review' })
+    const n = env.srs.buildQueue(s, now, undefined, { mode: 'new' })
+    // 5-32 (relearning, in 3 h) waits for the review session; 5-33 (learning, in 4 h) for the new one
+    expect({ waiting: r.waiting, nextDue: r.nextDue }).toEqual({ waiting: 1, nextDue: T + 3 * HOUR })
+    expect({ waiting: n.waiting, nextDue: n.nextDue }).toEqual({ waiting: 1, nextDue: T + 4 * HOUR })
+    // nothing new today, yet the new session still has its two learning cards: they are never dropped
+    expect({ fresh: n.fresh, learning: n.learning }).toEqual({ fresh: 0, learning: 2 })
+    expect(n.next).toEqual({ id: L('5-31'), kind: 'learning' })
   })
 })
