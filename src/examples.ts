@@ -12,8 +12,12 @@ export interface Example {
   ko: string
 }
 
-/** Levels with an example file (tests/unit/examples.test.ts checks this against public/data). */
-export const EXAMPLE_LEVELS: readonly Level[] = [5]
+/**
+ * Levels with an example file: every level that has data/examples/n{l}.json when `npm run data` ran (written into
+ * src/generated/content.ts; tests/unit/examples.test.ts checks this against public/data).
+ */
+export { EXAMPLE_LEVELS } from './generated/content.ts'
+import { EXAMPLE_LEVELS } from './generated/content.ts'
 
 const cache = new Map<Level, Promise<Record<string, Example>>>()
 
