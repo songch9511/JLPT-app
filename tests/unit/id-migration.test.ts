@@ -33,15 +33,25 @@ const target = (id: string) => (CORRECTED_HEADWORD[split(id)[0]] ?? WORD.get(spl
 
 type Legacy = Omit<State, 'v'> & { v: 2 | 3 }
 
-/** Every card of `old` is in `s` under the stable id of the same word and card type, byte for byte, in the same order. */
+/**
+ * The cards `old` should become, in order: every card under its own id, except the fast-track's reading cards (removed
+ * 2026-11-16): one of a word that has its own card goes, one of a word learned only with it becomes that word's card.
+ */
+function folded(old: Legacy): [string, SCard][] {
+  const words = new Set(Object.keys(old.cards).filter((id) => !id.endsWith(':r')))
+  return Object.entries(old.cards).filter(([id]) => !id.endsWith(':r') || !words.has(id.slice(0, -2)))
+}
+
+/** Every card of `old` is in `s` under the stable id of the same word, byte for byte, in the same order (reading cards folded). */
 function expectSameRecords(old: Legacy, s: State) {
-  const oldIds = Object.keys(old.cards)
+  const want = folded(old)
   const ids = Object.keys(s.cards)
-  expect(ids).toHaveLength(oldIds.length)
-  oldIds.forEach((oldId, i) => {
-    expect(target(ids[i])).toBe(legacyTarget(oldId))
-    expect(JSON.stringify(s.cards[ids[i]])).toBe(JSON.stringify(old.cards[oldId]))
+  expect(ids).toHaveLength(want.length)
+  want.forEach(([oldId, card], i) => {
+    expect(target(ids[i])).toBe(legacyTarget(oldId).replace(/:r$/, ''))
+    expect(JSON.stringify(s.cards[ids[i]])).toBe(JSON.stringify(card))
   })
+  expect(ids.some((id) => id.includes(':'))).toBe(false)
   expect(s.marks.map(target)).toEqual((old.marks ?? []).map(legacyTarget))
   expect(s.log).toEqual(old.log)
   expect(s.xp).toBe(old.xp)
@@ -63,8 +73,9 @@ describe('migrating a real learner’s saved state (v3, positional ids)', () => 
     expect(s.v).toBe(4)
     expectSameRecords(old, s)
     // every setting as it was, except the exam date and goal the app no longer has (dropped, 2026-11-14)
-    const { examDate: _e, goal: _g, ...settings } = old.settings as Record<string, unknown>
-    expect(s.settings).toEqual(settings)
+    const { examDate: _e, goal: _g, fastTrack: _f, ...settings } = old.settings as Record<string, unknown>
+    // …and the fast-track setting, gone with the reading cards; 하루 새 한자 at its default
+    expect(s.settings).toEqual({ ...settings, dailyKanji: 5 })
     expect(s.onboarded).toBe(true)
     // …and the stamps' best exam-day estimate
     expect('bestE' in s).toBe(false)

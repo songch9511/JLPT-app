@@ -12,10 +12,11 @@
 // - never on a day already completed: today once something was answered and nothing is left or waiting.
 // - never on the learner's quiet weekdays, never in the past.
 // - the message states the real counts.
-import { buildQueue, isActive, newPerDay, newWordsLeft, reviewCap } from '../srs'
+import { buildQueue, newPerDay, newWordsLeft, reviewCap } from '../srs'
 import type { State } from '../store'
 import { addDays, dayKey } from '../util'
 import { wordOfCard } from '../data'
+import { isKanjiId } from '../kanji'
 
 export interface ReminderPrefs {
   enabled: boolean
@@ -59,9 +60,8 @@ export function workOn(s: State, day: Date, now: Date): { reviews: number; fresh
     return { reviews: q.review + q.learning, fresh: q.fresh, done: answered > 0 && !q.next && q.waiting === 0 }
   }
   const eod = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1).getTime()
-  const ft = s.settings.fastTrack !== false
   const words = new Set<string>()
-  for (const id in s.cards) if (isActive(id, ft) && s.cards[id].due < eod) words.add(wordOfCard(id))
+  for (const id in s.cards) if (!isKanjiId(id) && s.cards[id].due < eod) words.add(wordOfCard(id))
   // as the queue would show that day: reviews up to the day's cap (the rest wait, 03 §5.3), fewer new words then
   const cap = reviewCap(s, now)
   const fresh = Math.min(newPerDay(s.settings.dailyNew, words.size > cap), newWordsLeft(s))

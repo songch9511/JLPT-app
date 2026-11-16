@@ -32,7 +32,7 @@ export function backupFile(s: State, now = new Date()) {
   }
 }
 
-export type ReadResult = { ok: true; state: State } | { ok: false; reason: 'invalid' | 'newer' }
+export type ReadResult = { ok: true; state: State; exportedAt?: string } | { ok: false; reason: 'invalid' | 'newer' }
 
 /**
  * Reads a parsed backup file. Accepts this format (versions 1 to 3) and the earlier plain state (`{ v: 2, … }`)
@@ -52,7 +52,8 @@ export function readBackup(x: unknown): ReadResult {
   // a file never brings this device's bookkeeping, even if someone edited it in
   delete rest.rev
   delete rest.legacy
-  return isBackup(rest) ? { ok: true, state: migrate(rest) } : { ok: false, reason: 'invalid' }
+  if (!isBackup(rest)) return { ok: false, reason: 'invalid' }
+  return typeof o.exportedAt === 'string' ? { ok: true, state: migrate(rest), exportedAt: o.exportedAt } : { ok: true, state: migrate(rest) }
 }
 
 /**

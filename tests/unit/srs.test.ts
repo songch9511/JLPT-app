@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { at, bootUser, card, DAY, HOUR, MIN, KEY, L } from './helpers'
+import { at, bootUser, card, DAY, HOUR, MIN, KEY, L, knownKanji } from './helpers'
 import type { DayLog, SCard } from '../../src/store'
 
 // Friday 2026-11-13, 09:00 in Seoul
@@ -233,7 +233,7 @@ describe('XP and quests', () => {
   })
 
   it('awards the one quest — finishing today’s plan — exactly once, at the answer that completes it', async () => {
-    const { srs, store } = await bootUser(NOW, { dailyNew: 5 })
+    const { srs, store } = await bootUser(NOW, { dailyNew: 5 }, { cards: knownKanji() })
     const gains: number[] = []
     // 5 new words, all “쉬워요”: the 5th clears the day
     for (let i = 0; i < 5; i++) gains.push(srs.answer(L(`5-${i}`), srs.Rating.Easy, new Date(T + i * MIN)))
@@ -263,7 +263,7 @@ describe('XP and quests', () => {
 
 describe('undo (snapshot / restore)', () => {
   it('restores cards, the day log (incl. quest flags) and XP exactly', async () => {
-    const { srs, store } = await bootUser(NOW, { dailyNew: 5 })
+    const { srs, store } = await bootUser(NOW, { dailyNew: 5 }, { cards: knownKanji() })
     for (let i = 0; i < 4; i++) srs.answer(L(`5-${i}`), srs.Rating.Easy, at(NOW))
     const before = structuredClone({ cards: store.getState().cards, log: store.getState().log, xp: store.getState().xp })
     const snap = srs.snapshot()

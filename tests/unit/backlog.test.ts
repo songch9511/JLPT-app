@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { at, boot, bootUser, card, DAY, HOUR, MIN, L, legacyKeys } from './helpers'
+import { at, boot, bootUser, card, DAY, HOUR, MIN, L, legacyKeys, knownKanji } from './helpers'
 import type { DayLog, SCard, State } from '../../src/store'
 
 // Friday 2026-11-13 09:00 in Seoul
@@ -75,7 +75,7 @@ describe('buildQueue with a backlog', () => {
   })
 
   it('the quota counts review answers already given today; “더 하기” lets more in', async () => {
-    const { srs, store } = await setup(overdue(300), { dailyNew: 0 })
+    const { srs, store } = await setup({ ...knownKanji(), ...overdue(300) }, { dailyNew: 0 })
     // 225 reviews answered today (as if the oldest had been done): the day's share is finished
     store.update((d) => {
       const cards = { ...d.cards }

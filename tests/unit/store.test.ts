@@ -9,7 +9,7 @@ describe('store: loading', () => {
     const s = store.getState()
     expect(s.onboarded).toBe(false)
     // a new learner studies the lower levels too (03 decision 2)
-    expect(s.settings).toEqual({ target: 5, dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, fastTrack: true })
+    expect(s.settings).toEqual({ target: 5, dailyNew: 20, theme: 'system', autoSpeak: false, includeLower: true, dailyKanji: 5 })
     expect(s.cards).toEqual({})
     expect(s.marks).toEqual([])
     expect(s.xp).toBe(0)
@@ -28,7 +28,7 @@ describe('store: loading', () => {
     const { store, ls } = await boot({ now: NOW, legacy: saved })
     const s = store.getState()
     // a learner from before `includeLower` keeps studying the target level only, so the plan does not suddenly grow
-    expect(s.settings).toEqual({ target: 3, dailyNew: 10, theme: 'dark', autoSpeak: false, includeLower: false, fastTrack: true })
+    expect(s.settings).toEqual({ target: 3, dailyNew: 10, theme: 'dark', autoSpeak: false, includeLower: false, dailyKanji: 5 })
     expect(JSON.stringify(s)).not.toContain('sk-ant-old')
     // the migrated state is stored at once (without the key); the pre-migration copy stays exactly as it was
     expect(ls.getItem(KEY)).not.toContain('sk-ant-old')
@@ -205,7 +205,7 @@ describe('store: additive fields without a version bump', () => {
     const s = store.getState()
     // migrated to v4 on load (the fast-track, stable ids); nothing else about the state changes
     expect(s.v).toBe(4)
-    expect(s.settings).toEqual({ target: 1, dailyNew: 40, theme: 'light', autoSpeak: true, includeLower: false, fastTrack: true })
+    expect(s.settings).toEqual({ target: 1, dailyNew: 40, theme: 'light', autoSpeak: true, includeLower: false, dailyKanji: 5 })
     expect(s.log['2026-11-12']).toEqual({ c: 5, n: 5, r: 0, p: 0, xp: 50 })
     expect(s.cards[L('1-0')]).toEqual(saved.cards['1-0'])
     expect(s.marks).toEqual([L('1-0')])
@@ -242,7 +242,7 @@ describe('store: the exam date and the exam-day estimate are gone (2026-11-14)',
     for (const v of [2, 3, 4] as const) {
       const { store, ls, srs } = await boot({ now: NOW, ...(v === 4 ? { saved: withExam(4) } : { legacy: withExam(v) }) })
       const s = store.getState()
-      expect(s.settings).toEqual({ target: 4, dailyNew: 10, theme: 'light', autoSpeak: false, includeLower: true, fastTrack: true })
+      expect(s.settings).toEqual({ target: 4, dailyNew: 10, theme: 'light', autoSpeak: false, includeLower: true, dailyKanji: 5 })
       expect(s).not.toHaveProperty('bestE')
       expect(s.log['2026-11-12']).toEqual({ c: 3, n: 1, r: 2, p: 2, e: 1.8, ms: 24000 })
       expect(srs.buildQueue(s, new Date(NOW)).review).toBe(1)

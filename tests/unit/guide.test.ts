@@ -69,29 +69,37 @@ describe('guide: who sees the first run', () => {
   })
 })
 
-describe('guide: the conversation', () => {
-  it('the level is the one question: answered, the plan is complete and Ruma offers the first session; saved at once', async () => {
+describe('guide: the first run (level, then the intro pages)', () => {
+  it('the level comes first, then the intro pages; read (or skipped), the plan is complete and the first session is offered; saved at once', async () => {
     const { store, guide, ls } = await bootGuide({ now: NOW })
     guide.chooseLevel(3)
-    const s = store.getState()
+    let s = store.getState()
     expect(s.settings.target).toBe(3)
+    expect(s.onboarded).toBe(false)
+    expect(guide.phase(s)).toBe('intro')
+    // back from the first intro page: the level cards again
+    guide.backToLevel()
+    expect(guide.phase(store.getState())).toBe('level')
+    guide.chooseLevel(3)
+    guide.finishIntro()
+    s = store.getState()
     expect(s.onboarded).toBe(true)
     expect(guide.phase(s)).toBe('start')
     expect(s.settings).not.toHaveProperty('examDate')
     // reload
     const again = await bootGuide({ now: NOW, storage: ls })
     expect(again.guide.phase(again.store.getState())).toBe('start')
-    expect(JSON.parse(again.ls.getItem(KEY)!).guide.done).toEqual(['level'])
+    expect(JSON.parse(again.ls.getItem(KEY)!).guide.done).toEqual(['level', 'intro'])
   })
 
-  it('a learner saved at the removed exam-date question continues at the first session, with the level they chose', async () => {
+  it('a learner saved at the removed exam-date question continues with the intro pages, with the level they chose', async () => {
     // as the version with the exam question saved it: level answered, not yet onboarded, the default exam date set
     const saved = { v: 4, onboarded: false, settings: { target: 3, examDate: '2026-12-06', goal: 0.8, dailyNew: 20, includeLower: true }, cards: {}, log: {}, marks: [], xp: 0, guide: { done: ['level'] } }
     const { store, guide } = await bootGuide({ now: NOW, saved })
     const s = store.getState()
-    expect(s.onboarded).toBe(true)
+    expect(s.onboarded).toBe(false)
     expect(s.settings.target).toBe(3)
-    expect(guide.phase(s)).toBe('start')
+    expect(guide.phase(s)).toBe('intro')
     expect(s.settings).not.toHaveProperty('examDate')
   })
 
@@ -109,9 +117,10 @@ describe('guide: the conversation', () => {
     expect(guide.phase(store.getState())).toBe('level')
   })
 
-  it('the level can be chosen again before the first session (Home’s chip): the first session stays', async () => {
+  it('the level can be changed in 설정 before the first session: the first session stays', async () => {
     const { store, guide } = await bootGuide({ now: NOW })
     guide.chooseLevel(2)
+    guide.finishIntro()
     store.update((d) => void (d.settings.target = 4))
     expect(guide.phase(store.getState())).toBe('start')
     expect(store.getState().settings.target).toBe(4)
@@ -121,11 +130,12 @@ describe('guide: the conversation', () => {
     vi.setSystemTime(new Date(NOW))
     const { store, guide } = await bootGuide({ now: NOW })
     guide.chooseLevel(5)
+    guide.finishIntro()
     expect(guide.phase(store.getState())).toBe('start')
     store.update((d) => void (d.log = { '2026-11-13': { c: 1, n: 1, r: 0, p: 0 } }))
     expect(guide.phase(store.getState())).toBeNull()
     expect(Object.keys(guide)).not.toContain('homeTip')
     expect(Object.keys(guide)).not.toContain('replayTips')
-    expect(store.getState().guide).toEqual({ done: ['level'] })
+    expect(store.getState().guide).toEqual({ done: ['level', 'intro'] })
   })
 })

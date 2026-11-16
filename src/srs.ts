@@ -1,7 +1,8 @@
 // Spaced repetition on top of FSRS (the open scheduler Anki uses): every answer moves a card's
 // next review further out when remembered and brings it back within minutes when forgotten.
 import { createEmptyCard, fsrs, generatorParameters, Rating, State as CardState, type Card, type Grade } from 'ts-fsrs'
-import { COUNTS, fallbackOrder, isReadingCard, LEVELS, levelInfo, levelInfoVersion, levelOf, readingId, readingRetired, wordOfCard, type Level } from './data'
+import { COUNTS, fallbackOrder, LEVELS, levelInfo, levelInfoVersion, levelOf, type Level } from './data'
+import { isKanjiId, KANJI_COUNTS, kanjiIdsOfLevel, kanjiLevel } from './kanji'
 import { getState, MAX_DAILY_NEW, update, type DayLog, type SCard, type State } from './store'
 import { addDays, dayKey, daysBetween } from './util'
 
@@ -51,26 +52,24 @@ const emptyLog = (): DayLog => ({ c: 0, n: 0, r: 0, p: 0 })
 
 export type Kind = 'new' | 'learning' | 'review'
 /**
- * Which of today's cards a study session shows. Home has two sessions: `review` (reviews due today, and cards being
- * relearned after a forgotten review) and `new` (today's new words, and words still in their first learning steps).
- * `all` is both together, as one queue: the plain `#/study` route (the reminder notification, the widget) and every
- * count that speaks of the whole day.
+ * Which of today's cards a study session shows. Home has three sessions: `review` (word reviews due today, and words
+ * being relearned after a forgotten review), `new` (today's new words, and words still in their first learning steps)
+ * and `kanji` (the kanji cards: reviews, learning steps and today's new kanji). `all` is the day's words in one queue
+ * (`review` and `new` together): the plain `#/study` route (the reminder notification, the widget). The whole day is
+ * `all` and `kanji` (`dayLeft`).
  *
- * A learning card belongs to the session that put it into learning, read from its FSRS state (nothing is saved for
- * it): `Learning` is a word introduced as new, `Relearning` a review answered "모르겠어요". So the two sessions split
- * today's cards exactly — every card of `all` is in one of them, none in both — and a session never loses a card to
- * the other while it is open.
+ * A word's learning card belongs to the session that put it into learning, read from its FSRS state (nothing is saved
+ * for it): `Learning` is a word introduced as new, `Relearning` a review answered "모르겠어요". So the sessions split
+ * today's cards exactly — every card of `all` is in one of them, none in two.
  */
-export type StudyMode = 'all' | 'review' | 'new'
+export type StudyMode = 'all' | 'review' | 'new' | 'kanji'
 export interface Queue {
   learning: number
-  /** today's reviews still to do (at most the day's review quota) */
+  /** today's reviews still to do (word reviews: at most the day's review quota) */
   review: number
-  /** reviews due by tonight but beyond today's quota: kept for the coming days (03 §5.3) */
+  /** word reviews due by tonight but beyond today's quota: kept for the coming days (03 §5.3) */
   held: number
   fresh: number
-  /** …of the new words, those introduced with a reading card (fast-track) */
-  freshReading: number
   /** the card to show now, if any */
   next: { id: string; kind: Kind } | null
   /** learning cards that come back later today (beyond the learn-ahead window) */
@@ -81,59 +80,38 @@ export interface Queue {
 
 /**
  * The levels whose words are studied: the target alone, or with `includeLower` the target and every level below
- * it, easiest first (03 §2.1 P4: each level assumes the words of the levels below).
+ * it, easiest first (03 §2.1 P4: each level assumes the words of the levels below). Their kanji are studied too.
  */
 export function studyLevels(settings: Pick<State['settings'], 'target' | 'includeLower'>): Level[] {
   return settings.includeLower ? LEVELS.filter((l) => l >= settings.target) : [settings.target]
 }
 
-// ── card types (03 §3 C): meaning card `<id>`, fast-track reading card `<id>:r` ──
+/** What the per-word helpers read. */
+export type CardsView = { cards: State['cards'] }
 
-/** What the per-word helpers read: the cards and whether the fast-track is on. */
-export type CardsView = { cards: State['cards']; settings: Pick<State['settings'], 'fastTrack'> }
-
-const fastOn = (s: { settings: Pick<State['settings'], 'fastTrack'> }) => s.settings?.fastTrack !== false
-
-/**
- * Whether a card takes part in study. Reading cards rest (kept, not shown, not counted) while the fast-track is off,
- * and once the loaded data no longer tags their word S (`readingRetired`): the word then counts as new until its
- * meaning card is introduced, and the reading card comes back as it was if the word is tagged S again.
- */
-export const isActive = (id: string, fastTrack: boolean) => !isReadingCard(id) || (fastTrack && !readingRetired(wordOfCard(id)))
-
-/** The active cards of a word (meaning first). */
-export function wordCards(s: CardsView, word: string): { id: string; card: SCard }[] {
-  const out: { id: string; card: SCard }[] = []
-  if (s.cards[word]) out.push({ id: word, card: s.cards[word] })
-  const r = readingId(word)
-  if (s.cards[r] && isActive(r, fastOn(s))) out.push({ id: r, card: s.cards[r] })
-  return out
-}
-
-/** A word counts as introduced once it has an active card; words without one are still new. */
-export const isSeen = (s: CardsView, word: string) => !!s.cards[word] || (!!s.cards[readingId(word)] && isActive(readingId(word), fastOn(s)))
+/** A word or kanji counts as introduced once it has a card. */
+export const isSeen = (s: CardsView, id: string) => !!s.cards[id]
 
 /**
- * The card that introduces a word: the reading card for a word tagged S while the fast-track is on, else the
- * meaning card. Before the level's data has loaded nothing is known about the word, so it is a meaning card;
- * the study screen waits for the data before showing a new card.
- */
-export function introCard(s: { settings: Pick<State['settings'], 'fastTrack'> }, id: string): string {
-  const l = levelOf(id)
-  return fastOn(s) && l !== undefined && levelInfo(l)?.fast.has(id) ? readingId(id) : id
-}
-
-/**
- * The next words to introduce, as card ids: per level in the data's introduction order (frequency, 08 §2),
- * or id order (the data's row order) until the level's data has loaded. Words already introduced are skipped wherever they are in
- * the order, so a learner part-way through a level keeps every word seen and simply gets the next unseen
- * words of the new order.
+ * The next words to introduce: per level in the data's introduction order (frequency, 08 §2), or id order until the
+ * level's data has loaded. Words already introduced are skipped wherever they are in the order, so a learner part-way
+ * through a level keeps every word seen and simply gets the next unseen words of the new order.
  */
 function nextNewIds(s: State, limit: number): string[] {
   const out: string[] = []
   for (const l of studyLevels(s.settings)) {
     const order = levelInfo(l)?.order ?? fallbackOrder(l)
-    for (let k = 0; k < order.length && out.length < limit; k++) if (!isSeen(s, order[k])) out.push(introCard(s, order[k]))
+    for (let k = 0; k < order.length && out.length < limit; k++) if (!s.cards[order[k]]) out.push(order[k])
+  }
+  return out
+}
+
+/** The next kanji to introduce: the studied levels' kanji, easiest level first, in their introduction order. */
+function nextNewKanji(s: State, limit: number): string[] {
+  const out: string[] = []
+  for (const l of studyLevels(s.settings)) {
+    const ids = kanjiIdsOfLevel(l)
+    for (let k = 0; k < ids.length && out.length < limit; k++) if (!s.cards[ids[k]]) out.push(ids[k])
   }
   return out
 }
@@ -156,54 +134,43 @@ export function newLeftToday(s: State, now: Date, dailyNew = s.settings.dailyNew
 /** The plan's new words for a day: the setting, held to MAX_DAILY_NEW, and to NEW_WHILE_BEHIND while catching up. */
 export const newPerDay = (dailyNew: number, behind: boolean) => Math.min(MAX_DAILY_NEW, dailyNew, behind ? NEW_WHILE_BEHIND : Infinity)
 
+/** New kanji still allowed today: 하루 새 한자, at most NEW_WHILE_BEHIND while word reviews are held for later days. */
+export function newKanjiLeftToday(s: State, now: Date, behind = false): number {
+  const log = s.log[dayKey(now)]
+  return Math.max(0, Math.min(s.settings.dailyKanji ?? 5, behind ? NEW_WHILE_BEHIND : Infinity) - (log?.kn ?? 0))
+}
+
 /**
- * Today's cards: learning cards due before midnight, and the reviews due before midnight in the order they are
- * shown — oldest due first (ties by card id). Only one card of a word a day: a review whose sibling was answered
- * today, or a second review card of the same word, waits for another day (`buried`; learning cards are mid-step
- * and always come back).
+ * Today's cards: learning cards due before midnight, and the reviews due before midnight in the order they are shown —
+ * oldest due first (ties by card id) — words and kanji apart.
  */
-let scanMemo: { cards: State['cards']; ft: boolean; day: string; iv: number; value: ReturnType<typeof scan> } | null = null
+let scanMemo: { cards: State['cards']; day: string; value: ReturnType<typeof scan> } | null = null
 function scanToday(s: State, now: Date) {
-  const ft = fastOn(s)
   const day = dayKey(now)
-  const iv = levelInfoVersion()
-  if (scanMemo && scanMemo.cards === s.cards && scanMemo.ft === ft && scanMemo.day === day && scanMemo.iv === iv) return scanMemo.value
+  if (scanMemo && scanMemo.cards === s.cards && scanMemo.day === day) return scanMemo.value
   const value = scan(s, now)
-  scanMemo = { cards: s.cards, ft, day, iv, value }
+  scanMemo = { cards: s.cards, day, value }
   return value
 }
 
 function scan(s: State, now: Date) {
   const eod = endOfDay(now)
-  const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const ft = fastOn(s)
   const learning: [string, number][] = []
-  let review: [string, number][] = []
-  /** words with a card answered today: their other card waits for another day (sibling burying, 03 §3) */
-  const answeredToday = new Map<string, string>()
+  const review: [string, number][] = []
+  const kLearning: [string, number][] = []
+  const kReview: [string, number][] = []
   for (const id in s.cards) {
-    if (!isActive(id, ft)) continue
     const c = s.cards[id]
-    if ((c.last_review ?? 0) >= sod) answeredToday.set(wordOfCard(id), id)
-    if (isLearning(c)) {
-      if (c.due < eod) learning.push([id, c.due])
-    } else if (c.due < eod) review.push([id, c.due])
+    if (c.due >= eod) continue
+    const k = isKanjiId(id)
+    if (isLearning(c)) (k ? kLearning : learning).push([id, c.due])
+    else (k ? kReview : review).push([id, c.due])
   }
   learning.sort((a, b) => a[1] - b[1])
+  kLearning.sort((a, b) => a[1] - b[1])
   review.sort(byDue)
-  const queued = new Set(learning.map(([id]) => wordOfCard(id)))
-  const buried: string[] = []
-  review = review.filter(([id]) => {
-    const w = wordOfCard(id)
-    const other = answeredToday.get(w)
-    if ((other !== undefined && other !== id) || queued.has(w)) {
-      buried.push(id)
-      return false
-    }
-    queued.add(w)
-    return true
-  })
-  return { learning, review, buried }
+  kReview.sort(byDue)
+  return { learning, review, kLearning, kReview }
 }
 
 const byDue = (a: [string, number], b: [string, number]) => a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)
@@ -211,27 +178,27 @@ const byDue = (a: [string, number], b: [string, number]) => a[1] - b[1] || (a[0]
 /**
  * `avoid` keeps the card just answered from reappearing immediately when something else is available.
  * `finishNow` shows learning cards that come back later today right away, so a session never has to wait
- * for them (03 §5.2 P7). When more reviews are due than today's review quota (`reviewQuota`), only the
+ * for them (03 §5.2 P7). When more word reviews are due than today's review quota (`reviewQuota`), only the
  * oldest-due ones up to the quota are today's; the rest are `held` for the coming days (03 §5.3) and new
- * words are cut to NEW_WHILE_BEHIND. `mode` keeps one session's cards (`StudyMode`): the day is planned as a whole
- * first (the quota, `held`, the cut of new words), then the other session's cards are left out, so the two sessions'
- * counts always add up to the day's.
+ * words and new kanji are cut to NEW_WHILE_BEHIND. `mode` keeps one session's cards (`StudyMode`): the day is planned
+ * as a whole first (the quota, `held`, the cut of new words), then the other sessions' cards are left out, so the
+ * sessions' counts always add up to the day's.
  */
 export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNow?: boolean; mode?: StudyMode } = {}): Queue {
   const t = now.getTime()
   const mode = opts.mode ?? 'all'
   const today = scanToday(s, now)
-  const due = today.review
   const quota = reviewQuota(s, now)
-  const held = Math.max(0, due.length - quota.left)
-  const learning = mode === 'all' ? today.learning : today.learning.filter(([id]) => (s.cards[id].state === CardState.Relearning) === (mode === 'review'))
-  const review = mode === 'new' ? [] : due.slice(0, quota.left)
-  const fresh = mode === 'review' ? [] : nextNewIds(s, newLeftToday(s, now, s.settings.dailyNew, held > 0))
+  const held = Math.max(0, today.review.length - quota.left)
+  const kanji = mode === 'kanji'
+  const learning = kanji ? today.kLearning : mode === 'all' ? today.learning : today.learning.filter(([id]) => (s.cards[id].state === CardState.Relearning) === (mode === 'review'))
+  const review = kanji ? today.kReview : mode === 'new' ? [] : today.review.slice(0, quota.left)
+  const fresh = kanji ? nextNewKanji(s, newKanjiLeftToday(s, now, held > 0)) : mode === 'review' ? [] : nextNewIds(s, newLeftToday(s, now, s.settings.dailyNew, held > 0))
 
   const ready = opts.finishNow ? learning : learning.filter(([, due]) => due <= t + LEARN_AHEAD_MS)
   const dueNow = ready.filter(([, due]) => due <= t)
   const answered = s.log[dayKey(now)]?.c ?? 0
-  // New words are sprinkled between reviews (every 4th card) instead of piling up at the end.
+  // New cards are sprinkled between reviews (every 4th card) instead of piling up at the end.
   const newFirst = fresh.length > 0 && (review.length === 0 || answered % 4 === 3)
 
   const candidates: { id: string; kind: Kind }[] = [
@@ -245,17 +212,18 @@ export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNo
 
   const waiting = learning.length - ready.length
   const nextDue = waiting > 0 ? learning[ready.length][1] : null
-  return {
-    learning: learning.length,
-    review: review.length,
-    held,
-    fresh: fresh.length,
-    freshReading: fresh.filter(isReadingCard).length,
-    next,
-    waiting,
-    nextDue,
-  }
+  return { learning: learning.length, review: review.length, held, fresh: fresh.length, next, waiting, nextDue }
 }
+
+/** Cards still to do today, words and kanji: what Home's "오늘" counts and when the day is done. */
+export function dayLeft(s: State, now: Date): { left: number; waiting: number; next: boolean } {
+  const w = buildQueue(s, now)
+  const k = buildQueue(s, now, undefined, { mode: 'kanji' })
+  return { left: cardsLeft(w) + cardsLeft(k), waiting: w.waiting + k.waiting, next: !!(w.next || k.next) }
+}
+
+/** Word reviews due by tonight, all of them (Home's "412장 중 100장" while some are held for later days). */
+export const reviewsDue = (s: State, now: Date) => scanToday(s, now).review.length
 
 // ── backlog (03 §5.3): more reviews due than a day holds are spread over the coming days ──
 
@@ -263,7 +231,7 @@ export function buildQueue(s: State, now: Date, avoid?: string, opts: { finishNo
 export const REVIEW_MINUTES = 30
 /** …but never fewer than this many reviews (a very slow measured pace must not make the day trivial). */
 export const MIN_REVIEW_CAP = 50
-/** New words a day while reviews are held for later days (03 §5.1: 밀림이면 새 단어 ≤ 5). */
+/** New words a day while reviews are held for later days (03 §5.1: 밀림이면 새 단어 ≤ 5); new kanji too. */
 export const NEW_WHILE_BEHIND = 5
 /** Reviews added by one "더 하기". */
 export const MORE_REVIEWS = 50
@@ -306,7 +274,7 @@ const DAY_MS = 86_400_000
 let spreadMemo: { args: unknown[]; value: Spread } | null = null
 
 /**
- * The backlog policy as a schedule, for Home's "n일이면 따라잡아요": every review card in due order (the order
+ * The backlog policy as a schedule, for "n일이면 따라잡아요": every word review card in due order (the order
  * `buildQueue` shows them; see backlog-sim.ts for why) goes to the first day, from its due day on, that still has
  * room — today's quota left today and the cap on every later day. This is a selection policy derived from the
  * cards: due dates are never rewritten. It counts only the next review of each card; the reviews that follow it
@@ -314,7 +282,7 @@ let spreadMemo: { args: unknown[]; value: Spread } | null = null
  */
 export function spreadReviews(s: State, now: Date): Spread {
   const todayRoom = reviewQuota(s, now).left
-  const args = [s.cards, s.log, s.settings.fastTrack, dayKey(now), todayRoom, levelInfoVersion()]
+  const args = [s.cards, s.log, dayKey(now), todayRoom, levelInfoVersion()]
   if (spreadMemo && spreadMemo.args.every((a, i) => a === args[i])) return spreadMemo.value
   const cap = reviewCap(s, now)
   // first day >= release with room, via "next free day" links (days fill up in order)
@@ -358,30 +326,26 @@ export function spreadReviews(s: State, now: Date): Spread {
   return value
 }
 
-let orderMemo: { cards: State['cards']; ft: boolean; day: string; iv: number; value: number[] } | null = null
-/** The day each review card is released (0 = today), in priority order: today's in due order, then later ones by due. */
+let orderMemo: { cards: State['cards']; day: string; value: number[] } | null = null
+/** The day each word review card is released (0 = today), in priority order: today's in due order, then later ones by due. */
 function spreadOrder(s: State, now: Date): number[] {
-  const ft = fastOn(s)
   const day = dayKey(now)
-  const iv = levelInfoVersion()
-  if (orderMemo && orderMemo.cards === s.cards && orderMemo.ft === ft && orderMemo.day === day && orderMemo.iv === iv) return orderMemo.value
+  if (orderMemo && orderMemo.cards === s.cards && orderMemo.day === day) return orderMemo.value
   const value = makeOrder(s, now)
-  orderMemo = { cards: s.cards, ft, day, iv, value }
+  orderMemo = { cards: s.cards, day, value }
   return value
 }
 
 function makeOrder(s: State, now: Date): number[] {
   const eod = endOfDay(now)
   const dayOf = (due: number) => (due < eod ? 0 : 1 + Math.floor((due - eod) / DAY_MS))
-  const ft = fastOn(s)
-  const { review: dueToday, buried } = scanToday(s, now)
-  const buriedSet = new Set(buried)
+  const { review: dueToday } = scanToday(s, now)
   const order: number[] = dueToday.map(() => 0)
   const later: [string, number][] = []
   for (const id in s.cards) {
-    if (!isActive(id, ft)) continue
+    if (isKanjiId(id)) continue
     const c = s.cards[id]
-    if (!isLearning(c) && (buriedSet.has(id) || c.due >= eod)) later.push([id, c.due])
+    if (!isLearning(c) && c.due >= eod) later.push([id, c.due])
   }
   later.sort(byDue)
   for (const [, due] of later) order.push(Math.max(1, dayOf(due)))
@@ -389,13 +353,6 @@ function makeOrder(s: State, now: Date): number[] {
 }
 
 // ── answering ───────────────────────────────────────────────────────────────
-
-/**
- * How a reading card's multiple-choice answer maps onto FSRS (03 §7.5): the right reading is "알아요" (Good),
- * a wrong one or "모르겠어요" (-1) is Again. There is no Easy: recognising among four choices is easier than
- * recalling, so it never earns the longest interval.
- */
-export const gradeReading = (picked: number, answer: number): Grade => (picked === answer ? Rating.Good : Rating.Again)
 
 /** Time on one card counts up to this much: a card left on screen while the learner is away is not study. */
 export const MAX_CARD_MS = 60_000
@@ -425,12 +382,22 @@ export function applyAnswer(d: State, id: string, grade: Grade, now: Date, activ
   const { card: next } = scheduler.next(card, at, grade)
   d.cards = { ...d.cards, [id]: fromCard(next) }
   const key = dayKey(now)
+  if (!prev && !d.first?.[id]) d.first = { ...d.first, [id]: key }
   const log = { ...(d.log[key] ?? emptyLog()) }
   log.c++
-  if (!prev) log.n++
-  if (prev?.state === CardState.Review) {
-    log.r++
-    if (grade !== Rating.Again) log.p++
+  // a kanji card has its own counts, so the word plan (new words, the review quota) never moves with it
+  if (isKanjiId(id)) {
+    if (!prev) log.kn = (log.kn ?? 0) + 1
+    if (prev?.state === CardState.Review) {
+      log.kr = (log.kr ?? 0) + 1
+      if (grade !== Rating.Again) log.kp = (log.kp ?? 0) + 1
+    }
+  } else {
+    if (!prev) log.n++
+    if (prev?.state === CardState.Review) {
+      log.r++
+      if (grade !== Rating.Again) log.p++
+    }
   }
   if (activeMs !== undefined && Number.isFinite(activeMs) && activeMs > 0) log.ms = (log.ms ?? 0) + Math.min(MAX_CARD_MS, Math.round(activeMs))
   d.log = { ...d.log, [key]: log }
@@ -515,66 +482,61 @@ export function stageOf(c: SCard | undefined): Stage {
 
 export type Breakdown = Record<Stage, number>
 
-const STAGE_RANK: Record<Stage, number> = { new: 0, learning: 1, young: 2, mature: 3 }
 
-/** A word's stage: the lowest stage among its active cards (03 §3: a word is only as known as its weakest card). */
-export function wordStage(s: CardsView, word: string): Stage {
-  let st: Stage | null = null
-  for (const { card } of wordCards(s, word)) {
-    const x = stageOf(card)
-    if (st === null || STAGE_RANK[x] < STAGE_RANK[st]) st = x
+/** A word's (or a kanji's) stage. */
+export const wordStage = (s: CardsView, id: string): Stage => stageOf(s.cards[id])
+
+/** Words per stage and level. */
+export function breakdowns(s: CardsView): Record<Level, Breakdown> {
+  const out = Object.fromEntries(LEVELS.map((l) => [l, { new: COUNTS[l], learning: 0, young: 0, mature: 0 }])) as Record<Level, Breakdown>
+  for (const id in s.cards) {
+    const l = levelOf(id)
+    if (l === undefined) continue
+    out[l][stageOf(s.cards[id])]++
+    out[l].new--
   }
-  return st ?? 'new'
+  return out
 }
 
-/** Words per stage and level. Counted per word, not per card, so a word with two cards counts once. */
-export function breakdowns(s: CardsView): Record<Level, Breakdown> {
-  const out = Object.fromEntries(
-    LEVELS.map((l) => [l, { new: COUNTS[l], learning: 0, young: 0, mature: 0 }]),
-  ) as Record<Level, Breakdown>
-  const ft = fastOn(s)
-  const per = new Map<string, Stage>()
+/** Kanji per stage and level. */
+export function kanjiBreakdowns(s: CardsView): Record<Level, Breakdown> {
+  const out = Object.fromEntries(LEVELS.map((l) => [l, { new: KANJI_COUNTS[l], learning: 0, young: 0, mature: 0 }])) as Record<Level, Breakdown>
   for (const id in s.cards) {
-    if (!isActive(id, ft)) continue
-    const w = wordOfCard(id)
-    const st = stageOf(s.cards[id])
-    const prev = per.get(w)
-    if (prev === undefined || STAGE_RANK[st] < STAGE_RANK[prev]) per.set(w, st)
-  }
-  for (const [w, st] of per) {
-    const l = levelOf(w)
+    const l = kanjiLevel(id)
     if (l === undefined) continue
-    out[l][st]++
+    out[l][stageOf(s.cards[id])]++
     out[l].new--
   }
   return out
 }
 
 /**
- * The studied levels' words (`studyLevels`): how many there are, how many were met (introduced) and how many of those
- * are in long-term memory — the sums of the 단어장 level rows (`breakdowns`). The 기록 stamps and the
- * widget show these.
+ * The studied levels' words and kanji (`studyLevels`): how many there are, how many were met (introduced) and how many
+ * words are in long-term memory — the sums of the 단어장 level rows (`breakdowns`). 기록 and the widget show these.
  */
 export function studyProgress(s: CardsView & { settings: Pick<State['settings'], 'target' | 'includeLower'> }) {
   const levels = studyLevels(s.settings)
   const b = breakdowns(s)
+  const kb = kanjiBreakdowns(s)
   let total = 0
   let met = 0
   let mature = 0
+  let kanjiTotal = 0
+  let kanjiMet = 0
   for (const l of levels) {
     total += COUNTS[l]
     met += COUNTS[l] - b[l].new
     mature += b[l].mature
+    kanjiTotal += KANJI_COUNTS[l]
+    kanjiMet += KANJI_COUNTS[l] - kb[l].new
   }
-  return { levels, total, met, mature }
+  return { levels, total, met, mature, kanjiTotal, kanjiMet }
 }
 
 /** Cards coming due on each of the next `days` days (index 0 = today, including overdue). */
 export function forecast(s: State, now: Date, days = 7): number[] {
   const out = new Array<number>(days).fill(0)
-  const ft = fastOn(s)
   for (const id in s.cards) {
-    if (!isActive(id, ft)) continue
     const i = Math.max(0, daysBetween(now, new Date(s.cards[id].due)))
     if (i < days) out[i]++
   }
@@ -613,8 +575,8 @@ export function retention(s: State, now: Date, days = 30): number | null {
   for (let i = 0; i < days; i++) {
     const log = s.log[dayKey(addDays(now, -i))]
     if (log) {
-      r += log.r
-      p += log.p
+      r += log.r + (log.kr ?? 0)
+      p += log.p + (log.kp ?? 0)
     }
   }
   return r >= 10 ? p / r : null
@@ -631,23 +593,16 @@ export function streak(log: State['log'], today = new Date()): number {
   return n
 }
 
-/** Times a word was forgotten: the most of its active cards. */
-export function wordLapses(s: CardsView, word: string): number {
-  return Math.max(0, ...wordCards(s, word).map(({ card }) => card.lapses))
-}
+/** Times a word (or a kanji) was forgotten. */
+export const wordLapses = (s: CardsView, id: string): number => s.cards[id]?.lapses ?? 0
 
 /**
- * Words (word ids, never card ids) that keep being forgotten (Anki calls them leeches), most-forgotten first.
- * A word with a forgotten meaning card and reading card is listed once.
+ * Words (or, with `kanji`, kanji) that keep being forgotten (Anki calls them leeches), most-forgotten first.
  */
-export function leechIds(cards: State['cards'], limit = 40, fastTrack = true): string[] {
-  const by = new Map<string, number>()
-  for (const [id, c] of Object.entries(cards))
-    if (c.lapses >= LEECH_LAPSES && isActive(id, fastTrack)) {
-      const w = wordOfCard(id)
-      by.set(w, Math.max(by.get(w) ?? 0, c.lapses))
-    }
-  return [...by]
+export function leechIds(cards: State['cards'], limit = 40, kanji = false): string[] {
+  const by: [string, number][] = []
+  for (const [id, c] of Object.entries(cards)) if (c.lapses >= LEECH_LAPSES && isKanjiId(id) === kanji) by.push([id, c.lapses])
+  return by
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([id]) => id)
@@ -673,7 +628,7 @@ export interface Quest {
  */
 export function quests(s: State, now: Date): Quest[] {
   const log = s.log[dayKey(now)] ?? emptyLog()
-  const q = buildQueue(s, now)
-  const cleared = log.c > 0 && !q.next && q.waiting === 0
+  const d = dayLeft(s, now)
+  const cleared = log.c > 0 && !d.next && d.waiting === 0
   return [{ title: '오늘 분량 끝내기', have: cleared ? 1 : 0, need: 1, xp: 50 }].map((x) => ({ ...x, done: x.have >= x.need }))
 }
