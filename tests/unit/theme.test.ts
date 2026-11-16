@@ -56,8 +56,6 @@ const PAIRS: [string, string, number][] = [
   ['--color-text-blue', '--color-background-blue', 4.5],
   ['--color-text-red', '--color-background-red', 4.5],
   ['--color-text-pink', '--color-background-pink', 4.5],
-  // the selected tab's icon: ink line, pink fill, on the white bar
-  ['--color-icon-primary', '--ruma-pink', 3],
   // the focus ring and the chosen chip's face on the grounds
   ['--color-accent', '--color-background-body', 3],
   ['--color-accent', '--color-background-surface', 3],
@@ -70,7 +68,7 @@ const PAIRS: [string, string, number][] = [
   ['--ruma-gold-icon', '--ruma-yellow-tint', 3],
   ['--ruma-flame', '--color-background-body', 3],
   ['--ruma-flame', '--color-background-surface', 3],
-  ['--ruma-stage-young', '--color-background-surface', 3],
+  // memory stages: long-term memory in the ink (a stage's name is always written next to its dot or bar)
   ['--ruma-stage-mature', '--color-background-surface', 3],
   // the five levels: the level's name in its ink on its tint (badges, Home's chip, the picker), on a card and on the
   // ground (the level screen's heading)
@@ -94,16 +92,24 @@ describe('ruma theme', () => {
   it('keeps surfaces apart from the ground: a card, the muted fill and the hairline are each their own value', () => {
     for (const i of [0, 1]) {
       const values = ['--color-background-surface', '--color-background-muted', '--color-border'].map((k) => tokens[k][i])
-      expect(new Set(values).size).toBe(3)
+      // light: three values; dark (the 2026-11-16 boards): the muted fill and the hairline are one warm grey
+      expect(new Set(values).size).toBe(i === 0 ? 3 : 2)
+      expect(values[0]).not.toBe(values[1])
       expect(values).not.toContain(tokens['--color-background-body'][i])
     }
   })
 
+  it('the selected tab: its icon filled pink, drawn in the quiet ink (light: 3:1 against the pink)', () => {
+    expect(tokens['--ruma-pink']).toEqual(['#f7c6d0', '#f7c6d0'])
+    expect(contrast(tokens['--color-icon-secondary'][0], tokens['--ruma-pink'][0])).toBeGreaterThanOrEqual(3)
+  })
+
   it('keeps the palette: cream ground, white surface, ink text, and the three pastels', () => {
-    expect(tokens['--color-background-body']).toEqual(['#faf8f5', '#1c1a17'])
+    expect(tokens['--color-background-body']).toEqual(['#faf8f5', '#1b1917'])
+    expect(tokens['--color-background-surface'][1]).toBe('#25221f')
     expect(tokens['--color-background-surface'][0]).toBe('#ffffff')
     expect(tokens['--color-border'][0]).toBe('#e9e4d9')
-    expect(tokens['--color-text-primary']).toEqual(['#2d2a26', '#ece7db'])
+    expect(tokens['--color-text-primary']).toEqual(['#2d2a26', '#f1ede5'])
     expect(tokens['--ruma-pink'][0]).toBe('#f7c6d0')
     expect(tokens['--ruma-pink-tint'][0]).toBe('#fce8ed')
     expect(tokens['--ruma-green'][0]).toBe('#8fb573')
@@ -144,10 +150,10 @@ describe('ruma theme', () => {
     expect(css).not.toMatch(/@font-face|@import|url\(/)
   })
 
-  it('headwords ask for a textbook hand first and fall back to the device’s mincho, then any serif', () => {
+  it('headwords ask for Klee One (bundled), then the device’s textbook hand and mincho, then any serif', () => {
     const stack = /--ruma-font-ja-head:\s*([^;]+);/.exec(css)?.[1] ?? ''
     const names = stack.split(',').map((x) => x.trim().replace(/['"]/g, ''))
-    expect(names.slice(0, 2)).toEqual(['YuKyokasho Yoko', 'YuKyokasho'])
+    expect(names.slice(0, 3)).toEqual(['Klee One', 'YuKyokasho Yoko', 'YuKyokasho'])
     expect(names).toContain('Klee')
     expect(names.indexOf('Hiragino Mincho ProN')).toBeGreaterThan(names.indexOf('Klee'))
     expect(names.at(-1)).toBe('serif')

@@ -25,9 +25,9 @@
          Colours are the ruma theme's ground / ink / pink ink (src/themes/ruma/rumaTheme.ts), copied because the theme's CSS
          is not loaded yet; the iOS launch image (scripts/ios/make-assets.mjs) draws the same screen. */
       :root { --launch-bg: #faf8f5; --launch-ink: #2d2a26; --launch-accent: #8f3550; background: var(--launch-bg); }
-      :root[data-theme='dark'] { --launch-bg: #1c1a17; --launch-ink: #ece7db; --launch-accent: #f0b3c1; }
+      :root[data-theme='dark'] { --launch-bg: #1b1917; --launch-ink: #f1ede5; --launch-accent: #f4c3d0; }
       @media (prefers-color-scheme: dark) {
-        :root:not([data-theme='light']) { --launch-bg: #1c1a17; --launch-ink: #ece7db; --launch-accent: #f0b3c1; }
+        :root:not([data-theme='light']) { --launch-bg: #1b1917; --launch-ink: #f1ede5; --launch-accent: #f4c3d0; }
       }
       #launch {
         position: fixed; inset: 0; z-index: 100; pointer-events: none; background: var(--launch-bg);

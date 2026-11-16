@@ -9,19 +9,19 @@ import { rumaIcons } from './icons'
 
 /** The palette. Values were checked for WCAG AA (tests/unit/theme.test.ts, docs/design-system.md §2). */
 const c = {
-  ground: ['#faf8f5', '#1c1a17'], // the page
-  surface: ['#ffffff', '#272420'], // cards, sheets, dialogs, the tab bar, secondary buttons
-  muted: ['#f3efe7', '#33302a'], // beige: segmented track, quiet fills, the mascot circle at rest
-  track: ['#efeae0', '#3a362f'], // the empty part of a progress bar
-  line: ['#e9e4d9', '#3d3932'], // the hairline around a surface and between rows
-  edge: ['#e3ded2', '#100f0d'], // the soft bottom edge of a secondary button
+  ground: ['#faf8f5', '#1b1917'], // the page
+  surface: ['#ffffff', '#25221f'], // cards, sheets, dialogs, the tab bar, secondary buttons
+  muted: ['#f3efe7', '#36322c'], // beige: segmented track, quiet fills, the mascot circle at rest
+  track: ['#efeae0', '#36322c'], // the empty part of a progress bar
+  line: ['#e9e4d9', '#36322c'], // the hairline around a surface and between rows
+  edge: ['#e3ded2', '#3d3832'], // the soft bottom edge of a secondary button
   inputLine: ['#938f86', '#7d776c'], // input edges and the off switch, 3:1 on the grounds
-  ink: ['#2d2a26', '#ece7db'], // text; the primary button's face
-  inkEdge: ['#14120f', '#a8a294'], // the primary button's bottom edge
-  onInk: ['#ffffff', '#1c1a17'], // the primary button's label
-  ink2: ['#6b665d', '#a8a294'], // secondary text
+  ink: ['#2d2a26', '#f1ede5'], // text; the primary button's face
+  inkEdge: ['#14120f', '#8f897e'], // the primary button's bottom edge
+  onInk: ['#ffffff', '#1b1917'], // the primary button's label
+  ink2: ['#6b665d', '#a39d92'], // secondary text
   // pastel accents: a fill (small marks), a tint (a ground for dark ink) and the ink that is readable on the tint
-  pink: ['#f7c6d0', '#7a4553'],
+  pink: ['#f7c6d0', '#f7c6d0'],
   pinkTint: ['#fce8ed', '#3a2229'],
   pinkInk: ['#8f3550', '#f0b3c1'],
   green: ['#8fb573', '#8fb573'], // progress
@@ -36,28 +36,36 @@ const c = {
   redTint: ['#fbe6e0', '#40271f'],
   teal: ['#4d9aa6', '#6fb3bd'], // "다지는 중" (young): a stage mark only
   tealInk: ['#2f6e78', '#6fb3bd'],
-  flame: ['#c9662f', '#e08a55'], // the streak flame
+  flame: ['#c9662f', '#e0894f'], // the streak flame
   flameTint: ['#f8e4d5', '#40291b'],
   purple: ['#8f7fb0', '#b3a6d1'], // not used by the app; keeps Astryx's purple role on-palette
   black: ['#2d2a26', '#000000'],
+  // memory stages, all in ink (bars and dots): long-term memory the ink itself, learning a grey ink, not yet the faintest
+  stageLearn: ['#a8a196', '#8f897e'],
+  stageNew: ['#dcd5c7', '#4a453e'],
   // one colour per JLPT level, with the same meaning wherever a level is named (picker, Home's chip, badges, the
   // level screen): a tint as the badge's ground, the ink readable on it (and on the ground and a card), and a fill for
   // the level's small bars. The level's name is always written: the colour never carries it alone.
-  lv5Tint: ['#e8f1dc', '#26321c'], // N5 green
-  lv5Ink: ['#3f6426', '#b5d39b'],
+  lv5Tint: ['#e8f1dc', '#2f3d24'], // N5 green
+  lv5Ink: ['#3f6426', '#c6e0ae'],
   lv5Fill: ['#8fb573', '#7fae62'],
-  lv4Tint: ['#fbf1c9', '#332b12'], // N4 yellow
-  lv4Ink: ['#6e5210', '#e6cf7a'],
+  lv5Wave: ['#d3e5c0', '#3a4c2c'], // the deeper wave of the level card
+  lv4Tint: ['#fbf1c9', '#4a3f1c'], // N4 yellow
+  lv4Ink: ['#6e5210', '#f3dc8a'],
   lv4Fill: ['#e2bc3c', '#c9a73a'],
-  lv3Tint: ['#fce8ed', '#3a2229'], // N3 pink
-  lv3Ink: ['#8f3550', '#f0b3c1'],
+  lv4Wave: ['#f3e2a0', '#5a4c20'], // the deeper wave of the level card
+  lv3Tint: ['#fce8ed', '#4a2a34'], // N3 pink
+  lv3Ink: ['#8f3550', '#f4c3d0'],
   lv3Fill: ['#e08aa0', '#c77d91'],
-  lv2Tint: ['#ebe6f7', '#2c2640'], // N2 violet
-  lv2Ink: ['#56428f', '#c9bcef'],
+  lv3Wave: ['#f6cfda', '#5c3341'], // the deeper wave of the level card
+  lv2Tint: ['#ebe6f7', '#3a3152'], // N2 violet
+  lv2Ink: ['#56428f', '#d8cdf6'],
   lv2Fill: ['#9a87d1', '#8e7cc7'],
-  lv1Tint: ['#e1edf6', '#1d2d3a'], // N1 sky
-  lv1Ink: ['#2c5f85', '#a9cdea'],
+  lv2Wave: ['#d9cff0', '#473c63'], // the deeper wave of the level card
+  lv1Tint: ['#e1edf6', '#233a4b'], // N1 sky
+  lv1Ink: ['#2c5f85', '#bcdaf0'],
   lv1Fill: ['#7fb0d6', '#6aa0c9'],
+  lv1Wave: ['#c9ddee', '#2c475c'], // the deeper wave of the level card
 } as const
 
 type Pair = readonly [string, string]
@@ -67,16 +75,15 @@ const alpha = (hex: string, a: string) => `${hex}${a}`
 export const rumaTheme = defineTheme({
   name: 'ruma',
   typography: {
-    // Rounded Latin digits where the platform has them (SF Pro Rounded); Korean falls to SD Gothic Neo / Pretendard
+    // Noto Sans KR, bundled with the app (src/main.tsx, @fontsource: only the subsets a page uses are loaded); the
+    // device's Korean gothic until it has loaded
     body: {
-      family: 'ui-rounded',
-      fallbacks:
-        "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif",
+      family: 'Noto Sans KR',
+      fallbacks: "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Malgun Gothic', system-ui, sans-serif",
     },
     heading: {
-      family: 'ui-rounded',
-      fallbacks:
-        "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif",
+      family: 'Noto Sans KR',
+      fallbacks: "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Malgun Gothic', system-ui, sans-serif",
     },
     code: { family: 'ui-monospace', fallbacks: "'SF Mono', Menlo, Consolas, monospace" },
   },
@@ -262,12 +269,16 @@ export const rumaTheme = defineTheme({
         [`--ruma-level-${l}-tint`, pair(c[`lv${l}Tint`])],
         [`--ruma-level-${l}-ink`, pair(c[`lv${l}Ink`])],
         [`--ruma-level-${l}-fill`, pair(c[`lv${l}Fill`])],
+        [`--ruma-level-${l}-wave`, pair(c[`lv${l}Wave`])],
       ]),
     ),
     // memory stages (only on stage marks: bars, legend, dots)
-    '--ruma-stage-mature': pair(c.greenDeep),
-    '--ruma-stage-young': pair(c.teal),
-    '--ruma-stage-learning': pair(c.yellow),
+    '--ruma-stage-mature': pair(c.ink),
+    '--ruma-stage-young': pair(c.stageLearn),
+    '--ruma-stage-learning': pair(c.stageLearn),
+    '--ruma-stage-new': pair(c.stageNew),
+    // the 済 seal: a vermilion stamp
+    '--ruma-seal': ['#c4553b', '#e08c74'],
     // game marks: gold only on the bookmark that is on, persimmon only on the streak flame
     '--ruma-gold-icon': pair(c.yellowInk),
     '--ruma-flame': pair(c.flame),
@@ -283,11 +294,10 @@ export const rumaTheme = defineTheme({
     '--ruma-radius-card': '20px',
     // a text button's height (icon buttons and chips stay at the 44px minimum)
     '--ruma-control': '48px',
-    // Japanese text: gothic for readings and choices; headwords in a textbook (kyokasho) hand where the device has
-    // one, else mincho. Device fonts only: the app is offline-first and loads no web font.
-    '--ruma-font-ja': "'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', 'Noto Sans CJK JP', sans-serif",
-    '--ruma-font-ja-head':
-      "'YuKyokasho Yoko', 'YuKyokasho', 'Klee', 'Klee One', 'UD Digi Kyokasho N-R', 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'Noto Serif CJK JP', serif",
+    // Japanese text: Noto Sans JP for sentences and readings, Klee One (a textbook hand) for headwords; both bundled
+    // with the app (src/main.tsx), the device's fonts until they have loaded
+    '--ruma-font-ja': "'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans CJK JP', sans-serif",
+    '--ruma-font-ja-head': "'Klee One', 'YuKyokasho Yoko', 'YuKyokasho', 'Klee', 'Hiragino Mincho ProN', 'Yu Mincho', serif",
   },
   icons: rumaIcons,
   // Only the Astryx components the app still uses are themed here: the buttons inside its dialogs (AlertDialog,
