@@ -72,9 +72,21 @@ jobs:
       - name: Write the API key to a temporary file
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        # The secret is pasted by hand, so it is rebuilt before use: Windows line ends, a key pasted on one line,
+        # literal "\n" and missing BEGIN/END lines are all repaired, and anything that still is not a private
+        # key stops here with a message that says so (only the length is printed, never the key).
         run: |
           umask 077
-          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          body="$(printf '%s' "$ASC_KEY_P8" | sed -e 's/\\n//g' -e 's/-----BEGIN PRIVATE KEY-----//' -e 's/-----END PRIVATE KEY-----//' | tr -d ' \t\r\n')"
+          {
+            echo '-----BEGIN PRIVATE KEY-----'
+            printf '%s\n' "$body" | fold -w 64
+            echo '-----END PRIVATE KEY-----'
+          } > "$RUNNER_TEMP/AuthKey.p8"
+          if ! openssl pkey -in "$RUNNER_TEMP/AuthKey.p8" -noout 2>/dev/null; then
+            echo "::error::secret ASC_KEY_P8 is not a private key (${#body} characters after cleaning; an App Store Connect key has about 200). Open the downloaded AuthKey_<KEY_ID>.p8 in a plain text editor, copy everything, and save the secret again."
+            exit 1
+          fi
       - name: Temporary keychain for the signing identity xcodebuild creates
         run: |
           kc="$RUNNER_TEMP/signing.keychain-db"
