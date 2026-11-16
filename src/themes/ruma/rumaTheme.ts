@@ -40,6 +40,24 @@ const c = {
   flameTint: ['#f8e4d5', '#40291b'],
   purple: ['#8f7fb0', '#b3a6d1'], // not used by the app; keeps Astryx's purple role on-palette
   black: ['#2d2a26', '#000000'],
+  // one colour per JLPT level, with the same meaning wherever a level is named (picker, Home's chip, badges, the
+  // level screen): a tint as the badge's ground, the ink readable on it (and on the ground and a card), and a fill for
+  // the level's small bars. The level's name is always written: the colour never carries it alone.
+  lv5Tint: ['#e8f1dc', '#26321c'], // N5 green
+  lv5Ink: ['#3f6426', '#b5d39b'],
+  lv5Fill: ['#8fb573', '#7fae62'],
+  lv4Tint: ['#fbf1c9', '#332b12'], // N4 yellow
+  lv4Ink: ['#6e5210', '#e6cf7a'],
+  lv4Fill: ['#e2bc3c', '#c9a73a'],
+  lv3Tint: ['#fce8ed', '#3a2229'], // N3 pink
+  lv3Ink: ['#8f3550', '#f0b3c1'],
+  lv3Fill: ['#e08aa0', '#c77d91'],
+  lv2Tint: ['#ebe6f7', '#2c2640'], // N2 violet
+  lv2Ink: ['#56428f', '#c9bcef'],
+  lv2Fill: ['#9a87d1', '#8e7cc7'],
+  lv1Tint: ['#e1edf6', '#1d2d3a'], // N1 sky
+  lv1Ink: ['#2c5f85', '#a9cdea'],
+  lv1Fill: ['#7fb0d6', '#6aa0c9'],
 } as const
 
 type Pair = readonly [string, string]
@@ -238,6 +256,14 @@ export const rumaTheme = defineTheme({
     '--ruma-green': pair(c.green),
     '--ruma-yellow': pair(c.yellow),
     '--ruma-yellow-tint': pair(c.yellowTint),
+    // the five levels (c.lv*): tint, ink, fill
+    ...Object.fromEntries(
+      ([5, 4, 3, 2, 1] as const).flatMap((l) => [
+        [`--ruma-level-${l}-tint`, pair(c[`lv${l}Tint`])],
+        [`--ruma-level-${l}-ink`, pair(c[`lv${l}Ink`])],
+        [`--ruma-level-${l}-fill`, pair(c[`lv${l}Fill`])],
+      ]),
+    ),
     // memory stages (only on stage marks: bars, legend, dots)
     '--ruma-stage-mature': pair(c.greenDeep),
     '--ruma-stage-young': pair(c.teal),

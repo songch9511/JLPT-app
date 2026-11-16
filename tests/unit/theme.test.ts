@@ -72,6 +72,15 @@ const PAIRS: [string, string, number][] = [
   ['--ruma-flame', '--color-background-surface', 3],
   ['--ruma-stage-young', '--color-background-surface', 3],
   ['--ruma-stage-mature', '--color-background-surface', 3],
+  // the five levels: the level's name in its ink on its tint (badges, Home's chip, the picker), on a card and on the
+  // ground (the level screen's heading)
+  ...[5, 4, 3, 2, 1].flatMap((l): [string, string, number][] => [
+    [`--ruma-level-${l}-ink`, `--ruma-level-${l}-tint`, 4.5],
+    [`--ruma-level-${l}-ink`, '--color-background-surface', 4.5],
+    [`--ruma-level-${l}-ink`, '--color-background-body', 4.5],
+    // the body ink on the tint (a level's figures inside its tinted badge)
+    ['--color-text-primary', `--ruma-level-${l}-tint`, 4.5],
+  ]),
 ]
 
 describe('ruma theme', () => {
@@ -113,6 +122,21 @@ describe('ruma theme', () => {
     // in dark the face stands out from the ground and from a card
     expect(contrast(tokens['--ruma-primary'][1], tokens['--color-background-body'][1])).toBeGreaterThanOrEqual(4.5)
     expect(contrast(tokens['--ruma-primary'][1], tokens['--color-background-surface'][1])).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('gives each level its own colour, the same pastels as the mockups: N5 green, N4 yellow, N3 pink, N2 violet, N1 sky', () => {
+    expect(tokens['--ruma-level-5-tint'][0]).toBe('#e8f1dc')
+    expect(tokens['--ruma-level-4-tint'][0]).toBe('#fbf1c9')
+    expect(tokens['--ruma-level-3-tint'][0]).toBe('#fce8ed')
+    expect(tokens['--ruma-level-2-tint'][0]).toBe('#ebe6f7')
+    expect(tokens['--ruma-level-1-tint'][0]).toBe('#e1edf6')
+    for (const i of [0, 1])
+      for (const role of ['tint', 'ink', 'fill']) {
+        const values = [5, 4, 3, 2, 1].map((l) => tokens[`--ruma-level-${l}-${role}`]?.[i])
+        expect(values.every(Boolean), role).toBe(true)
+        // five different colours in each mode, so no two levels look alike
+        expect(new Set(values).size, `${role} ${i ? 'dark' : 'light'}`).toBe(5)
+      }
   })
 
   it('has no @scope left (Safari < 17.4 would drop every token) and loads no web fonts', () => {
