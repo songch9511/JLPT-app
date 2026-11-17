@@ -130,7 +130,7 @@
 "w0ni":{"core":"ソフト","hk":0,"auto":"L","sk":[],"rt":"","hint":"L"},
 "w0nj":{"core":"過ぎる","hk":1,"auto":"","sk":["과"],"rt":"kun","hint":"N"},
 "w0nk":{"core":"棚","hk":1,"auto":"","sk":["붕","팽"],"rt":"kun","hint":"N"},
-"w0nl":{"core":"真中","hk":1,"auto":"","sk":["진중"],"rt":"irr","hint":"M"},
+"w0nl":{"core":"真ん中","hk":1,"auto":"","sk":["진중"],"rt":"kun","hint":"N"},
 "w0nm":{"core":"込む","hk":1,"auto":"","sk":["입"],"rt":"kun","hint":"N"},
 "w0nn":{"core":"アルバイト","hk":0,"auto":"L","sk":[],"rt":"","hint":"L"},
 "w0no":{"core":"寂しい","hk":1,"auto":"","sk":["적"],"rt":"kun","hint":"N"},

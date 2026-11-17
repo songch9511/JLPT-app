@@ -41,6 +41,7 @@ const CORRECTED_HEADWORD: Record<string, string> = {
   w2yx: 'N2 引受る|ひきうける',
   w5r3: 'N1 大部|たいぶ',
   w498: 'N1 あせる (こえが～)|',
+  w0nl: 'N4 真中|まんなか',
 }
 const target = (id: string) => (CORRECTED_HEADWORD[split(id)[0]] ?? WORD.get(split(id)[0])) + split(id)[1]
 

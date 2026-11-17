@@ -38,10 +38,10 @@ const FROZEN: Record<number, string> = {
  * 2026-11-14: w4db's headword corrected 副 → とりわけ (source error, docs/plan/12 §6, 08 §7.2).
  * 2026-11-14: w3nu's reading corrected ふす → むす, w4ta's headword 摩する → 摩る (data/tags/audit/source-errors.csv).
  * 2026-11-17: headwords 落る → 落ちる (w0yx), 楽む → 楽しむ (w0r6), 下る → 下がる (w0v6), 引受る → 引き受ける (w2yx),
- * 唯 → たった (w1qm), あせる (こえが～) → あせる (いろが～) (w498); readings 琴 きん → こと (w3r7), 大部 たいぶ → だいぶ (w5r3)
+ * 唯 → たった (w1qm), あせる (こえが～) → あせる (いろが～) (w498), 真中 → 真ん中 (w0nl); readings 琴 きん → こと (w3r7), 大部 たいぶ → だいぶ (w5r3)
  * (docs/plan/08 §7.2).
  */
-const REGISTRY_SHA = '02752e7efeb546468ee24ddfc9fe51f7a0fe32bfd97aaf7de4128013ef5966ea'
+const REGISTRY_SHA = 'a9f81c187983dccc9b72d72d91bd5b2cedd84499021874a050e489fa4de66eee'
 
 /**
  * Source errors corrected after the positional files froze (docs/plan/12 §6, 08 §7.2), by id: each column that may
@@ -94,6 +94,8 @@ const SOURCE_CORRECTED: Record<string, { level: number; cols: Record<number, [un
   w5r3: { level: 1, cols: { 1: ['たいぶ', 'だいぶ'] } },
   // the note of 褪せる: colour fades (いろが～), not the voice
   w498: { level: 1, cols: { 0: ['あせる (こえが～)', 'あせる (いろが～)'] } },
+  // 真中 is まなか; まんなか is 真ん中 (owner's decision). f 31 → 43, o pinned (f and JMdict rank)
+  w0nl: { level: 4, cols: { 0: ['真中', '真ん中'], 5: [31, 43] } },
 }
 
 function rng(seed: number) {
@@ -193,7 +195,8 @@ describe('the id registry (data/ids.json)', () => {
  */
 const TAGS_CORRECTED: Record<number, string[]> = {
   5: ['w08t', 'w0ed', 'w0g8'],
-  4: ['w0xf'],
+  // w0nl: its corrected headword 真ん中 まんなか is N, rt kun (was M, rt irr from the headword 真中, which is まなか)
+  4: ['w0nl', 'w0xf'],
   // w1qm: its corrected kana headword たった makes it K (was M, rt irr, derived from the wrong headword 唯)
   3: ['w1i9', 'w1m9', 'w1qm', 'w2gy', 'w2ll', 'w2om'],
   // w3nu: its corrected reading 蒸す むす is N, rt kun (as N3 w14d 蒸す むす, R10); was M, rt irr from the wrong reading
