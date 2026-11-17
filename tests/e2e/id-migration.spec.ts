@@ -25,6 +25,8 @@
 // (resting) reading card count as met again (2,776 → 2,783 of 5,431); every other count is as before — the sessions'
 // 복습 134장 and 새 단어 25개, the bookmarks, the weak words. Each level is now read as its chapters and its first
 // chapter's words, the study card's top as "done / all".
+// An eighth (2026-11-17, the design canvas's copy): the new-words button is named "단어" ("단어 25개"); `home` edited
+// by hand, the counts unchanged.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { homeShown, KEY, L, NOW, open, saved, user } from './fixtures'
@@ -48,7 +50,7 @@ async function screens(page: Page) {
   await homeShown(page)
   // 17 new words today and the 8 still in their first steps: the new session's 25
   await expect(page.locator('.go-new .home-go-count')).toHaveText('25개')
-  await expect(page.getByRole('button', { name: /익히는 중 8개 포함$/ })).toHaveText('새 단어25개')
+  await expect(page.getByRole('button', { name: /익히는 중 8개 포함$/ })).toHaveText('단어25개')
   out.home = { plan: await text(page, '.plan .btn'), foot: await text(page, '.home-foot') }
   // the words met, on 기록
   await page.goto('./#/stats')

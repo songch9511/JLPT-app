@@ -153,7 +153,7 @@ test('touch targets: every button and link on home and in study is at least 44px
         .filter(([, h]) => h > 0 && h < 44),
     )
   expect(await small()).toEqual([])
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   await expect(page.locator('.flash')).toBeVisible()
   // measured after the card's entry motion (a translate): mid-motion the transformed boxes read 43.99999px
   await page.locator('.flash').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))

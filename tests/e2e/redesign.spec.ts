@@ -104,7 +104,7 @@ test.describe('the ends of a chapter and of a level (3-9, 3-10)', () => {
     await expect(page.locator('.done-figures dt')).toHaveText(['N5 챕터', '연속', '오늘 XP'])
     await expect(page.locator('.done-figures dd').first()).toHaveText('1 / 15')
     await expect(page.getByRole('button', { name: '홈으로' })).toHaveAttribute('data-variant', 'primary')
-    await expect(page.getByRole('button', { name: '새 단어 10개 더 하기' })).toHaveText('새 단어 더10개')
+    await expect(page.getByRole('button', { name: '단어 더 하기, 10개' })).toHaveText('단어 더10개')
   })
 
   test('the session that meets the level’s last word ends with “N5 끝”: its words, its kanji, the days it took; the next level starts from there', async ({ page }) => {
@@ -137,7 +137,7 @@ test.describe('dark (7-1, 7-2): the whole app when 설정 › 테마 is 다크, 
       expect(await bg('.btn[data-variant="primary"]')).toBe(rgb('#f1ede5'))
       expect(await page.locator('.home-head .level-badge').evaluate((el) => getComputedStyle(el).color)).toBe(rgb('#c6e0ae'))
       expect(await axeViolations(page)).toEqual([])
-      await page.getByRole('button', { name: /^새 단어 시작/ }).click()
+      await page.getByRole('button', { name: /^단어 시작/ }).click()
       await expect(page.locator('.flash')).toBeVisible()
       expect(await bg('.flash')).toBe(rgb('#25221f'))
       expect(await page.locator('.flash-word').evaluate((el) => getComputedStyle(el).color)).toBe(rgb('#f1ede5'))

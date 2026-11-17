@@ -114,6 +114,11 @@
   .btn[data-variant='ghost'] { --face: transparent; --edge: transparent; --ink: var(--color-icon-secondary); --line: transparent; margin-bottom: 0; }
   .btn[data-variant='ghost']:active { transform: none; }
   .btn[aria-disabled='true'] { opacity: 0.5; cursor: default; box-shadow: none; }
+  /* a filled icon (Icon.tsx `fill`): the Lucide icon's filled copy under its outline. The chart's axis is an open line,
+     so only its bars take the fill */
+  .icon-filled { display: inline-grid; flex: none; }
+  .icon-filled > svg { grid-area: 1 / 1; }
+  .icon-fill.lucide-chart-column-big path { fill: none; }
   /* an icon-only button: a 44px square in the quiet ink; a bookmark that is on turns gold */
   .icon-btn { flex: none; width: var(--size-element-md); min-height: var(--size-element-md); padding: 0; }
   .icon-btn.marked { --ink: var(--ruma-gold-icon); }
@@ -436,7 +441,7 @@
   .tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 48px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); text-decoration: none; border-radius: var(--radius-element); }
   .tab-icon { position: relative; display: grid; place-items: center; width: 56px; height: 28px; border-radius: var(--radius-full); transition: background var(--duration-medium) var(--ease-standard); }
   .tabbar a.on { color: var(--color-text-primary); font-weight: 700; }
-  .tabbar a.on .tab-icon svg { fill: var(--ruma-pink); }
+  .tabbar a.on .tab-icon .icon-fill { fill: var(--ruma-pink); }
   .tabbar a:active .tab-icon { background: var(--color-background-muted); }
   /* the backup reminder is due (it waits in 설정 › 데이터) */
   .tab-dot { position: absolute; top: 2px; left: calc(50% + 8px); width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--ruma-flame); box-shadow: 0 0 0 2px var(--color-background-surface); }
@@ -662,7 +667,7 @@
   }
   .tabbar a { font-size: var(--font-size-sm); min-height: 72px; color: var(--color-text-secondary); }
   .tabbar a .tab-icon { width: 48px; height: 26px; color: var(--color-icon-secondary); }
-  .tabbar a.on .tab-icon svg { fill: var(--ruma-pink); }
+  .tabbar a.on .tab-icon .icon-fill { fill: var(--ruma-pink); }
 
   /* ── home ── */
   .home-head { gap: var(--spacing-2); min-height: 44px; padding-top: var(--spacing-2); }
@@ -927,6 +932,8 @@
   .stat-label { font-size: var(--font-size-base); }
   .card-section { display: flex; flex-direction: column; gap: 14px; padding: var(--spacing-4); border: 1px solid var(--color-border); border-radius: var(--ruma-radius-card); background: var(--color-background-surface); }
   .card-section .group-title { margin: 0; }
+  /* the levels the 기록 counts cover ("N5~N3"), small at the right of its heading */
+  .group-range { font-size: var(--font-size-sm); }
   .meter { display: flex; flex-direction: column; gap: var(--spacing-2); }
   .meter-name { color: var(--color-text-primary); font-size: calc(var(--font-size-lg) * 0.94); }
   .meter .bar { height: 10px; }

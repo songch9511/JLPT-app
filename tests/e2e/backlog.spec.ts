@@ -26,7 +26,7 @@ test.describe('backlog on home (board 2-4)', () => {
     await expect(reviews).toHaveText('복습600장 중225장')
     await expect(reviews).toHaveAttribute('data-variant', 'primary')
     // fewer new words while behind (03 §5.1)
-    await expect(plan.getByRole('button', { name: '새 단어 시작, 5개' })).toHaveAttribute('data-variant', 'secondary')
+    await expect(plan.getByRole('button', { name: '단어 시작, 5개' })).toHaveAttribute('data-variant', 'secondary')
     // no tag, no catch-up estimate, no sentence
     await expect(page.getByText(/따라잡아요|나눠서 해요|오래된 것부터|밀린/)).toHaveCount(0)
     // Ruma is asleep (today's study has not started) and says nothing; the streak is gone
@@ -53,7 +53,7 @@ test.describe('backlog on home (board 2-4)', () => {
     await expect(page.locator('.today-ruma')).toHaveAttribute('data-mood', 'day')
     await expect(page.locator('.ruma.cheer')).toBeVisible()
     await expect(plan.locator('.btn[data-variant="primary"]')).toHaveCount(0)
-    await expect(plan.getByRole('button', { name: /새 단어.*더 하기/ })).toHaveCount(0)
+    await expect(plan.getByRole('button', { name: /^단어 더 하기/ })).toHaveCount(0)
     const more = plan.getByRole('button', { name: '밀린 복습 50장 더 하기' })
     await expect(more).toHaveText('밀린 복습 더50장')
     await more.click()
@@ -75,6 +75,6 @@ test.describe('backlog on home (board 2-4)', () => {
     await expect(page.getByText(/나눠서|밀린 \d/)).toHaveCount(0)
     // the same button as Home's: short on screen, the whole action as its name
     await expect(page.getByRole('button', { name: '밀린 복습 50장 더 하기' })).toHaveText('밀린 복습 더50장')
-    await expect(page.getByRole('button', { name: /새 단어.*더 하기/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^단어 더 하기/ })).toHaveCount(0)
   })
 })

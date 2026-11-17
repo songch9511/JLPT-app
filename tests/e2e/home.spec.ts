@@ -68,7 +68,7 @@ for (const [name, c] of Object.entries(CASES)) {
       await expect(review).toHaveAttribute('data-variant', 'primary')
     }
     if (c.fresh) {
-      await expect(fresh).toHaveText(`새 단어${c.fresh}개`)
+      await expect(fresh).toHaveText(`단어${c.fresh}개`)
       await expect(fresh).toHaveAttribute('data-variant', c.review ? 'secondary' : 'primary')
     }
     // the 오늘 card: "done / all" over one bar with a text alternative, the time at its right
@@ -112,8 +112,8 @@ for (const [name, c] of Object.entries(CASES)) {
 test('the states without a session: “오늘 끝” and more new words, a day off, a level with every word met', async ({ page }) => {
   await open(page, { state: CASES['today’s share done'].state })
   await expect(page.locator('.home-done')).toHaveText('오늘 끝')
-  const more = page.getByRole('button', { name: '새 단어 더 하기, 10개' })
-  await expect(more).toHaveText('새 단어 더10개')
+  const more = page.getByRole('button', { name: '단어 더 하기, 10개' })
+  await expect(more).toHaveText('단어 더10개')
   await expect(more).toHaveAttribute('data-variant', 'secondary')
   // a day off: more new words is the one thing to do
   await reseed(page, CASES['a day off with words left'].state)
@@ -182,14 +182,14 @@ test('복습하기 opens a session of the reviews only, 새 단어 one of the ne
   // the session is over while the day is not: it says what is left and goes home
   await expect(page.getByRole('heading', { name: '복습 끝', level: 1 })).toBeVisible()
   await expect(page.locator('.done-text')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '새 단어 시작, 3개' })).toHaveText('새 단어3개')
-  await expect(page.getByRole('button', { name: /새 단어.*더 하기/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '단어 시작, 3개' })).toHaveText('단어3개')
+  await expect(page.getByRole('button', { name: /^단어 더 하기/ })).toHaveCount(0)
   expect(await todayLog(page)).toMatchObject({ c: 4, n: 0, r: 4 })
   await page.getByRole('button', { name: '홈으로' }).click()
   await homeShown(page)
   await expect(page.locator('.home-go.go-review')).toHaveCount(0)
   // the new words are now the one primary
-  const fresh = page.getByRole('button', { name: '새 단어 시작, 3개' })
+  const fresh = page.getByRole('button', { name: '단어 시작, 3개' })
   await expect(fresh).toHaveAttribute('data-variant', 'primary')
   await fresh.click()
   await expect(page).toHaveURL(/#\/study\/new$/)
@@ -199,19 +199,19 @@ test('복습하기 opens a session of the reviews only, 새 단어 one of the ne
   expect(await todayLog(page)).toMatchObject({ c: 5, n: 1, r: 4 })
   // leaving part-way: Home counts what the session still holds
   await page.getByRole('button', { name: /나가기/ }).click()
-  await expect(page.getByRole('button', { name: '새 단어 이어서 하기, 2개 남음' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '단어 이어서 하기, 2개 남음' })).toBeVisible()
   await expect(page.locator('.today-count')).toHaveText('5 / 7')
 })
 
 test('a word forgotten in the new session stays there; a review forgotten stays with the reviews', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 1 }, { cards: cards(40, 1) }) })
   await homeShown(page)
-  await page.getByRole('button', { name: '새 단어 시작, 1개' }).click()
+  await page.getByRole('button', { name: '단어 시작, 1개' }).click()
   await answer(page, '모르겠어요')
   await page.getByRole('button', { name: /나가기/ }).click()
   // the word is in its first steps: still the new session's (said in the button's name), not a review
-  const fresh = page.getByRole('button', { name: '새 단어 이어서 하기, 1개 남음, 익히는 중 1개 포함' })
-  await expect(fresh).toHaveText('새 단어1개')
+  const fresh = page.getByRole('button', { name: '단어 이어서 하기, 1개 남음, 익히는 중 1개 포함' })
+  await expect(fresh).toHaveText('단어1개')
   await expect(page.locator('.go-review .home-go-count')).toHaveText('1장')
   await page.getByRole('button', { name: '복습 시작, 1장' }).click()
   await answer(page, '모르겠어요')
@@ -221,7 +221,7 @@ test('a word forgotten in the new session stays there; a review forgotten stays 
   await expect(page.locator('.go-new .home-go-count')).toHaveText('1개')
 })
 
-test('the tab bar is a white surface with a hairline on top; the tab you are on has its icon filled pink; 기록 is the bar-rect icon', async ({ page }) => {
+test('the tab bar is a white surface with a hairline on top; the tab you are on has its icon filled pink; the four icons are Lucide icons', async ({ page }) => {
   await open(page, { state: user({ target: 4, includeLower: true }, { cards: cards(718, 0) }) })
   await homeShown(page)
   const tabbar = page.locator('.tabbar')
@@ -235,10 +235,19 @@ test('the tab bar is a white surface with a hairline on top; the tab you are on 
     expect(css).toEqual(['rgb(255, 255, 255)', '1px', '0px'])
     const on = tabbar.locator('a[aria-current="page"]')
     await expect(on).toHaveText(tab)
-    expect(await on.locator('svg').evaluate((el) => getComputedStyle(el).fill)).toBe(rgb('#f7c6d0'))
-    expect(await on.locator('svg').evaluate((el) => getComputedStyle(el).stroke)).toBe(rgb('#6b665d'))
+    // a Lucide icon: its filled copy (pink, no stroke) under its outline (the quiet ink, unfilled)
+    expect(await on.locator('svg.icon-fill').evaluate((el) => [getComputedStyle(el).fill, getComputedStyle(el).stroke])).toEqual([rgb('#f7c6d0'), 'none'])
+    expect(await on.locator('svg:not(.icon-fill)').evaluate((el) => [getComputedStyle(el).fill, getComputedStyle(el).stroke])).toEqual(['none', rgb('#6b665d')])
     expect(await on.evaluate((el) => getComputedStyle(el).color)).toBe(rgb('#2d2a26'))
+    await expect(tabbar.locator('a:not([aria-current]) svg')).toHaveCount(3)
     expect(await tabbar.locator('a:not([aria-current]) svg').first().evaluate((el) => getComputedStyle(el).fill)).toBe('none')
   }
-  await expect(tabbar.getByRole('link', { name: '기록' }).locator('svg rect')).toHaveCount(3)
+  for (const [tab, icon] of [['홈', 'house'], ['단어장', 'book-open'], ['기록', 'chart-column-big'], ['설정', 'settings']])
+    await expect(tabbar.getByRole('link', { name: tab }).locator(`svg.lucide-${icon}`).first()).toBeAttached()
+  // 기록's bars take the pink, its axis does not
+  await tabbar.getByRole('link', { name: '기록' }).click()
+  const chart = tabbar.getByRole('link', { name: '기록' }).locator('svg.icon-fill')
+  await expect(chart.locator('rect')).toHaveCount(2)
+  expect(await chart.locator('path').evaluate((el) => getComputedStyle(el).fill)).toBe('none')
+  expect(await chart.locator('rect').first().evaluate((el) => getComputedStyle(el).fill)).toBe(rgb('#f7c6d0'))
 })

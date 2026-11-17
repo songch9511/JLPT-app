@@ -61,10 +61,10 @@ test.describe('accessibility (Q7, Q8)', () => {
     await expect(page.getByRole('button', { name: 'N5 시작하기' })).toBeVisible()
     expect(await violations(page)).toEqual([])
     await page.getByRole('button', { name: 'N5 시작하기' }).click()
-    for (const title of ['단어를 보고 뜻을 떠올려요', '기억난 만큼 눌러요', '하루 새 단어']) {
+    for (const title of ['단어를 보고 뜻을 떠올려요', '내 상태를 골라요', '매일 새로운 단어']) {
       await expect(page.getByRole('heading', { name: title })).toBeVisible()
       expect(await violations(page)).toEqual([])
-      await page.getByRole('button', { name: title === '하루 새 단어' ? '시작하기' : '다음', exact: true }).click()
+      await page.getByRole('button', { name: title === '매일 새로운 단어' ? '시작하기' : '다음', exact: true }).click()
     }
     await expect(page.getByRole('button', { name: /^첫 학습 시작/ })).toBeVisible()
     expect(await violations(page)).toEqual([])
@@ -141,7 +141,7 @@ test.describe('accessibility (Q7, Q8)', () => {
     await page.waitForTimeout(200)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320)
     // Ruma's circle shrinks, so the start button stays on the first screen
-    const box = (await page.getByRole('button', { name: /^새 단어 시작/ }).boundingBox())!
+    const box = (await page.getByRole('button', { name: /^단어 시작/ }).boundingBox())!
     const tabbar = (await page.locator('.tabbar').boundingBox())!
     expect(box.y + box.height).toBeLessThanOrEqual(tabbar.y)
   })
