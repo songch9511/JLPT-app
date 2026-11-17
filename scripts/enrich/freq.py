@@ -27,10 +27,11 @@ Methods, tried in order:
   j  neither found; JMdict priority tag -> median Zipf of JMdict words carrying the same tag
   z  nothing at all: floor Zipf 1.0 (f = 10), i.e. "rarer than anything wordfreq lists"
 
-Order pins (data/freq/order-pins.json, {"<id>": {"order_f": n, "why": "<date>: <reason>"}}): the word is
-ordered as if its f were order_f, while its shipped f stays the measured one. Used when a corrected headword
-changes a word's f after learners started: the word keeps its place, and no other word's position moves
-(docs/plan/08 §2.4, §7.2). Every pin must name a live word.
+Order pins (data/freq/order-pins.json, {"<id>": {"order_f": n, "order_rank": r, "why": "<date>: <reason>"}}):
+the word is ordered as if its f were order_f (and, when order_rank 1..3 is given, as if its JMdict priority rank
+were order_rank), while its shipped f stays the measured one. Used when a corrected headword changes a word's f
+(or rank) after learners started: the word keeps its place, and no other word's position moves (docs/plan/08
+§2.4, §7.2). Every pin must name a live word.
 
 Order: f descending (or the pinned order_f), then JMdict priority rank (news1/ichi1/spec1/spec2/gai1 < other tags < none),
 then the word's place in id order (seq). For the 8,130 words that existed when ids were introduced this is
@@ -342,7 +343,8 @@ def main():
             v, m, rank = score(w, jm, calib)
             f[w['id']] = v
             src[w['id']] = m
-            keys.append((-pins.get(w['id'], v), rank, w['seq'], w['id']))
+            pf, pr = pins.get(w['id'], (v, None))
+            keys.append((-pf, rank if pr is None else pr, w['seq'], w['id']))
         order = [k[3] for k in sorted(keys)]
         assert sorted(order) == sorted(w['id'] for w in ws)
         dump(f'n{n}.json', f)
@@ -367,7 +369,10 @@ def load_pins(live):
             sys.exit(f'{path}: "{k}" is not a live word id')
         if not isinstance(v.get('order_f'), int) or not 10 <= v['order_f'] <= 80 or not str(v.get('why', '')).strip():
             sys.exit(f'{path}: "{k}" needs an integer order_f (10..80) and a why')
-        pins[k] = v['order_f']
+        r = v.get('order_rank')
+        if r is not None and (not isinstance(r, int) or not 1 <= r <= 3):
+            sys.exit(f'{path}: "{k}" order_rank must be an integer 1..3 (the JMdict priority rank) when given')
+        pins[k] = (v['order_f'], r)
     return pins
 
 

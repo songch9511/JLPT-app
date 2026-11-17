@@ -1,7 +1,7 @@
 // Home (docs/design-system.md §3 "홈"): name-tags and numbers only. At the top the target level as a badge (a label:
 // the level is changed in 설정), today's date and the streak; a white "오늘" card with Ruma (asleep, one eye, both eyes:
 // the day's progress), the day's count, time and bar, and the day's three sessions as three buttons — 복습 (word
-// reviews due today), 새 단어 (today's new words) and 한자 (the kanji cards). Each button's number is what its session
+// reviews due today), 단어 (today's new words) and 한자 (the kanji cards). Each button's number is what its session
 // will show (srs.ts `StudyMode`); they add up to the day's cards. Below, the current chapter of the target level, then
 // one line with the level's words and kanji met. The first run asks the level first (LevelCarousel), then shows the
 // three short intro pages (Intro).
@@ -208,10 +208,10 @@ export function Home() {
                 <CountButton
                   primary={reviews === 0}
                   className="go-new"
-                  title="새 단어"
+                  title="단어"
                   count={`${fresh}개`}
                   label={
-                    (first === 'start' ? `첫 학습 시작, 새 단어 ${fresh}개` : (todayLog?.n ?? 0) > 0 ? `새 단어 이어서 하기, ${fresh}개 남음` : `새 단어 시작, ${fresh}개`) +
+                    (first === 'start' ? `첫 학습 시작, 단어 ${fresh}개` : (todayLog?.n ?? 0) > 0 ? `단어 이어서 하기, ${fresh}개 남음` : `단어 시작, ${fresh}개`) +
                     (qn.learning > 0 ? `, 익히는 중 ${qn.learning}개 포함` : '')
                   }
                   onClick={() => go('/study/new')}
@@ -252,9 +252,9 @@ export function Home() {
                   // after a finished day more is an offer (white); on a day with nothing planned it is the one thing to do
                   <CountButton
                     primary={!cleared}
-                    title="새 단어 더"
+                    title="단어 더"
                     count="10개"
-                    label="새 단어 더 하기, 10개"
+                    label="단어 더 하기, 10개"
                     onClick={() => {
                       unlockMoreNew(10)
                       go('/study/new')

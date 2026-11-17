@@ -4,7 +4,7 @@
 // Nothing on a card moves when something opens: every slot (the reading above the headword, the meaning under it, the
 // example's translation, the kanji chips; on a kanji card its 훈음, its readings, the words' readings and meanings) is
 // always laid out and only becomes visible (`.slot.on`). A closed slot is empty to the eye and to screen readers
-// (visibility) and keeps its room. Nothing on the card opens on a tap but the two toggles, the speaker and the bookmark.
+// (visibility) and keeps its room. Nothing on the card opens on a tap but the two toggles and the bookmark.
 import { useState, type MouseEvent, type ReactNode } from 'react'
 import { meaning, wordById, type Level, type Word } from '../data'
 import type { Example } from '../examples'
@@ -15,22 +15,20 @@ import { Icon } from './Icon'
 import { LevelBadge } from './LevelBadge'
 import { IconButton, Meta } from './ui'
 import { FalseFriend } from './WordNotes'
-import { speak } from '../util'
 
 const stop = (fn: () => void) => (e: MouseEvent) => {
   e.stopPropagation()
   fn()
 }
 
-/** The card's top line: the level in its colour and the card's facts ("복습 · 1번 잊음"), then sound and bookmark. */
-export function CardHead({ level, items, say, marked, onMark }: { level: Level; items: (string | false | null | undefined)[]; say?: string; marked: boolean; onMark: () => void }) {
+/** The card's top line: the level in its colour and the card's facts ("복습 · 1번 잊음"), then the bookmark. */
+export function CardHead({ level, items, marked, onMark }: { level: Level; items: (string | false | null | undefined)[]; marked: boolean; onMark: () => void }) {
   return (
     <div className="flash-head">
       <span className="flash-status grow">
         <LevelBadge level={level} />
         <Meta className="flash-meta" items={items} />
       </span>
-      {say && <IconButton label="발음 듣기" icon={<Icon name="speaker" />} onClick={stop(() => speak(say))} />}
       <IconButton label="북마크" className={marked ? 'marked' : undefined} aria-pressed={marked} icon={<Icon name="mark" fill={marked} />} onClick={stop(onMark)} />
     </div>
   )

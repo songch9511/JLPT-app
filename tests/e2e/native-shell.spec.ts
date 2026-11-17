@@ -58,7 +58,6 @@ async function openShell(page: Page, opts: { state?: unknown; files?: Record<str
           schedule: (o: { notifications: { id: number }[] }) => void pending.push(...o.notifications),
         },
         Haptics: { impact: () => {}, notification: () => {} },
-        TextToSpeech: { speak: () => {}, getSupportedVoices: () => ({ voices: [{ name: 'Kyoko', lang: 'ja-JP', voiceURI: 'ja.kyoko', default: false, localService: true }] }) },
         App: { exitApp: () => {} },
         Browser: { open: () => {} },
         StatusBar: { setStyle: () => {} },
@@ -122,7 +121,7 @@ test('first launch with nothing saved: Ruma asks on home; progress is mirrored t
 test('settings: native section shown, export through the share sheet, import through the document picker', async ({ page }) => {
   const backup = { format: 'jlpt-luma-backup', formatVersion: 2, ...user({}, { xp: 999, kanji: false }) }
   await openShell(page, { state: user({}, { xp: 5 }), hash: '/settings', pick: JSON.stringify(backup) })
-  await expect(page.getByRole('heading', { name: '알림 · 진동 · 발음' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '알림 · 진동' })).toBeVisible()
   await expect(page.getByText('기록은 이 기기에만 저장돼요', { exact: true })).toBeVisible()
 
   // no browser download inside the app: the file goes to the share sheet
@@ -191,7 +190,7 @@ test('the privacy policy and support pages open inside the app, from the bundled
 
 test('finishing the day: haptics, then the reminder offer; permission is asked only on “알림 받기”, then reminders are scheduled', async ({ page }) => {
   await openShell(page, { state: user({ dailyNew: 1 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   await answer(page, '쉬워요')
   await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
   expect((await calls(page, 'Haptics', 'impact')).length).toBe(1)
@@ -210,7 +209,7 @@ test('finishing the day: haptics, then the reminder offer; permission is asked o
 
 test('the offer is not repeated once answered “나중에”', async ({ page }) => {
   await openShell(page, { state: user({ dailyNew: 1 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   await answer(page, '쉬워요')
   await page.getByRole('region', { name: '복습할 날 알려 드릴까요?' }).getByRole('button', { name: '나중에' }).click()
   await expect(page.getByRole('region', { name: '복습할 날 알려 드릴까요?' })).toHaveCount(0)

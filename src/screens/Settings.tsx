@@ -13,7 +13,7 @@ import { docHref, type DocName } from './Doc'
 import { dayKey, formatDay } from '../util'
 import { UNOFFICIAL_LINE } from '../brand'
 
-// reminders, haptics and voice: only in the iOS app (not even in the web bundle, see src/platform/index.ts)
+// reminders and haptics: only in the iOS app (not even in the web bundle, see src/platform/index.ts)
 const NativeSettings = import.meta.env.MODE === 'native' ? lazy(() => import('../platform/NativeSettings')) : null
 
 /**
@@ -128,7 +128,7 @@ export function Settings() {
         <RowLink href="#/intro" label="처음 안내 다시 보기" />
       </Group>
 
-      <Group title="화면 · 소리" id="display-title">
+      <Group title="화면" id="display-title">
         <Field label="테마">
           <Choice
             label="테마"
@@ -141,11 +141,6 @@ export function Settings() {
             onChange={(theme) => set({ theme })}
           />
         </Field>
-        <Switch
-          label="발음 자동 재생"
-          value={st.autoSpeak}
-          onChange={(autoSpeak) => set({ autoSpeak })}
-        />
       </Group>
 
       {NativeSettings && platform.native && (

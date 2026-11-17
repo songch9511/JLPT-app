@@ -356,24 +356,6 @@ test.describe('undo, keyboard, screen readers, motion, sizes', () => {
     await expect(page.getByRole('status').filter({ hasText: '지금 카드' })).toHaveCount(1)
   })
 
-  test('auto-speak does not play an earlier card again', async ({ page }) => {
-    await page.addInitScript(() => {
-      const w = window as unknown as { __spoken: string[] }
-      w.__spoken = []
-      speechSynthesis.speak = (u: SpeechSynthesisUtterance) => void w.__spoken.push(u.text)
-      speechSynthesis.cancel = () => {}
-    })
-    await studyThree(page, user({ dailyNew: 0, autoSpeak: true }, { cards: reviews() }))
-    const spoken = () => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken.length)
-    const n = await spoken()
-    await back(page)
-    await back(page)
-    await forward(page)
-    await forward(page)
-    await page.waitForTimeout(300)
-    expect(await spoken()).toBe(n)
-  })
-
   test('reduced motion: the card changes at once, with no slide', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const [, , c] = await studyThree(page)

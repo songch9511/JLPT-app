@@ -22,7 +22,7 @@ test('first run → a full day of study (new words, then kanji) → done screen 
   await expect(page.locator('.go-kanji .home-go-count')).toHaveText('5자')
   await expect(page.locator('.today-count')).toHaveText('0 / 15')
   await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
-  await page.getByRole('button', { name: '첫 학습 시작, 새 단어 10개' }).click()
+  await page.getByRole('button', { name: '첫 학습 시작, 단어 10개' }).click()
   await expect(page).toHaveURL(/#\/study\/new$/)
 
   // each new word: 알아요 (→ 10 min) then 알아요 again (shown early thanks to learn-ahead)
@@ -55,14 +55,14 @@ test('first run → a full day of study (new words, then kanji) → done screen 
   await expect(page.locator('.today-count')).toHaveText('30 / 30')
   await expect(page.locator('.home-done')).toHaveText('오늘 끝')
   await expect(page.locator('.home-head .streak')).toHaveText('1')
-  await expect(page.getByRole('button', { name: '새 단어 더 하기, 10개' })).toHaveText('새 단어 더10개')
-  await expect(page.getByRole('button', { name: '새 단어 더 하기, 10개' })).toHaveAttribute('data-variant', 'secondary')
+  await expect(page.getByRole('button', { name: '단어 더 하기, 10개' })).toHaveText('단어 더10개')
+  await expect(page.getByRole('button', { name: '단어 더 하기, 10개' })).toHaveAttribute('data-variant', 'secondary')
   await expect(page.locator('.streak')).toHaveCount(1)
 })
 
 test('leaving mid-session keeps progress and “이어서 하기” resumes it', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   for (let i = 0; i < 3; i++) await answer(page, '쉬워요')
   await page.getByRole('button', { name: /나가기/ }).click()
   await expect(page).toHaveURL(/#\/$/)
@@ -78,7 +78,7 @@ test('leaving mid-session keeps progress and “이어서 하기” resumes it',
 
 test('undo restores the answer, the XP and shows the same card again', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   const undo = page.getByRole('button', { name: '방금 답 되돌리기' })
   await expect(undo).toBeDisabled()
   const first = await currentWord(page)
@@ -96,7 +96,7 @@ test('undo restores the answer, the XP and shows the same card again', async ({ 
 
 test('undo brings back the card that was undone even after its predecessor became due', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   const a = await currentWord(page)
   await answer(page, '모르겠어요') // A comes back in 1 minute
   const b = await currentWord(page)
@@ -110,7 +110,7 @@ test('undo brings back the card that was undone even after its predecessor becam
 
 test('“모르겠어요” always shows the answer before moving on', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   await page.getByRole('button', { name: /^모르겠어요/ }).click()
   await expect(page.locator('.flash-meaning')).toBeVisible()
   expect(await todayLog(page)).toBeUndefined()
@@ -125,7 +125,7 @@ test('“모르겠어요” always shows the answer before moving on', async ({ 
 
 test('the next day’s reviews appear (clock moves forward)', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   for (let i = 0; i < 10; i++) await answer(page, '알아요')
   await expect(page.getByRole('heading', { name: '오늘 끝', level: 1 })).toBeVisible()
   await page.getByRole('button', { name: '홈으로' }).click()
@@ -137,21 +137,21 @@ test('the next day’s reviews appear (clock moves forward)', async ({ page }) =
   await expect(page.locator('.go-review .home-go-count')).toHaveText('5장')
   await expect(page.locator('.go-new .home-go-count')).toHaveText('5개')
   await expect(page.getByRole('button', { name: '복습 시작, 5장' })).toBeVisible()
-  await expect(page.getByRole('button', { name: '새 단어 시작, 5개' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '단어 시작, 5개' })).toBeVisible()
   // yesterday was skipped: the streak is gone but today does not count yet
   await expect(page.locator('.home-head .streak')).toHaveText('0')
 })
 
 test('home rolls over to the new day while the app stays open', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 5 }), time: new Date('2026-11-13T23:50:00+09:00') })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   for (let i = 0; i < 5; i++) await answer(page, '쉬워요')
   await page.getByRole('button', { name: '홈으로' }).click()
   await expect(page.locator('.today-ruma')).toHaveAttribute('data-mood', 'day')
   // the app is left open past midnight (e.g. a PWA left in the background)
   await page.clock.runFor('20:00')
   await expect(page.locator('.go-new .home-go-count')).toHaveText('5개')
-  await expect(page.getByRole('button', { name: '새 단어 시작, 5개' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '단어 시작, 5개' })).toBeVisible()
 })
 
 test('waiting for a learning card brings it back on its own once it is due', async ({ page }) => {
@@ -165,7 +165,7 @@ test('waiting for a learning card brings it back on its own once it is due', asy
 
 test('a double tap on an answer button answers only the card on screen', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   await expect(page.locator('.flash')).toBeVisible()
   await page.getByRole('button', { name: /^쉬워요/ }).dblclick()
   await page.waitForTimeout(300)
@@ -174,7 +174,7 @@ test('a double tap on an answer button answers only the card on screen', async (
 
 test('a double tap on “모르겠어요” still shows the answer', async ({ page }) => {
   await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   await page.getByRole('button', { name: /^모르겠어요/ }).dblclick()
   await page.waitForTimeout(300)
   await expect(page.locator('.flash-meaning')).toBeVisible()
@@ -184,7 +184,7 @@ test('a double tap on “모르겠어요” still shows the answer', async ({ pa
 test.describe('keyboard', () => {
   test('Space opens both toggles, number keys answer (← and → move between cards since swiping, they no longer grade)', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 5 }) })
-    await page.getByRole('button', { name: '새 단어 시작' }).click()
+    await page.getByRole('button', { name: '단어 시작' }).click()
     await expect(page.locator('.flash')).toBeVisible()
     await page.keyboard.press('Space')
     await expect(page.locator('.flash-meaning')).toBeVisible()
@@ -208,7 +208,7 @@ test.describe('keyboard', () => {
 
   test('holding an arrow key answers one card, not one per key repeat', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 5 }) })
-    await page.getByRole('button', { name: '새 단어 시작' }).click()
+    await page.getByRole('button', { name: '단어 시작' }).click()
     await expect(page.locator('.flash')).toBeVisible()
     await page.keyboard.press('Space')
     await expect(page.locator('.flash-meaning')).toBeVisible()
@@ -223,7 +223,7 @@ test.describe('keyboard', () => {
 
   test('Enter on a focused button activates that button instead of the card shortcut', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 5 }) })
-    await page.getByRole('button', { name: '새 단어 시작' }).click()
+    await page.getByRole('button', { name: '단어 시작' }).click()
     await expect(page.locator('.flash')).toBeVisible()
     await page.getByRole('button', { name: /나가기/ }).focus()
     await page.keyboard.press('Enter')
@@ -259,7 +259,7 @@ test('two open tabs do not overwrite each other’s progress', async ({ page, co
 test.describe('progress bar', () => {
   test('counts the whole day, so resuming does not start from zero', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 5 }) })
-    await page.getByRole('button', { name: '새 단어 시작' }).click()
+    await page.getByRole('button', { name: '단어 시작' }).click()
     const bar = page.getByRole('progressbar', { name: '학습 진행' })
     await expect(bar).toHaveAttribute('aria-valuenow', '0')
     await expect(page.locator('.left-count')).toHaveAttribute('data-left', '5')
@@ -278,53 +278,15 @@ test.describe('progress bar', () => {
 })
 
 test.describe('a forgotten card', () => {
-  const spy = () => {
-    const w = window as unknown as { __spoken: string[] }
-    w.__spoken = []
-    if ('speechSynthesis' in window) {
-      speechSynthesis.speak = (u: SpeechSynthesisUtterance) => void w.__spoken.push(u.text)
-      speechSynthesis.cancel = () => {}
-    }
-  }
-  const spoken = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken)
-
-  test('opens everything, keeps the three grades and the card’s facts, and stays silent when auto-speak is off', async ({ page }) => {
-    await page.addInitScript(spy)
+  test('opens everything, keeps the three grades and the card’s facts', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 5 }) })
-    await page.getByRole('button', { name: '새 단어 시작' }).click()
+    await page.getByRole('button', { name: '단어 시작' }).click()
     await expect(page.locator('.flash-head .flash-meta')).toHaveText('새 단어')
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await expect(page.locator('.flash-meaning')).toBeVisible()
     await expect(page.locator('.flash-toggles')).toBeVisible()
     await expect(page.getByRole('button', { name: '모르겠어요, 1분 뒤 다시' })).toBeVisible()
     await expect(page.locator('.flash-head .flash-meta')).toHaveText('새 단어')
-    expect(await spoken(page)).toEqual([])
-  })
-
-  test('with auto-speak on, the reading is played once more when the card is missed', async ({ page }) => {
-    await page.addInitScript(spy)
-    await open(page, { state: user({ dailyNew: 5, autoSpeak: true }) })
-    await page.getByRole('button', { name: '새 단어 시작' }).click()
-    await expect.poll(async () => (await spoken(page)).length).toBe(1) // the card appeared after a tap
-    await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: /^모르겠어요/ }).click()
-    await expect(page.locator('.flash-meaning')).toBeVisible()
-    const [first] = await spoken(page)
-    await expect.poll(() => spoken(page)).toEqual([first, first])
-    // confirming moves on without another play
-    await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: /^모르겠어요/ }).click()
-    await expect.poll(async () => (await spoken(page)).length).toBe(3) // only the next card's own auto-speak
-  })
-
-  test('auto-speak waits for a user gesture: opening the study page directly plays nothing', async ({ page }) => {
-    await page.addInitScript(spy)
-    // the page has not been interacted with yet (Playwright's own navigation counts as activation)
-    await page.addInitScript(() => Object.defineProperty(navigator, 'userActivation', { configurable: true, value: { hasBeenActive: false } }))
-    await open(page, { state: user({ dailyNew: 5, autoSpeak: true }), hash: '/study' })
-    await expect(page.locator('.flash')).toBeVisible()
-    await page.waitForTimeout(300)
-    expect(await spoken(page)).toEqual([])
   })
 
   test('answer buttons carry the interval in their accessible name, from the start', async ({ page }) => {
@@ -355,8 +317,8 @@ test.describe('nothing new left in the target level', () => {
     await expect(page.locator('.today-ruma')).toHaveAttribute('data-mood', 'sleep')
     await expect(page.getByText(/오늘은 쉬어요/)).toHaveCount(0)
     await expect(page.locator('.btn[data-variant="primary"]')).toHaveCount(1)
-    await expect(page.getByRole('button', { name: '새 단어 더 하기, 10개' })).toHaveText('새 단어 더10개')
-    await expect(page.getByRole('button', { name: '새 단어 더 하기, 10개' })).toHaveAttribute('data-variant', 'primary')
+    await expect(page.getByRole('button', { name: '단어 더 하기, 10개' })).toHaveText('단어 더10개')
+    await expect(page.getByRole('button', { name: '단어 더 하기, 10개' })).toHaveAttribute('data-variant', 'primary')
   })
 })
 
@@ -404,7 +366,7 @@ test.describe('answering (2026-11-16: the grades from the start)', () => {
     await page.waitForTimeout(READ_MS)
     await bar.getByRole('button', { name: /^쉬워요/ }).click()
     await expect.poll(async () => (await todayLog(page))?.c).toBe(2)
-    // a tap on the card opens nothing (only the toggles, the speaker and the bookmark do)
+    // a tap on the card opens nothing (only the toggles and the bookmark do)
     await page.waitForTimeout(READ_MS)
     await page.locator('.flash-word').click()
     await page.locator('.flash').click({ position: { x: 30, y: 200 } })
@@ -547,7 +509,7 @@ test.describe('the answer bar and the sessions (2026-11-16 redesign)', () => {
     expect(await todayLog(page)).toMatchObject({ c: 5, n: 2, r: 2, q: 1 })
     expect((await saved(page)).xp).toBe(100)
     // more new words from the review session's done screen open the new-words session
-    await page.getByRole('button', { name: '새 단어 10개 더 하기' }).click()
+    await page.getByRole('button', { name: '단어 더 하기, 10개' }).click()
     await expect(page).toHaveURL(/#\/study\/new$/)
     await expect(page.locator('.left-count')).toHaveAttribute('data-left', '10')
     await expect(page.locator('.flash-meta')).toContainText('새 단어')

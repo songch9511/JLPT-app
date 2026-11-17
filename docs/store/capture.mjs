@@ -188,7 +188,6 @@ function simulate() {
       target: 3,
       dailyNew: 20,
       theme: 'light',
-      autoSpeak: false,
       includeLower: true,
       fastTrack: true,
     },

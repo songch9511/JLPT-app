@@ -77,7 +77,8 @@ test('the word sheet traps focus, closes on Escape and gives focus back to the r
 })
 
 test('theme modes reach the controls: light, dark and system (following the OS); a group is a white card on the cream ground', async ({ page }) => {
-  await open(page, { state: user({ theme: 'light' }), hash: '/settings' })
+  // N4, so the settings show a switch (아래 급수 단어도 함께)
+  await open(page, { state: user({ theme: 'light', target: 4 }), hash: '/settings' })
   const group = '.group'
   const card = '.group-body'
   // the chosen segment is white on the beige track, in the ink
@@ -98,7 +99,7 @@ test('theme modes reach the controls: light, dark and system (following the OS);
   expect(await bg(page, segment)).toBe('rgb(255, 255, 255)')
   expect(await css(segment, 'color')).toBe('rgb(45, 42, 38)')
   // a switch that is on is the ink
-  await page.getByRole('switch', { name: '발음 자동 재생' }).check()
+  await page.getByRole('switch', { name: /^아래 급수 단어도 함께/ }).check()
   await expect.poll(() => bg(page, '.switch-input:checked')).toBe('rgb(45, 42, 38)')
   await page.getByRole('radio', { name: '다크' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
@@ -152,7 +153,7 @@ test('touch targets: every button and link on home and in study is at least 44px
         .filter(([, h]) => h > 0 && h < 44),
     )
   expect(await small()).toEqual([])
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
+  await page.getByRole('button', { name: '단어 시작' }).click()
   await expect(page.locator('.flash')).toBeVisible()
   // measured after the card's entry motion (a translate): mid-motion the transformed boxes read 43.99999px
   await page.locator('.flash').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)))

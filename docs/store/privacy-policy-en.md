@@ -30,7 +30,7 @@ We process **no** personal data. To work, the app creates and stores the followi
 | Kept on the device | Used for | Where |
 | --- | --- | --- |
 | Study records: review schedule and memory state per word, daily study counts, bookmarks, XP | scheduling reviews, the counts on Home and the records screen | the app's own storage (web view storage and a file in the app's private folder) |
-| Settings: target level, new words per day, theme, voice settings | your study plan | same |
+| Settings: target level, new words per day, theme | your study plan | same |
 | Reminder settings and scheduled reminders | review reminders | same; scheduled notifications sit in iOS Notification Center |
 | A summary for the widget (reviews and new words for the next 7 days, words met so far) | the Home Screen widget | a shared container only this app and its widget can read (App Group) |
 | Date of your last backup | the backup reminder | the app's own storage |
@@ -38,7 +38,6 @@ We process **no** personal data. To work, the app creates and stores the followi
 ### 3. What happens on your device
 
 - **Review reminders** are iOS local notifications, scheduled on the device only if you turn them on. Their text is composed on the device; no server is involved. You can turn notification permission off in iOS Settings at any time.
-- **Pronunciation** uses the speech synthesis built into iOS (AVSpeechSynthesizer); words to be spoken do not leave the device. The web version uses your browser's speech synthesis; depending on the browser, an online voice may be used, in which case the word may be sent to the browser vendor under its own policy.
 - **Haptics** use the device's haptic engine only.
 - **Backup files** are created only when you tap Settings › Data › "백업 내보내기" (export backup). The app writes your records to a JSON file and opens the iOS share sheet; you decide where it goes (Files, AirDrop, mail…). We never receive it. Import reads only the file you pick in the document picker.
 - **iOS device backups**: the study record file in the app's private folder may be included in the iCloud or computer backup that iOS makes. That backup is managed by you under your Apple Account; we have no access to it.

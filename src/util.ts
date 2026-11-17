@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { platform } from './platform'
 
 export function dayKey(d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0')
@@ -34,11 +33,6 @@ export function shuffle<T>(arr: T[]): T[] {
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
-}
-
-/** Read Japanese aloud: the browser's speech on the web, the iOS voice in the app (src/platform). */
-export function speak(text: string) {
-  platform.speak(text)
 }
 
 /**

@@ -44,7 +44,7 @@ const daysStudied = (s: State, now: Date) => {
   return first ? daysBetween(parseDay(first), now) + 1 : 1
 }
 
-/** The next session of the day after this one, in Home's order (복습, 새 단어, 한자), with its button. */
+/** The next session of the day after this one, in Home's order (복습, 단어, 한자), with its button. */
 function nextSession(s: State, now: Date, mode: StudyMode) {
   for (const m of ['review', 'new', 'kanji'] as const) {
     if (m === mode) continue
@@ -53,7 +53,7 @@ function nextSession(s: State, now: Date, mode: StudyMode) {
       return m === 'review'
         ? { title: '복습', count: `${f(n)}장`, label: `복습 시작, ${f(n)}장`, path: '/study/review' }
         : m === 'new'
-          ? { title: '새 단어', count: `${f(n)}개`, label: `새 단어 시작, ${f(n)}개`, path: '/study/new' }
+          ? { title: '단어', count: `${f(n)}개`, label: `단어 시작, ${f(n)}개`, path: '/study/new' }
           : { title: '한자', count: `${f(n)}자`, label: `한자 시작, ${f(n)}자`, path: '/study/kanji' }
   }
   return null
@@ -114,9 +114,9 @@ export function DoneScreen({ kind, mode, q, day, chapter, waitMin, onFinishNow, 
     ) : (
       moreNew && (
         <CountButton
-          title="새 단어 더"
+          title="단어 더"
           count="10개"
-          label="새 단어 10개 더 하기"
+          label="단어 더 하기, 10개"
           onClick={() => {
             unlockMoreNew(10)
             go('/study/new')

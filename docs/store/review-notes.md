@@ -20,12 +20,11 @@ QUICK TOUR (about 3 minutes)
 4. Tabs: 단어장 (Words: search all 8,130 words, word sheet), 기록 (Records: stamps, 7-day review forecast, calendar), 설정 (Settings).
 
 iOS-ONLY FEATURES (not in the web version)
-1. Review reminders (local notifications). Permission is asked only after the first finished daily session, from an explanation card, never at launch. At most one a day, at the chosen time, only on days with reviews due, with the real count. To test: Settings > 알림 · 진동 · 발음 > turn on 복습 알림, set the time 2 minutes ahead, start today's study, answer 모르겠어요 on two cards, leave the app.
+1. Review reminders (local notifications). Permission is asked only after the first finished daily session, from an explanation card, never at launch. At most one a day, at the chosen time, only on days with reviews due, with the real count. To test: Settings > 알림 · 진동 > turn on 복습 알림, set the time 2 minutes ahead, start today's study, answer 모르겠어요 on two cards, leave the app.
 2. Home Screen widget 오늘의 복습: today's reviews and new words (small); also the words met so far (medium).
-3. Japanese pronunciation with on-device iOS voices (speaker button on every card); voice choice in Settings.
-4. Haptics when answering and when the day is finished (respects Reduce Motion).
-5. Backup export through the share sheet / Files, import through the document picker (Settings > 데이터).
-6. Works fully offline, including the first launch (try Airplane Mode).
+3. Haptics when answering and when the day is finished (respects Reduce Motion).
+4. Backup export through the share sheet / Files, import through the document picker (Settings > 데이터).
+5. Works fully offline, including the first launch (try Airplane Mode).
 
 NOT AFFILIATED. This app is not affiliated with, endorsed or sponsored by the Japan Foundation or JEES, which administer the JLPT. "JLPT" is used only to say which exam the word lists prepare for; no official logo, test questions or materials are used. The notice is in Settings > 정보 (About) and in the App Store description.
 
@@ -44,9 +43,9 @@ Contact: [name] [email] [phone]
 Risk: the app is a Capacitor web view around the same React code as the web version (`https://songch9511.github.io/JLPT-app/`). Guideline 4.2 asks for "features, content, and UI that elevate it beyond a repackaged website"; 4.2.2 excludes "web clippings, content aggregators, or a collection of links" (quoted from the guidelines page, 2026-11-14).
 
 Reply:
-> The app is not a wrapper around a website: it does not load any remote page. The whole app, its 8,130-word data set and the scheduler run from the app bundle and work in Airplane Mode from the first launch. It offers iOS features the website cannot: local review reminders with the day's real count, a WidgetKit Home Screen widget, on-device Japanese speech via AVSpeechSynthesizer with voice choice, haptic feedback, share-sheet backup export and document-picker import, and durable storage in the app's Library folder. Steps to see each are in the review notes.
+> The app is not a wrapper around a website: it does not load any remote page. The whole app, its 8,130-word data set and the scheduler run from the app bundle and work in Airplane Mode from the first launch. It offers iOS features the website cannot: local review reminders with the day's real count, a WidgetKit Home Screen widget, haptic feedback, share-sheet backup export and document-picker import, and durable storage in the app's Library folder. Steps to see each are in the review notes.
 
-Before submitting, make sure this is true on the build: the device checklist in `docs/plan/10-ios-build.md` §5 passed (reminders, widget, voice, haptics, offline first launch). If the widget is cut, say "five iOS features" and drop it from the list.
+Before submitting, make sure this is true on the build: the device checklist in `docs/plan/10-ios-build.md` §5 passed (reminders, widget, haptics, offline first launch). If the widget is cut, say "four iOS features" and drop it from the list.
 
 ### 5.2.1 / 2.3.7 / 4.1 Intellectual property: "JLPT" in the name
 

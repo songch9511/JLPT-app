@@ -31,7 +31,7 @@ export function PastCard({ entry, index, total, word, marked, lapses, onMark }: 
   return (
     <div className={`flash past ${entry.grade === Rating.Again ? 'missed' : ''}`}>
       {/* the card itself is unchanged by its grade: the grade given is the pressed button below */}
-      <CardHead level={word.level} items={[pastLabel(index, total), lapses > 0 && `${lapses}번 잊음`]} say={word.r || word.w} marked={marked} onMark={onMark} />
+      <CardHead level={word.level} items={[pastLabel(index, total), lapses > 0 && `${lapses}번 잊음`]} marked={marked} onMark={onMark} />
       <MeaningFace word={word} example={example} kana meaningOpen />
     </div>
   )

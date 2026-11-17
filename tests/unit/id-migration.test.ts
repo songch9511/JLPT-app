@@ -28,7 +28,21 @@ const legacyTarget = (id: string) => LEGACY_WORD.get(split(id)[0]) + split(id)[1
  * Words whose headword was corrected after that version (docs/plan/08 §7.2: same id, registry entry edited), as the
  * frozen files spell them: a card of the old spelling must land on the corrected word.
  */
-const CORRECTED_HEADWORD: Record<string, string> = { w4db: 'N1 副|とりわけ', w3nu: 'N2 蒸す|ふす', w4ta: 'N1 摩する|さする' }
+const CORRECTED_HEADWORD: Record<string, string> = {
+  w4db: 'N1 副|とりわけ',
+  w3nu: 'N2 蒸す|ふす',
+  w4ta: 'N1 摩する|さする',
+  // 2026-11-17 (docs/plan/08 §7.2)
+  w0yx: 'N4 落る|おちる',
+  w0r6: 'N4 楽む|たのしむ',
+  w0v6: 'N4 下る|さがる',
+  w1qm: 'N3 唯|たった',
+  w3r7: 'N2 琴|きん',
+  w2yx: 'N2 引受る|ひきうける',
+  w5r3: 'N1 大部|たいぶ',
+  w498: 'N1 あせる (こえが～)|',
+  w0nl: 'N4 真中|まんなか',
+}
 const target = (id: string) => (CORRECTED_HEADWORD[split(id)[0]] ?? WORD.get(split(id)[0])) + split(id)[1]
 
 type Legacy = Omit<State, 'v'> & { v: 2 | 3 }
@@ -73,8 +87,8 @@ describe('migrating a real learner’s saved state (v3, positional ids)', () => 
     expect(s.v).toBe(4)
     expectSameRecords(old, s)
     // every setting as it was, except the exam date and goal the app no longer has (dropped, 2026-11-14)
-    const { examDate: _e, goal: _g, fastTrack: _f, ...settings } = old.settings as Record<string, unknown>
-    // …and the fast-track setting, gone with the reading cards; 하루 새 한자 at its default
+    const { examDate: _e, goal: _g, fastTrack: _f, autoSpeak: _a, ...settings } = old.settings as Record<string, unknown>
+    // …and the fast-track setting, gone with the reading cards, and the pronunciation setting (2026-11-17); 하루 새 한자 at its default
     expect(s.settings).toEqual({ ...settings, dailyKanji: 5 })
     expect(s.onboarded).toBe(true)
     // …and the stamps' best exam-day estimate

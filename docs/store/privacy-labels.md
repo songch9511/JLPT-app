@@ -74,7 +74,7 @@ App Store Connect › 앱 개인정보 보호 › "이 앱에서 데이터를 �
 | `ion-ios-filesystem` 2.0.1(위 플러그인의 SPM 의존성, GitHub에서 태그를 받아 확인) → `IONFILEManager.swift:165` `attributesOfItem(atPath:)` | 파일 타임스탬프(`stat` 메서드 경로에서만) | **C617.1** | 앱: C617.1 ✔ |
 | `@capawesome/capacitor-file-picker` 8.1.1 → `FilePicker.swift:174` `attributesOfItem` + `.modificationDate` | 사용자가 고른 파일의 수정 시각 | **3B52.1** | 앱: 3B52.1 ✔ |
 | `@capacitor/ios` 8.6.0(Capacitor·Cordova 런타임) | 해당 API 없음(소스 검색) | — | 패키지 자체 매니페스트: 수집 없음·API 없음·추적 없음 ✔ |
-| `@capacitor/app`, `browser`, `haptics`, `local-notifications`, `share`, `status-bar`, `@capacitor-community/text-to-speech` | 해당 API 없음(소스 검색) | — | 해당 없음 |
+| `@capacitor/app`, `browser`, `haptics`, `local-notifications`, `share`, `status-bar` | 해당 API 없음(소스 검색) | — | 해당 없음 |
 
 결론: **지금의 `ios/App/App/PrivacyInfo.xcprivacy`(UserDefaults 1C8F.1, 파일 타임스탬프 C617.1·3B52.1)와 `ios/App/RumaWidget/PrivacyInfo.xcprivacy`(UserDefaults 1C8F.1)는 Apple의 현재 정의와 코드 사용에 맞습니다.** 10 문서 §3.6이 "기억에 의존(미확인)"이라고 적은 사유 코드 정의는 이번에 Apple 원문으로 확인됐습니다.
 
@@ -97,7 +97,7 @@ RevenueCat iOS SDK(Capacitor용 `@revenuecat/purchases-capacitor`가 쓰는 네�
 | `NSPrivacyTrackingDomains` | 빈 배열 | 맞음 |
 | `NSPrivacyCollectedDataTypes` | 빈 배열 | 1.0에는 맞음. 플러스 빌드에서는 2장의 유형을 추가(구입 항목·사용자 ID·제품 상호작용 등) |
 | `ITSAppUsesNonExemptEncryption` | false | HTTPS만 쓰면 면제(06 §4). 1.0은 네트워크 자체를 쓰지 않음 |
-| 사용 목적 문자열(`NS…UsageDescription`) | 없음 | 로컬 알림·햅틱·음성·공유·문서 선택기는 필요 없음(10 §3.6). 사진 관련 경고(ITMS-90683)가 오면 추가(10 §7) |
+| 사용 목적 문자열(`NS…UsageDescription`) | 없음 | 로컬 알림·햅틱·공유·문서 선택기는 필요 없음(10 §3.6). 사진 관련 경고(ITMS-90683)가 오면 추가(10 §7) |
 
 ## 5. 처리방침의 사실 확인 내역
 
@@ -111,7 +111,6 @@ RevenueCat iOS SDK(Capacitor용 `@revenuecat/purchases-capacitor`가 쓰는 네�
 | `index.html`에 외부 자원 없음 | 파일 확인 | 자체 아이콘·번들만 |
 | 네이티브 코드가 네트워크를 쓰지 않음 | 앱 Swift(`ios/App/App`, `ios/App/RumaWidget`)와 플러그인 Swift에서 `URLSession`, `URLRequest`, `NWConnection`, `http` 검색 | 앱 코드 0건. `@capacitor/filesystem`의 `downloadFile`만 `URLSession`을 쓰는데 앱은 이 메서드를 부르지 않음(`src/`에 `downloadFile` 없음) |
 | Capacitor가 원격 서버를 열지 않음 | `capacitor.config.ts` | `server.url` 없음 → 앱 번들(`capacitor://localhost`)에서 실행 |
-| 발음은 기기 안 | `src/platform/native.ts` | `@capacitor-community/text-to-speech`(AVSpeechSynthesizer), 웹은 `speechSynthesis`. 웹 브라우저의 온라인 음성 가능성은 처리방침에 적음 |
 | 알림은 로컬 | `src/platform/native.ts`, `reminders.ts` | `@capacitor/local-notifications`만, 푸시 등록 코드 없음 |
 | 백업은 사용자 동작으로만 | `src/backup.ts`, `native.ts` | 내보내기 버튼 → 캐시 폴더에 파일 → 공유 시트, 공유 후 파일 삭제. 가져오기는 문서 선택기(JSON) |
 | 기기 저장 위치 | `src/store.ts`, `src/backup.ts`, `src/platform/durable.ts`, `widget.ts` | localStorage 키 `kasane.state.v4`(2026-11-14 안정 단어 ID부터), `kasane.state.v2`(그 전 버전의 상태, 이전 전 사본으로 남음), `kasane.state.prev`, `kasane.meta`; 앱 Library 폴더의 JSON 두 슬롯과 이전 전 사본 `state-v3-premigration.json`(docs/plan/08 §7); App Group UserDefaults의 위젯 요약 |

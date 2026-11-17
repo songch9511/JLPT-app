@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@astryxdesign/core": "0.7.15",
-    "@capacitor-community/text-to-speech": "8.0.2",
     "@capacitor/app": "8.1.2",
     "@capacitor/browser": "8.0.5",
     "@capacitor/core": "8.6.0",

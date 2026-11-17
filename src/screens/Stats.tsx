@@ -152,13 +152,13 @@ export function Stats() {
 
       <section className="card-section" aria-labelledby="met-title">
         <h2 id="met-title" className="group-title">
-          만난 것 · {range}
+          공부한 단어 · 한자 <span className="group-aside group-range">{range}</span>
         </h2>
         <Meter label="단어" value={met} total={total} range={range} />
         <Meter label="한자" value={kanjiMet} total={kanjiTotal} range={range} />
       </section>
 
-      <Group title="7일 복습 예보" id="forecast-title">
+      <Group title="복습 예정" id="forecast-title">
         <Forecast counts={forecast(s, today)} today={today} />
       </Group>
 

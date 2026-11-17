@@ -1,6 +1,5 @@
 /* iOS app only (loaded with the native chunks, never part of the web bundle). Same tokens as styles.css. */
-.form input[type='time'],
-.form select {
+.form input[type='time'] {
   width: 100%; min-height: 48px; padding: 0 14px; border-radius: var(--r-md);
   border: 1.5px solid var(--input-line); background: var(--bg); color: var(--text); font: inherit;
 }

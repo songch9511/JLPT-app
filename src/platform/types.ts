@@ -6,8 +6,6 @@
 export interface Platform {
   /** true inside the iOS app (Capacitor); screens use it to show native-only settings and hide web-only ones */
   readonly native: boolean
-  /** Read a word aloud in Japanese. Callers keep the rule: only inside or after a user gesture. */
-  speak(text: string): void
   /** Light feedback: `answer` on grading a card, `turn` on swiping to another card, `done` on finishing the day. No-op on the web. */
   haptic(kind: 'answer' | 'turn' | 'done'): void
   /**

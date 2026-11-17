@@ -8,14 +8,12 @@ import type { HapticsPlugin } from '@capacitor/haptics'
 import type { LocalNotificationsPlugin } from '@capacitor/local-notifications'
 import type { SharePlugin } from '@capacitor/share'
 import type { StatusBarPlugin } from '@capacitor/status-bar'
-import type { TextToSpeechPlugin } from '@capacitor-community/text-to-speech'
 import type { FilePickerPlugin } from '@capawesome/capacitor-file-picker'
 import { getState, hydrate, LEGACY_KEY, setStoreHooks, STATE_KEY } from '../store'
 import { DurableStore, legacyCopy, reconcile, type FileAdapter } from './durable'
 import { DEFAULT_PREFS, getPrefs, initPrefs, setPrefs } from './prefs'
 import { isReminderId, planReminders, type PlannedReminder } from './reminders'
 import type { Platform } from './types'
-import { webSpeak } from './web'
 import { widgetSnapshot } from './widget'
 import './native.css'
 
@@ -33,7 +31,6 @@ export interface NativeDeps {
   LocalNotifications: LocalNotificationsPlugin
   Share: SharePlugin
   StatusBar: StatusBarPlugin
-  TextToSpeech: TextToSpeechPlugin
   FilePicker: FilePickerPlugin
   WidgetBridge: WidgetBridgePlugin
 }
@@ -48,7 +45,7 @@ const STYLE_DARK = 'DARK' as never // light text, for the dark theme
 const STYLE_LIGHT = 'LIGHT' as never // dark text, for the light theme
 
 export async function loadDeps(): Promise<NativeDeps> {
-  const [core, app, browser, fs, haptics, ln, share, sb, tts, fp] = await Promise.all([
+  const [core, app, browser, fs, haptics, ln, share, sb, fp] = await Promise.all([
     import('@capacitor/core'),
     import('@capacitor/app'),
     import('@capacitor/browser'),
@@ -57,7 +54,6 @@ export async function loadDeps(): Promise<NativeDeps> {
     import('@capacitor/local-notifications'),
     import('@capacitor/share'),
     import('@capacitor/status-bar'),
-    import('@capacitor-community/text-to-speech'),
     import('@capawesome/capacitor-file-picker'),
   ])
   return {
@@ -68,7 +64,6 @@ export async function loadDeps(): Promise<NativeDeps> {
     LocalNotifications: ln.LocalNotifications,
     Share: share.Share,
     StatusBar: sb.StatusBar,
-    TextToSpeech: tts.TextToSpeech,
     FilePicker: fp.FilePicker,
     WidgetBridge: core.registerPlugin<WidgetBridgePlugin>('WidgetBridge'),
   }
@@ -171,7 +166,6 @@ interface Ctx {
   files: FileAdapter
   now: () => Date
   refreshTimer: ReturnType<typeof setTimeout> | null
-  voices: Promise<{ index: number; name: string; voiceURI: string; lang: string }[]> | null
 }
 let ctx: Ctx | null = null
 
@@ -240,38 +234,12 @@ export function setReminderPrefs(patch: Partial<ReturnType<typeof getPrefs>['rem
   refreshSoon(300)
 }
 
-/** The installed Japanese voices, with their index in the plugin's voice list (what `speak` takes). */
-export function japaneseVoices() {
-  if (!ctx) return Promise.resolve([])
-  ctx.voices ??= ctx.d.TextToSpeech.getSupportedVoices().then(
-    ({ voices }) =>
-      voices
-        .map((v, index) => ({ index, name: v.name, voiceURI: v.voiceURI, lang: v.lang }))
-        .filter((v) => v.lang.toLowerCase().startsWith('ja')),
-    () => [],
-  )
-  return ctx.voices
-}
-
 const reducedMotion = () => {
   try {
     return matchMedia('(prefers-reduced-motion: reduce)').matches
   } catch {
     return false
   }
-}
-
-function speakNative(d: NativeDeps, text: string) {
-  const t = text.replace(/[～~]/g, '')
-  const uri = getPrefs().voiceURI
-  void japaneseVoices()
-    .then((vs) => {
-      const v = uri ? vs.find((x) => x.voiceURI === uri) : undefined
-      // 'playback': audible with the ring/silent switch on silent, like a media app; the speech is always tapped for
-      return d.TextToSpeech.speak({ text: t, lang: 'ja-JP', rate: 0.9, voice: v?.index, category: 'playback' })
-    })
-    // no Japanese voice or the engine failed: the web view's own speech is the fallback
-    .catch(() => webSpeak(t))
 }
 
 // ── lifecycle, status bar, links (DOM wiring, skipped where there is no DOM) ──
@@ -339,7 +307,7 @@ export async function createNativePlatform(d?: NativeDeps, now: () => Date = () 
   d ??= await loadDeps()
   const files = fileAdapter(d.Filesystem)
   const durable = new DurableStore(files)
-  ctx = { d, durable, files, now, refreshTimer: null, voices: null }
+  ctx = { d, durable, files, now, refreshTimer: null }
 
   // 1. which copy of the study state to start from (before the first render)
   let localRaw: string | null = null
@@ -415,7 +383,6 @@ export async function createNativePlatform(d?: NativeDeps, now: () => Date = () 
   const deps = d
   return {
     native: true,
-    speak: (text) => speakNative(deps, text),
     haptic: (kind) => {
       if (!getPrefs().haptics || reducedMotion()) return
       const p = kind === 'done' ? deps.Haptics.notification({ type: NOTIFY_SUCCESS }) : deps.Haptics.impact({ style: IMPACT_LIGHT })

@@ -2,7 +2,7 @@
 // (N5), two toggles that open on their own — 의미 (the meaning, the example's translation, the kanji's Korean
 // readings) and 히라가나 (the reading, the headword's furigana in the example, the kanji's Japanese readings) — and
 // the three grades from the start. Nothing on the card moves when something opens; nothing opens on a tap but the
-// toggles, the speaker and the bookmark.
+// toggles and the bookmark.
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { answer, NOW, open, READ_MS, todayLog, user } from './fixtures'

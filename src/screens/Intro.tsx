@@ -78,19 +78,19 @@ export function Intro({ again = false }: { again?: boolean }) {
               </span>
             </div>
             <div className="intro-text">
-              <h1>기억난 만큼 눌러요</h1>
-              <p>잘 알수록 다음 복습이 늦게 와요</p>
+              <h1>내 상태를 골라요</h1>
+              <p>잘 알수록 나중에 복습해요</p>
             </div>
           </>
         )}
         {step === 2 && (
           <>
             <div className="intro-text">
-              <h1>하루 새 단어</h1>
+              <h1>매일 새로운 단어</h1>
               <p>설정에서 바꿀 수 있어요</p>
             </div>
             <div className="intro-daily">
-              <div className="pills" role="group" aria-label="하루 새 단어">
+              <div className="pills" role="group" aria-label="매일 새로운 단어">
                 {DAILY_NEW.map((n) => (
                   <button key={n} type="button" className={`pill ${daily === n ? 'on' : ''}`} aria-pressed={daily === n} onClick={() => update((d) => void (d.settings.dailyNew = n))}>
                     {n}
