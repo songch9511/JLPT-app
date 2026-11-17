@@ -1,5 +1,5 @@
 // The web app after the iOS platform layer was added (docs/plan/10-ios-build.md): every device-facing path
-// must behave as before — browser speech, browser download, file input, new-window links — and nothing of
+// must behave as before — browser download, file input, new-window links — and nothing of
 // the native shell may appear.
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
@@ -9,28 +9,11 @@ test('no native code or native-only UI on the web', async ({ page }) => {
   await open(page, { state: user(), hash: '/settings' })
   await expect(page.getByRole('heading', { name: '설정' })).toBeVisible()
   expect(await page.evaluate(() => 'Capacitor' in window)).toBe(false)
-  await expect(page.getByRole('heading', { name: '알림 · 진동 · 발음' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '알림 · 진동' })).toHaveCount(0)
   await expect(page.getByText('기록은 이 브라우저에만 저장돼요', { exact: true })).toBeVisible()
   // only the app's own scripts were loaded: no native chunk
   const scripts = await page.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => /native|capacitor/i.test(n)))
   expect(scripts).toEqual([])
-})
-
-test('pronunciation uses the browser’s speech synthesis in Japanese', async ({ page }) => {
-  await page.addInitScript(() => {
-    const spoken: { text: string; lang: string; rate: number }[] = ((window as unknown as { __spoken: unknown[] }).__spoken = [])
-    Object.defineProperty(window, 'speechSynthesis', {
-      value: { speak: (u: SpeechSynthesisUtterance) => spoken.push({ text: u.text, lang: u.lang, rate: u.rate }), cancel: () => {}, getVoices: () => [] },
-    })
-  })
-  await open(page, { state: user({ dailyNew: 5 }) })
-  await page.getByRole('button', { name: '새 단어 시작' }).click()
-  await page.getByRole('button', { name: '발음 듣기' }).click()
-  const spoken = await page.evaluate(() => (window as unknown as { __spoken: { text: string; lang: string; rate: number }[] }).__spoken)
-  expect(spoken).toHaveLength(1)
-  expect(spoken[0].lang).toBe('ja-JP')
-  expect(spoken[0].rate).toBeCloseTo(0.9, 5)
-  expect(spoken[0].text).not.toBe('')
 })
 
 test('backup is a browser download (without the app-only save counter) and import is a file input', async ({ page }) => {

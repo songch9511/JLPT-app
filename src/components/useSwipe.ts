@@ -4,7 +4,7 @@
 // them all together through one CSS variable, `--drag` (transforms, no layout), and tells the screen when a swipe
 // went far or fast enough to change card. A swipe is recognised only once it is clearly sideways, so scrolling a long
 // card up and down still works (`touch-action: pan-y` hands vertical moves to the browser). It never starts on a
-// control (answer, audio, bookmark, reading choices), nor at the very edge of the screen, where iOS has its own
+// control (answer, bookmark, reading choices), nor at the very edge of the screen, where iOS has its own
 // back-swipe. A swipe that moved is never also a tap: the click that follows it is swallowed.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'

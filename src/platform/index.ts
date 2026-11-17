@@ -29,7 +29,7 @@ export let platform: Platform = web
 /**
  * Before the first render. On the web this does nothing (and is not awaited by main.tsx). In the app it
  * restores the durable copy of the study state if the web view's storage lost it or holds an older one,
- * then wires reminders, haptics, speech, files, links and lifecycle. If any of that fails the app still
+ * then wires reminders, haptics, files, links and lifecycle. If any of that fails the app still
  * starts, with the web behaviour.
  */
 export async function startPlatform(): Promise<void> {

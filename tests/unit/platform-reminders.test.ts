@@ -143,14 +143,15 @@ describe('widget snapshot', () => {
 })
 
 describe('native prefs', () => {
-  it('normalises whatever was stored', async () => {
+  it('normalises whatever was stored; the Japanese voice of the removed pronunciation feature is dropped', async () => {
     const { normalizePrefs, DEFAULT_PREFS } = await import('../../src/platform/prefs')
     expect(normalizePrefs(null)).toEqual(DEFAULT_PREFS)
-    expect(normalizePrefs({ reminders: { enabled: true, hour: 25, minute: -1, quietDays: [6, 6, 9, 'x', 0] }, haptics: false, voiceURI: '' })).toEqual({
+    const p = normalizePrefs({ reminders: { enabled: true, hour: 25, minute: -1, quietDays: [6, 6, 9, 'x', 0] }, haptics: false, voiceURI: 'ja.kyoko' })
+    expect(p).toEqual({
       reminders: { enabled: true, hour: 20, minute: 0, quietDays: [0, 6] },
       reminderAsked: false,
       haptics: false,
-      voiceURI: null,
     })
+    expect('voiceURI' in p).toBe(false)
   })
 })

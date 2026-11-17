@@ -5,7 +5,7 @@ import { meaning, TYPE_LABEL, useLevels, wordById, LEVELS, levelOf, type Word } 
 import { hunEum, kunText, useKanji, type Kanji } from '../kanji'
 import { formatInterval, STAGE_LABEL, wordStage } from '../srs'
 import { toggleMark, useStore, type State } from '../store'
-import { parseDay, speak } from '../util'
+import { parseDay } from '../util'
 import { Icon } from './Icon'
 import { IconButton, Meta, Sheet } from './ui'
 import { FalseFriend } from './WordNotes'
@@ -84,7 +84,7 @@ function WordDetails({ word, onClose, onKanji }: { word: Word; onClose: () => vo
         <Meta className="sheet-status grow" items={status({ cards }, word.id)} />
         <IconButton label="닫기" icon={<Icon name="close" />} onClick={onClose} />
       </div>
-      {/* the reading over the headword, as a textbook prints it; the two round buttons at the right */}
+      {/* the reading over the headword, as a textbook prints it; the round bookmark button at the right */}
       <div className="sheet-title">
         <div className="sheet-headword grow">
           {word.r && (
@@ -96,7 +96,6 @@ function WordDetails({ word, onClose, onKanji }: { word: Word; onClose: () => vo
             {word.w}
           </p>
         </div>
-        <IconButton label="발음 듣기" className="round" icon={<Icon name="speaker" />} onClick={() => speak(word.r || word.w)} />
         <IconButton label="북마크" className={marked ? 'round marked' : 'round'} aria-pressed={marked} icon={<Icon name="mark" fill={marked} />} onClick={() => toggleMark(word.id)} />
       </div>
       <p className="sheet-meaning">{meaning(word)}</p>

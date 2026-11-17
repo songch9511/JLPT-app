@@ -23,7 +23,7 @@ export const keyFor = (state: unknown) => {
 /** Friday 2026-11-13 09:00 in Seoul (the browser context runs in Asia/Seoul). */
 export const NOW = new Date('2026-11-13T09:00:00+09:00')
 
-type Settings = { target: number; dailyNew: number; dailyKanji: number; theme: string; autoSpeak: boolean; includeLower: boolean }
+type Settings = { target: number; dailyNew: number; dailyKanji: number; theme: string; includeLower: boolean }
 
 /**
  * Every kanji as a review card due long after the tests' days (`k` + the kanji): a learner who has them all, so the
@@ -43,7 +43,8 @@ export const KNOWN_KANJI: Record<string, object> = Object.fromEntries(
  * setting: only the target level is studied (pass `includeLower: true` for a new learner's behaviour).
  * Every kanji is known (KNOWN_KANJI, kept under the cards the scenario gives), so the day is the words; pass
  * `{ kanji: false }` in `extra` for a learner with no kanji studied yet.
- * Like every state saved before 2026-11-14 it carries an exam date, which the app now drops on load.
+ * Like every state saved before 2026-11-14 it carries an exam date, and like one saved before 2026-11-17 the
+ * pronunciation setting (`autoSpeak`); the app now drops both on load.
  */
 export function user(settings: Partial<Settings> & Record<string, unknown> = {}, extra: Record<string, unknown> = {}) {
   const { kanji = true, ...rest } = extra

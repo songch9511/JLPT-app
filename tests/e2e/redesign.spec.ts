@@ -27,8 +27,7 @@ test.describe('kanji study (4-1 … 4-4)', () => {
     await expect(card.locator('.flash-kanji')).toHaveText(first[0])
     await expect(card.locator('.flash-meta')).toHaveText('새 한자')
     await expect(card.locator('.flash-head .level-badge')).toHaveText('N5')
-    // no speaker on a kanji card; a bookmark
-    await expect(card.getByRole('button', { name: '발음 듣기' })).toHaveCount(0)
+    // a bookmark
     await expect(card.getByRole('button', { name: '북마크' })).toBeVisible()
     // closed: the words are listed, without their readings or meanings
     await expect(card.locator('.kanji-words-head')).toContainText(`단어 ${first[7].length}`)

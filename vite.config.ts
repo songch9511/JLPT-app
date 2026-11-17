@@ -68,7 +68,6 @@ export default defineConfig(({ mode }) => {
             '@capacitor/local-notifications',
             '@capacitor/share',
             '@capacitor/status-bar',
-            '@capacitor-community/text-to-speech',
             '@capawesome/capacitor-file-picker',
           ],
         }

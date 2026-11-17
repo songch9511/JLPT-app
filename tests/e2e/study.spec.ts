@@ -278,18 +278,7 @@ test.describe('progress bar', () => {
 })
 
 test.describe('a forgotten card', () => {
-  const spy = () => {
-    const w = window as unknown as { __spoken: string[] }
-    w.__spoken = []
-    if ('speechSynthesis' in window) {
-      speechSynthesis.speak = (u: SpeechSynthesisUtterance) => void w.__spoken.push(u.text)
-      speechSynthesis.cancel = () => {}
-    }
-  }
-  const spoken = (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken)
-
-  test('opens everything, keeps the three grades and the card’s facts, and stays silent when auto-speak is off', async ({ page }) => {
-    await page.addInitScript(spy)
+  test('opens everything, keeps the three grades and the card’s facts', async ({ page }) => {
     await open(page, { state: user({ dailyNew: 5 }) })
     await page.getByRole('button', { name: '새 단어 시작' }).click()
     await expect(page.locator('.flash-head .flash-meta')).toHaveText('새 단어')
@@ -298,33 +287,6 @@ test.describe('a forgotten card', () => {
     await expect(page.locator('.flash-toggles')).toBeVisible()
     await expect(page.getByRole('button', { name: '모르겠어요, 1분 뒤 다시' })).toBeVisible()
     await expect(page.locator('.flash-head .flash-meta')).toHaveText('새 단어')
-    expect(await spoken(page)).toEqual([])
-  })
-
-  test('with auto-speak on, the reading is played once more when the card is missed', async ({ page }) => {
-    await page.addInitScript(spy)
-    await open(page, { state: user({ dailyNew: 5, autoSpeak: true }) })
-    await page.getByRole('button', { name: '새 단어 시작' }).click()
-    await expect.poll(async () => (await spoken(page)).length).toBe(1) // the card appeared after a tap
-    await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: /^모르겠어요/ }).click()
-    await expect(page.locator('.flash-meaning')).toBeVisible()
-    const [first] = await spoken(page)
-    await expect.poll(() => spoken(page)).toEqual([first, first])
-    // confirming moves on without another play
-    await page.waitForTimeout(READ_MS)
-    await page.getByRole('button', { name: /^모르겠어요/ }).click()
-    await expect.poll(async () => (await spoken(page)).length).toBe(3) // only the next card's own auto-speak
-  })
-
-  test('auto-speak waits for a user gesture: opening the study page directly plays nothing', async ({ page }) => {
-    await page.addInitScript(spy)
-    // the page has not been interacted with yet (Playwright's own navigation counts as activation)
-    await page.addInitScript(() => Object.defineProperty(navigator, 'userActivation', { configurable: true, value: { hasBeenActive: false } }))
-    await open(page, { state: user({ dailyNew: 5, autoSpeak: true }), hash: '/study' })
-    await expect(page.locator('.flash')).toBeVisible()
-    await page.waitForTimeout(300)
-    expect(await spoken(page)).toEqual([])
   })
 
   test('answer buttons carry the interval in their accessible name, from the start', async ({ page }) => {
@@ -404,7 +366,7 @@ test.describe('answering (2026-11-16: the grades from the start)', () => {
     await page.waitForTimeout(READ_MS)
     await bar.getByRole('button', { name: /^쉬워요/ }).click()
     await expect.poll(async () => (await todayLog(page))?.c).toBe(2)
-    // a tap on the card opens nothing (only the toggles, the speaker and the bookmark do)
+    // a tap on the card opens nothing (only the toggles and the bookmark do)
     await page.waitForTimeout(READ_MS)
     await page.locator('.flash-word').click()
     await page.locator('.flash').click({ position: { x: 30, y: 200 } })

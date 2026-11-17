@@ -1,7 +1,6 @@
-// Settings that exist only in the iOS app: review reminders, haptics, the Japanese voice.
+// Settings that exist only in the iOS app: review reminders, haptics.
 import { useEffect, useState } from 'react'
-import { speak } from '../util'
-import { enableReminders, japaneseVoices, reminderPermission, setReminderPrefs, type Permission } from './native'
+import { enableReminders, reminderPermission, setReminderPrefs, type Permission } from './native'
 import './native.css'
 import { setPrefs, usePrefs } from './prefs'
 
@@ -12,17 +11,15 @@ export default function NativeSettings() {
   const p = usePrefs()
   const r = p.reminders
   const [perm, setPerm] = useState<Permission | null>(null)
-  const [voices, setVoices] = useState<Awaited<ReturnType<typeof japaneseVoices>> | null>(null)
   useEffect(() => {
     void reminderPermission().then(setPerm)
-    void japaneseVoices().then(setVoices)
   }, [])
 
   return (
     // a group like the others in 설정 (styles.css `.group`): a heading, then a white card of rows divided by hairlines
     <section className="group form native-settings" aria-labelledby="native-title">
       <h2 className="group-title" id="native-title">
-        알림 · 진동 · 발음
+        알림 · 진동
       </h2>
       <div className="group-body">
       <div className="native-row">
@@ -84,27 +81,6 @@ export default function NativeSettings() {
         </span>
         <input type="checkbox" checked={p.haptics} onChange={(e) => setPrefs({ haptics: e.target.checked })} />
       </label>
-
-      <div className="native-row">
-      <label className="native-label" htmlFor="voice">일본어 음성</label>
-      {voices && voices.length === 0 ? (
-        <p className="muted small">
-          일본어 음성이 없어요. iPhone 설정 › 손쉬운 사용 › 읽기 및 말하기 › 음성에서 받을 수 있어요.
-        </p>
-      ) : (
-        <select id="voice" value={p.voiceURI ?? ''} onChange={(e) => setPrefs({ voiceURI: e.target.value || null })}>
-          <option value="">기본 음성</option>
-          {voices?.map((v) => (
-            <option key={v.voiceURI} value={v.voiceURI}>
-              {v.name}
-            </option>
-          ))}
-        </select>
-      )}
-      <button className="btn text-action" data-variant="ghost" onClick={() => speak('おはようございます')}>
-        들어 보기
-      </button>
-      </div>
       </div>
     </section>
   )

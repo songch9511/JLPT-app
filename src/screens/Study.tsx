@@ -15,7 +15,7 @@ import { breakdowns, buildQueue, cardsLeft, dayLeft, formatInterval, wordLapses,
 import { platform } from '../platform'
 import { chaptersDone, currentChapter } from '../progress'
 import { getState, toggleMark, useStore, type DayLog } from '../store'
-import { dayKey, speak, useClock } from '../util'
+import { dayKey, useClock } from '../util'
 
 // the iOS app's offer to turn on review reminders, after a finished day (not in the web bundle)
 const ReminderOffer = import.meta.env.MODE === 'native' ? lazy(() => import('../platform/ReminderOffer')) : null
@@ -48,9 +48,6 @@ export function GradeButton({ label, interval, primary = false, isDisabled, clas
     </Button>
   )
 }
-
-/** Browsers (iOS above all) only allow speech after the user has interacted with the page. */
-const mayPlayAudio = () => (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive ?? true
 
 /**
  * Time the current card has been on screen while the page was visible: what DayLog.ms records (03 §5.1).
@@ -160,10 +157,6 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
   }, [cardKey])
 
   useEffect(() => {
-    if (s.settings.autoSpeak && word && mayPlayAudio()) speak(word.r || word.w)
-  }, [s.settings.autoSpeak, word])
-
-  useEffect(() => {
     if (!note) return
     const t = setTimeout(() => setNote(null), NOTE_MS)
     return () => clearTimeout(t)
@@ -207,7 +200,6 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
     [q.next, intervals, activeMs, session],
   )
 
-  const autoSpeak = s.settings.autoSpeak
   /**
    * "모르겠어요": before everything is open it opens everything (the three grades stay); once everything is open it is
    * the grade.
@@ -216,10 +208,8 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
     if (!allOpen) {
       lockUntil.current = Date.now() + DOUBLE_TAP_MS
       openAll()
-      // hear the reading once — inside the tap or key press, so the browser allows it
-      if (autoSpeak && word) speak(word.r || word.w)
     } else submit(Rating.Again)
-  }, [allOpen, openAll, submit, autoSpeak, word])
+  }, [allOpen, openAll, submit])
 
   // undo takes back the last answer while the card to answer is on screen; on an earlier card its grade buttons do
   const canUndo = !!undo.current && view === null && session.last() === undo.current.entry
@@ -447,7 +437,6 @@ export function Study({ mode = 'all' }: { mode?: StudyMode }) {
                 <CardHead
                   level={level}
                   items={[kindLabel, lapses > 0 && `${lapses}번 잊음`]}
-                  say={word ? word.r || word.w : undefined}
                   marked={marked}
                   onMark={() => toggleMark(next.id)}
                 />

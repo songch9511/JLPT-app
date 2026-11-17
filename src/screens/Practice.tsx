@@ -104,7 +104,7 @@ export function Practice({ set }: { set: PracticeSet }) {
             )}
             {ready && level !== undefined && (
               <section className={`flash ${kanjiCard ? 'kanji-card' : ''}`} key={`${id}:${at}`} aria-label={kanjiCard ? '한자 카드' : '단어 카드'}>
-                <CardHead level={level} items={['다시 보기']} say={word ? word.r || word.w : undefined} marked={marks.includes(id)} onMark={() => toggleMark(id)} />
+                <CardHead level={level} items={['다시 보기']} marked={marks.includes(id)} onMark={() => toggleMark(id)} />
                 {kanji && kanjiCard ? <KanjiFace kanji={kanji} kana={open.kana} meaningOpen={open.meaning} /> : word && <MeaningFace word={word} example={example} kana={open.kana} meaningOpen={open.meaning} />}
                 <div className="flash-toggles" role="group" aria-label="카드 열기">
                   <Button label="의미" className="toggle" aria-pressed={open.meaning} onClick={() => setOpen((o) => ({ ...o, meaning: !o.meaning }))} />

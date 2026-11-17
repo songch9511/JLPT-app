@@ -58,7 +58,6 @@ async function openShell(page: Page, opts: { state?: unknown; files?: Record<str
           schedule: (o: { notifications: { id: number }[] }) => void pending.push(...o.notifications),
         },
         Haptics: { impact: () => {}, notification: () => {} },
-        TextToSpeech: { speak: () => {}, getSupportedVoices: () => ({ voices: [{ name: 'Kyoko', lang: 'ja-JP', voiceURI: 'ja.kyoko', default: false, localService: true }] }) },
         App: { exitApp: () => {} },
         Browser: { open: () => {} },
         StatusBar: { setStyle: () => {} },
@@ -122,7 +121,7 @@ test('first launch with nothing saved: Ruma asks on home; progress is mirrored t
 test('settings: native section shown, export through the share sheet, import through the document picker', async ({ page }) => {
   const backup = { format: 'jlpt-luma-backup', formatVersion: 2, ...user({}, { xp: 999, kanji: false }) }
   await openShell(page, { state: user({}, { xp: 5 }), hash: '/settings', pick: JSON.stringify(backup) })
-  await expect(page.getByRole('heading', { name: '알림 · 진동 · 발음' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '알림 · 진동' })).toBeVisible()
   await expect(page.getByText('기록은 이 기기에만 저장돼요', { exact: true })).toBeVisible()
 
   // no browser download inside the app: the file goes to the share sheet

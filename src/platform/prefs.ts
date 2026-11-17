@@ -1,5 +1,5 @@
-// Device settings of the iOS app: reminders, haptics, the Japanese voice. Kept apart from the study state on
-// purpose — they belong to this phone (a notification permission, an installed voice) and must not travel
+// Device settings of the iOS app: reminders, haptics. Kept apart from the study state on
+// purpose — they belong to this phone (a notification permission) and must not travel
 // in a backup to another device. Held in memory for synchronous reads by the screens; saved by native.ts.
 import { useSyncExternalStore } from 'react'
 import { DEFAULT_REMINDERS, type ReminderPrefs } from './reminders'
@@ -9,16 +9,17 @@ export interface NativePrefs {
   /** the in-app explanation before the permission request was shown (asked once, after a finished day) */
   reminderAsked: boolean
   haptics: boolean
-  /** chosen Japanese voice (AVSpeechSynthesisVoice identifier); null: the system's default ja-JP voice */
-  voiceURI: string | null
 }
 
-export const DEFAULT_PREFS: NativePrefs = { reminders: DEFAULT_REMINDERS, reminderAsked: false, haptics: true, voiceURI: null }
+export const DEFAULT_PREFS: NativePrefs = { reminders: DEFAULT_REMINDERS, reminderAsked: false, haptics: true }
 
 const int = (x: unknown, lo: number, hi: number, d: number) =>
   typeof x === 'number' && Number.isInteger(x) && x >= lo && x <= hi ? x : d
 
-/** Whatever was stored, completed with defaults; anything malformed falls back to the default. */
+/**
+ * Whatever was stored, completed with defaults; anything malformed falls back to the default. Fields this version
+ * does not know (`voiceURI`, the Japanese voice of the removed pronunciation feature) are dropped.
+ */
 export function normalizePrefs(x: unknown): NativePrefs {
   const o = (typeof x === 'object' && x !== null ? x : {}) as Record<string, unknown>
   const r = (typeof o.reminders === 'object' && o.reminders !== null ? o.reminders : {}) as Record<string, unknown>
@@ -32,7 +33,6 @@ export function normalizePrefs(x: unknown): NativePrefs {
     },
     reminderAsked: o.reminderAsked === true,
     haptics: o.haptics !== false,
-    voiceURI: typeof o.voiceURI === 'string' && o.voiceURI ? o.voiceURI : null,
   }
 }
 

@@ -450,7 +450,7 @@
   @keyframes note { 0% { opacity: 0; } 15%, 75% { opacity: 1; } 100% { opacity: 0; } }
   .card-area { flex: 1; min-height: 0; padding: 0 max(var(--spacing-5), env(safe-area-inset-right)) var(--spacing-4) max(var(--spacing-5), env(safe-area-inset-left)); display: flex; }
   /* the card: the one thing you hold — white, a hairline, the 24px corner, the faintest lift. Top to bottom: the head
-     (level, the card's facts, sound, bookmark), the centre (reading slot, headword, meaning slot, the example and its
+     (level, the card's facts, bookmark), the centre (reading slot, headword, meaning slot, the example and its
      translation's line, the kanji row), the two toggles; spacing separates them, no lines inside. Nothing moves when a
      toggle opens: every slot is always laid out and only becomes visible (`.slot.on`); a card taller than its room
      (320px, the largest text sizes) scrolls inside itself while the answer bar stays on screen. */
@@ -620,7 +620,6 @@
      `.group`, `.btn`, `.chip-btn` and the switch track above; these give their labels the same look ── */
   .native-row { display: flex; flex-direction: column; gap: var(--spacing-2); }
   .native-label { font-size: var(--text-body-size); color: var(--color-text-primary); }
-  .native-row .text-action { align-self: flex-start; margin-left: calc(-1 * var(--spacing-2)); }
   /* a short result in place of the offer or under a setting: plain small text, no tinted box */
   .note { font-size: var(--text-supporting-size); color: var(--color-text-secondary); }
   .switch { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-3); font-size: var(--font-size-lg); font-weight: var(--font-weight-medium); color: var(--color-text-primary); }

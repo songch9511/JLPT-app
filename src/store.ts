@@ -59,7 +59,6 @@ export interface State {
     target: Level
     dailyNew: number
     theme: 'system' | 'light' | 'dark'
-    autoSpeak: boolean
     /** also study the levels below the target, e.g. N5·N4 for an N3 learner */
     includeLower: boolean
     /** new kanji a day (DAILY_KANJI) */
@@ -132,7 +131,7 @@ function initial(): State {
     v: STATE_VERSION,
     onboarded: false,
     // new learners include the lower levels; states saved before this setting existed keep it off (normalize)
-    settings: { target: 5, dailyNew: 20, dailyKanji: 5, theme: 'system', autoSpeak: false, includeLower: true },
+    settings: { target: 5, dailyNew: 20, dailyKanji: 5, theme: 'system', includeLower: true },
     cards: {},
     log: {},
     marks: [],
@@ -250,7 +249,7 @@ export const orphanCount = (s: Pick<State, 'orphans'>) => Object.keys(s.orphans?
  * `normalize`).
  * Within v2 fields were only added: a missing `includeLower` means a learner from before the setting (kept off
  * so their plan does not suddenly grow); `dailyNew` is held to MAX_DAILY_NEW; the API key of the removed AI
- * feature and the removed exam settings (`RETIRED_SETTINGS`) are dropped.
+ * feature, the removed exam settings and pronunciation setting (`RETIRED_SETTINGS`) are dropped.
  */
 export function migrate(s: StoredState): State {
   const { cards, marks, orphans } = migrateIds(s)
@@ -260,10 +259,11 @@ export function migrate(s: StoredState): State {
 
 /**
  * Fields of states saved before the exam date and the exam-day estimate were removed (2026-11-14, owner decision):
- * `settings.examDate`, `settings.goal`, `bestE` (the stamps' best estimate). Ignored on load and gone from the
- * next save; a backup without them still imports in the versions that had them (they fill in their defaults).
+ * `settings.examDate`, `settings.goal`, `bestE` (the stamps' best estimate); and before the pronunciation feature was
+ * removed (2026-11-17, owner decision): `settings.autoSpeak`. Ignored on load and gone from the next save; a backup
+ * without them still imports in the versions that had them (they fill in their defaults).
  */
-const RETIRED_SETTINGS = ['examDate', 'goal', 'apiKey'] as const
+const RETIRED_SETTINGS = ['examDate', 'goal', 'apiKey', 'autoSpeak'] as const
 /**
  * First-run steps and tips that no longer exist: the exam-date question and its "아직 몰라요", the readiness tip, and
  * Ruma's spaced-repetition and reading-card tips (2026-11-16: Ruma no longer speaks).
@@ -272,7 +272,7 @@ const RETIRED_GUIDE = new Set(['exam', 'exam-unknown', 'ready', 'srs', 'reading'
 
 function normalize(s: State): State {
   const base = initial()
-  // the API key of the removed AI feature, and the removed exam settings, are dropped
+  // the API key of the removed AI feature, and the removed exam and pronunciation settings, are dropped
   const settings = { ...base.settings, ...s.settings } as State['settings'] & Partial<Record<(typeof RETIRED_SETTINGS)[number], unknown>>
   for (const k of RETIRED_SETTINGS) delete settings[k]
   if (s.settings.includeLower === undefined) settings.includeLower = false

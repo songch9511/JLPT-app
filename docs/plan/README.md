@@ -14,7 +14,7 @@
 - **AI**: 앱에 없습니다. **사용자가 API 키를 넣는 구조는 없앴습니다**. 단어 설명은 미리 생성해 정적 데이터로 낼 계획(09, 실행 안 함), 약한 단어 이야기는 서버(`server/`, 배포 안 함)를 거칠 계획이고, 그때까지 화면에 입구가 없습니다(`src/content.ts`).
 - **게임 요소**: XP(카드당 10), 연속 학습, "오늘 분량 끝내기" 퀘스트 하나, 만난 단어 50개마다 도장 찍히는 여정, 진행할수록 눈을 뜨는 루마.
 - **디자인**: 일본 전통색 테마 `ruma`(Astryx 테마 형식, 토큰이 유일한 출처), 직접 만든 가벼운 컨트롤 + 따로 불러오는 Astryx 대화상자·시트, Lucide 아이콘, 묶음마다 프라이머리 하나, `word-break: keep-all`, 최소 iOS 16.4 — `docs/design-system.md`.
-- **iOS 앱 기능**: 복습 알림(로컬), 홈 화면 위젯, 기기 일본어 음성, 햅틱, 공유 시트 백업·문서 선택기 가져오기, 오프라인 첫 실행, 앱 안에서 여는 처리방침·도움말(10, `src/platform/`, `src/screens/Doc.tsx`).
+- **iOS 앱 기능**: 복습 알림(로컬), 홈 화면 위젯, 햅틱, 공유 시트 백업·문서 선택기 가져오기, 오프라인 첫 실행, 앱 안에서 여는 처리방침·도움말(10, `src/platform/`, `src/screens/Doc.tsx`).
 - **테스트**: 단위(Vitest, `tests/unit/`)와 E2E(Playwright, 휴대폰 화면, 웹 + 가짜 Capacitor로 돌리는 iOS 빌드, `tests/e2e/`), CI(`.github/workflows/ci.yml`), iOS 서명 없는 컴파일(`ios.yml`). 실제 iPhone에서는 아직 아무도 돌려 보지 않았습니다(10 §5 기기 체크리스트).
 
 ## 주요 파일
@@ -27,7 +27,7 @@
 | `src/screens/*.tsx` | Home, Study, Level, Words, Stats(기록), Settings, HomeGuide(루마의 첫 실행 질문·안내, 온보딩 화면 대신), Doc(처리방침·도움말) |
 | `src/components/ui.tsx`, `overlays.tsx`, `Ruma.tsx` | 컨트롤, Astryx 대화상자·시트, 마스코트 |
 | `src/themes/ruma/` | 테마 원본과 빌드 결과(`npm run theme`) |
-| `src/platform/` | 웹과 iOS 앱이 다른 곳 하나(알림, 음성, 햅틱, 파일, 내구 저장, 위젯) |
+| `src/platform/` | 웹과 iOS 앱이 다른 곳 하나(알림, 햅틱, 파일, 내구 저장, 위젯) |
 | `scripts/build-data.mjs`, `scripts/enrich/`, `scripts/word-ids.mjs` | 단어 데이터·보강 열·ID 등록부 (`npm run data`) |
 | `scripts/build-pages.mjs` | `docs/store/`의 처리방침·도움말 → `public/privacy/`, `public/support/` (`npm run pages`) |
 | `scripts/explain/` | 단어 설명 배치 생성(09) |

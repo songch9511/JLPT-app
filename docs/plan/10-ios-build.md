@@ -1,12 +1,14 @@
 # 10. iOS 앱 빌드 (Capacitor)
 
 > 작성·확인일: 2026-11-13. 작업 환경은 Linux라서 **Xcode·시뮬레이터·Apple 계정 없이** 만들었습니다. 이 문서의 "확인함"은 이 환경에서 실제로 실행한 것만 뜻합니다. 계획과 심사 요건은 [`06-app-store.md`](06-app-store.md), 데이터 유실 위험은 [`07-security-operations.md`](07-security-operations.md), iOS 위험 목록은 [`04-qa-report.md`](04-qa-report.md) 5절을 따릅니다.
+>
+> **2026-11-17: 음성(발음) 기능을 뺐습니다**(소유자 결정, 나중에 다시 넣음). 발음 버튼, 자동 재생, 일본어 음성 설정, `platform.speak`, `@capacitor-community/text-to-speech` 플러그인이 없어졌고, 아래에서 음성을 말하는 곳은 그에 맞게 줄였습니다.
 
 ## 0. 결론
 
-1. **iOS 프로젝트와 네이티브 기능 v1 범위가 코드로 모두 들어갔습니다.** Capacitor 8.6.0(SPM), `ios/` Xcode 프로젝트, 플랫폼 레이어(`src/platform/`), 내구 저장, 복습 알림, 일본어 음성, 햅틱, 공유 시트 내보내기·파일 선택 가져오기, 상태 표시줄, 외부 링크, 홈 화면 위젯(WidgetKit 확장), 개인정보 매니페스트, 아이콘·런치 화면, CI 두 개.
+1. **iOS 프로젝트와 네이티브 기능 v1 범위가 코드로 모두 들어갔습니다.** Capacitor 8.6.0(SPM), `ios/` Xcode 프로젝트, 플랫폼 레이어(`src/platform/`), 내구 저장, 복습 알림, 햅틱, 공유 시트 내보내기·파일 선택 가져오기, 상태 표시줄, 외부 링크, 홈 화면 위젯(WidgetKit 확장), 개인정보 매니페스트, 아이콘·런치 화면, CI 두 개.
 2. **웹 앱은 그대로입니다.** 웹 빌드에는 네이티브 코드가 한 줄도 들어가지 않고(빌드 시점에 제거), 번들은 **+785 B(gzip +315 B, +0.3%)** 늘었습니다. 기존 테스트는 모두 통과하고, 웹 경로가 그대로임을 보이는 E2E를 더했습니다.
-3. **아직 아무도 이 앱을 iOS에서 빌드하거나 실행하지 않았습니다.** Swift 코드, Xcode 프로젝트 수정, 위젯 확장의 **첫 컴파일은 PR에서 도는 `ios.yml`(macOS 러너, 서명 없음)** 이고, 실제 동작(알림 도착, 음성, 위젯 표시, WKWebView 저장)은 **기기 테스트(5절)** 에서 처음 확인됩니다.
+3. **아직 아무도 이 앱을 iOS에서 빌드하거나 실행하지 않았습니다.** Swift 코드, Xcode 프로젝트 수정, 위젯 확장의 **첫 컴파일은 PR에서 도는 `ios.yml`(macOS 러너, 서명 없음)** 이고, 실제 동작(알림 도착, 위젯 표시, WKWebView 저장)은 **기기 테스트(5절)** 에서 처음 확인됩니다.
 4. **소유자가 할 일 순서**: 결정 1~4(끝 절) → Apple Developer 가입 → `npm run ios:set-id` → App Store Connect 앱 레코드·API 키 → GitHub 비밀값 → TestFlight 워크플로 실행 → 기기 체크리스트(4절).
 
 ## 1. 무엇이 있나
@@ -34,7 +36,7 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 
 | 이 환경에서 확인함 | CI(macOS)에서 처음 확인됨 | 실제 iPhone에서만 확인됨 |
 | --- | --- | --- |
-| `tsc`, 단위 테스트 219개(새로 56개), E2E(웹 + 가짜 Capacitor 브리지로 돌린 앱 빌드), 웹·앱 빌드, `cap sync ios`, 번들 크기 | Xcode 26.6으로 Swift 패키지 해석, 앱·플러그인·`WidgetBridgePlugin`·`MainViewController`·`RumaWidget` 컴파일, 위젯이 앱에 포함되는지, 매니페스트·데이터가 번들에 들어가는지 | WKWebView 안의 동작 전부, 알림 권한·도착, 음성, 햅틱, 위젯 표시, 공유 시트, 파일 선택기, App Group 공유, 서명·업로드 |
+| `tsc`, 단위 테스트 219개(새로 56개), E2E(웹 + 가짜 Capacitor 브리지로 돌린 앱 빌드), 웹·앱 빌드, `cap sync ios`, 번들 크기 | Xcode 26.6으로 Swift 패키지 해석, 앱·플러그인·`WidgetBridgePlugin`·`MainViewController`·`RumaWidget` 컴파일, 위젯이 앱에 포함되는지, 매니페스트·데이터가 번들에 들어가는지 | WKWebView 안의 동작 전부, 알림 권한·도착, 햅틱, 위젯 표시, 공유 시트, 파일 선택기, App Group 공유, 서명·업로드 |
 | `project.pbxproj` 수정은 독립 파서(`xcode` npm 3.0.1)로 읽고 다시 쓰기, 참조 ID 전수 검사 | | |
 
 "가짜 브리지 E2E"(`tests/e2e/native-shell.spec.ts`)는 Capacitor의 실제 플러그인 프록시를 Chromium에서 돌리고 네이티브 쪽만 흉내 냅니다. JS 흐름이 맞다는 증거이지 **iOS에서 된다는 증거가 아닙니다.**
@@ -42,7 +44,7 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 ## 3. 구조와 결정
 
 ### 3.1 웹과 앱의 분리
-- 기능 분기는 `src/platform/` 한 곳입니다. `platform.speak/haptic/saveFile/pickFile/clearDeviceData`를 화면이 부르고, 웹 구현(`web.ts`)은 예전 동작 그대로(speechSynthesis, `<a download>`)입니다.
+- 기능 분기는 `src/platform/` 한 곳입니다. `platform.haptic/saveFile/pickFile/clearDeviceData`를 화면이 부르고, 웹 구현(`web.ts`)은 예전 동작 그대로(`<a download>`)입니다.
 - 앱 구현(`native.ts`)은 `import.meta.env.MODE === 'native'`일 때만 동적 import 되고, 실행 시에도 `window.Capacitor.isNativePlatform()`을 확인합니다. 웹 빌드에서는 이 조건이 상수 false라서 **청크조차 만들어지지 않습니다**(서비스 워커 사전 캐시 20개 그대로).
 - 번들(웹, `dist/assets/index-*.js`): 이전 325,788 B / gzip -9 102,020 B → 이후 326,573 B / 102,335 B.
 
@@ -60,10 +62,9 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 - 규칙(`reminders.ts`, 단위 테스트 13개): 꺼져 있으면 없음 · **하루 최대 하나**(ID = 날짜 yyyymmdd) · 정한 시각에 · 앞으로 7일 · **그날 복습할 카드가 있을 때만**(새 단어만 있는 날은 없음) · **이미 끝낸 날은 없음** · 쉬는 요일 제외 · 지난 시각 제외 · 문구에 실제 개수("복습할 단어 12개가 돌아왔어요", 새 단어 수).
 - 상태가 바뀔 때(1.5초 묶음), 앱이 앞으로 올 때, 설정을 바꿀 때 **우리 알림을 모두 취소하고 다시 예약**합니다. 끄면 전부 취소.
 - **권한은 첫 실행에 묻지 않습니다.** 하루 분량을 처음 끝낸 완료 화면에 설명 카드("복습할 때가 되면 알려 드릴까요?")를 보이고, "알림 받기"를 눌렀을 때만 iOS 권한 창을 띄웁니다. "나중에"도 기억합니다. 설정에서 언제든 켤 수 있습니다.
-- 알림을 누르면 학습 화면(`#/study`)으로 갑니다. 설정 화면의 알림·진동·음성 절은 앱에서만 보입니다.
+- 알림을 누르면 학습 화면(`#/study`)으로 갑니다. 설정 화면의 알림·진동 절은 앱에서만 보입니다.
 
 ### 3.4 그 밖의 네이티브 기능
-- **음성**: `@capacitor-community/text-to-speech`(AVSpeechSynthesizer), `ja-JP`, 속도 0.9, 설정에서 일본어 음성 선택. 일본어 음성이 없거나 실패하면 WebView의 speechSynthesis로 대신합니다. "사용자 동작 전에는 말하지 않는다" 규칙은 호출하는 쪽(Study.tsx)이 그대로 지킵니다. 무음 스위치를 켜도 들리도록 `playback`으로 둡니다(결정 7).
 - **햅틱**: 답할 때 가벼운 탭, 하루를 끝낼 때 성공 진동. 설정으로 끌 수 있고, "동작 줄이기"가 켜져 있으면 울리지 않습니다.
 - **백업**: 내보내기는 캐시 폴더에 파일을 쓰고 공유 시트(파일 앱 저장·AirDrop)를 엽니다. 공유를 취소하면 "마지막 백업"이 갱신되지 않습니다. 가져오기는 문서 선택기(JSON만)입니다. 웹은 예전 그대로입니다.
 - **수명 주기**: 앞으로 올 때 날짜를 넘기고(`useClock`이 듣는 `visibilitychange`를 발생시킴) 알림·위젯을 갱신합니다. Android 뒤로 버튼은 해시 라우터의 뒤로 가기로(iOS에는 없음, 화면 안의 닫기·뒤로 버튼으로 충분).
@@ -81,7 +82,7 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 
 ### 3.6 심사 관련 준비
 - **개인정보 매니페스트**: 추적 없음, 수집 없음. 필수 사유 API: UserDefaults `1C8F.1`(App Group, 앱·위젯), 파일 타임스탬프 `C617.1`(앱 컨테이너 안 파일, `@capacitor/filesystem`)·`3B52.1`(사용자가 문서 선택기로 고른 파일, `@capawesome/capacitor-file-picker`). 플러그인별 범주는 Ionic의 매니페스트 규칙[S3]과 소스 검색으로 확인했고, 사유 코드의 정의 문구도 2026-11-14 `docs/store/privacy-labels.md` §3에서 Apple의 현재 목록과 대조해 **확인했습니다**(세 코드 모두 코드 사용과 맞음). 남은 것은 빌드에 매니페스트가 실제로 들어가는지로, 업로드 후 App Store Connect 경고 메일로 확인합니다(같은 문서 §3.3).
-- **Info.plist**: `ITSAppUsesNonExemptEncryption = NO`(HTTPS 외 암호화 없음), 세로 고정, 개발 언어 한국어. **사용 목적 문자열은 없습니다**: 로컬 알림·햅틱·음성·공유·문서 선택기는 Info.plist 문자열이 필요 없고, 카메라·사진·위치는 쓰지 않습니다(파일 선택기의 사진 선택 경로는 호출하지 않으며 권한 없이 동작하는 PHPicker 계열).
+- **Info.plist**: `ITSAppUsesNonExemptEncryption = NO`(HTTPS 외 암호화 없음), 세로 고정, 개발 언어 한국어. **사용 목적 문자열은 없습니다**: 로컬 알림·햅틱·공유·문서 선택기는 Info.plist 문자열이 필요 없고, 카메라·사진·위치는 쓰지 않습니다(파일 선택기의 사진 선택 경로는 호출하지 않으며 권한 없이 동작하는 PHPicker 계열).
 - **iPhone 전용**(`TARGETED_DEVICE_FAMILY = 1`, 06 결정 7 추천을 적용).
 - 앱 안 데이터 전체 삭제(초기화), 비공식 고지(설정 › 정보), 웹 전용 문구 정리(저장 위치, 저장 실패 경고, "새로고침" 안내)를 앱에서 맞게 바꿨습니다.
 
@@ -120,11 +121,6 @@ npm 스크립트: `build:native`, `ios:sync`(= 네이티브 웹 빌드 + `cap sy
 - [ ] 가져오기 → 파일 앱에서 고름 → 확인 → 기록 교체 → "가져오기 되돌리기"
 - [ ] **웹(PWA)에서 내보낸 파일**을 앱에서 가져오기(웹 → 앱 이전 경로)
 
-발음(04 QA 5절 위험)
-- [ ] 단어 카드·단어 시트의 발음 버튼, 일본어 음성으로 읽음, **무음 스위치를 켠 상태**에서도 들림
-- [ ] "카드가 나올 때 자동 재생"을 켜고 학습 시작 → **첫 카드부터** 소리(웹에서 생기던 첫 카드 무음 문제)
-- [ ] 설정 › 일본어 음성 바꾸기·들어 보기. 일본어 음성이 없는 기기에서 안내 문구
-
 햅틱
 - [ ] 답할 때 가벼운 진동, 하루 끝에 성공 진동. 설정에서 끄면 없음. 손쉬운 사용 › 동작 › 동작 줄이기 켜면 없음
 
@@ -160,14 +156,13 @@ Features of the iOS app (not offered by a website):
 1. Review reminders (local notifications). After the first finished daily session the app explains
    reminders and only then asks for permission. At most one notification a day, at the learner's
    chosen time, only on days with reviews due, stating the count ("복습할 단어 12개가 돌아왔어요").
-   To test: Settings (설정) > 알림 · 진동 · 발음 > turn on 복습 알림, set the time 2 minutes ahead,
+   To test: Settings (설정) > 알림 · 진동 > turn on 복습 알림, set the time 2 minutes ahead,
    then start today's session (오늘의 학습 시작), answer "모르겠어요" on two cards and leave the app.
 2. Home Screen widget "오늘의 복습": today's reviews and the predicted number of words remembered
    on the exam day.
-3. Japanese pronunciation with the iOS speech voices (AVSpeechSynthesizer), voice choice in Settings.
-4. Haptic feedback when answering and when the day is finished (respects Reduce Motion).
-5. Backup export through the share sheet / Files, import through the document picker.
-6. Works fully offline, including the first launch (try Airplane Mode).
+3. Haptic feedback when answering and when the day is finished (respects Reduce Motion).
+4. Backup export through the share sheet / Files, import through the document picker.
+5. Works fully offline, including the first launch (try Airplane Mode).
 
 This app is not affiliated with or endorsed by the Japan Foundation or JEES, which administer the
 JLPT; the notice is in Settings > 정보.
@@ -190,7 +185,7 @@ JLPT; the notice is in Settings > 정보.
 4. **위젯을 v1에 넣을지**. → **추천: 넣기.** 코드는 준비됐고 4.2 위험을 줄입니다. 조건: `ios.yml`이 통과하고 5절 위젯 항목이 기기에서 맞을 것. 아니면 3.5절대로 타깃을 빼고 1.1에서 넣습니다.
 5. **기기 범위**: iPhone 전용으로 설정해 두었습니다(06 추천). iPad를 넣으려면 13인치 스크린샷과 레이아웃 확인이 더 필요합니다.
 6. **알림 기본 시각**: 20:00으로 두었습니다. 학습 패턴 데이터가 없어서 정한 값입니다.
-7. **무음 스위치에서의 발음**: 지금은 들리게(`playback`) 했습니다. 수업·대중교통에서 원치 않는 소리가 문제라면 `ambient`(무음 스위치 따름)로 바꿉니다.
+7. ~~무음 스위치에서의 발음~~: 음성 기능을 뺐습니다(2026-11-17). 다시 넣을 때 정합니다(전에는 `playback`, 무음 스위치를 켜도 들림).
 
 ## 출처 (2026-11-13 확인)
 

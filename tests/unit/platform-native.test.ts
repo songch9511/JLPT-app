@@ -39,15 +39,6 @@ function fakes(opts: { permission?: 'granted' | 'denied' | 'prompt'; shareCancel
       addListener: vi.fn(async (ev: string, f: (x: unknown) => void) => void (listeners[ev] = f)),
     },
     Haptics: { impact: vi.fn(async () => {}), notification: vi.fn(async () => {}) },
-    TextToSpeech: {
-      speak: vi.fn(async () => {}),
-      getSupportedVoices: vi.fn(async () => ({
-        voices: [
-          { name: 'Samantha', lang: 'en-US', voiceURI: 'en.samantha', default: true, localService: true },
-          { name: 'Kyoko', lang: 'ja-JP', voiceURI: 'ja.kyoko', default: false, localService: true },
-        ],
-      })),
-    },
     App: { addListener: vi.fn(async (ev: string, f: (x: unknown) => void) => void (listeners[ev] = f)), exitApp: vi.fn() },
     Browser: { open: vi.fn(async () => {}) },
     StatusBar: { setStyle: vi.fn(async () => {}) },
@@ -221,7 +212,7 @@ describe('backup export and import go through the share sheet and the document p
   })
 })
 
-describe('reminders, haptics, speech, reset', () => {
+describe('reminders, haptics, reset', () => {
   const dueToday = () => ({ cards: { [L('5-0')]: card({ due: at('2026-11-13T08:00:00').getTime() }) } })
 
   it('nothing is scheduled and no permission is asked at launch; enabling asks, then schedules', async () => {
@@ -292,24 +283,6 @@ describe('reminders, haptics, speech, reset', () => {
     expect(f.d.Haptics.impact).not.toHaveBeenCalled()
   })
 
-  it('speech: the iOS Japanese voice, the chosen one by its index; the web speech if the plugin fails', async () => {
-    await bootUser('2026-11-13T09:00:00')
-    const f = fakes()
-    const { platform } = await start(f)
-    platform.speak('～食べる')
-    await vi.waitFor(() => expect(f.d.TextToSpeech.speak).toHaveBeenCalledWith({ text: '食べる', lang: 'ja-JP', rate: 0.9, voice: undefined, category: 'playback' }))
-    ;(await import('../../src/platform/prefs')).setPrefs({ voiceURI: 'ja.kyoko' })
-    platform.speak('水')
-    await vi.waitFor(() => expect(f.d.TextToSpeech.speak).toHaveBeenLastCalledWith(expect.objectContaining({ text: '水', voice: 1 })))
-    const web = { speak: vi.fn(), cancel: vi.fn(), getVoices: () => [] }
-    vi.stubGlobal('window', { speechSynthesis: web })
-    vi.stubGlobal('speechSynthesis', web)
-    vi.stubGlobal('SpeechSynthesisUtterance', class { constructor(public text: string) {} })
-    f.d.TextToSpeech.speak.mockRejectedValueOnce(new Error('Language not supported'))
-    platform.speak('山')
-    await vi.waitFor(() => expect(web.speak).toHaveBeenCalled())
-  })
-
   it('reset: the old history is removed from both durable slots, reminders cancelled, device settings back to default', async () => {
     const b = await bootUser('2026-11-13T09:00:00', {}, { ...dueToday(), xp: 500 })
     const f = fakes()
@@ -350,7 +323,7 @@ describe('reminders, haptics, speech, reset', () => {
 })
 
 describe('web platform stays as it was', () => {
-  it('the default platform is the web one: download export, browser speech, no haptics, no picker', async () => {
+  it('the default platform is the web one: download export, no haptics, no picker', async () => {
     vi.resetModules()
     const { platform, isNativeRuntime } = await import('../../src/platform')
     expect(platform.native).toBe(false)
