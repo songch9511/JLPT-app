@@ -37,8 +37,11 @@ const FROZEN: Record<number, string> = {
  * then still prove no existing id moved to another word.
  * 2026-11-14: w4db's headword corrected 副 → とりわけ (source error, docs/plan/12 §6, 08 §7.2).
  * 2026-11-14: w3nu's reading corrected ふす → むす, w4ta's headword 摩する → 摩る (data/tags/audit/source-errors.csv).
+ * 2026-11-17: headwords 落る → 落ちる (w0yx), 楽む → 楽しむ (w0r6), 下る → 下がる (w0v6), 引受る → 引き受ける (w2yx),
+ * 唯 → たった (w1qm), あせる (こえが～) → あせる (いろが～) (w498); readings 琴 きん → こと (w3r7), 大部 たいぶ → だいぶ (w5r3)
+ * (docs/plan/08 §7.2).
  */
-const REGISTRY_SHA = '043ae4c79176f82455a64b39c01ccab5a2c341f36ed60ac1bd7ea069a320fe3b'
+const REGISTRY_SHA = '02752e7efeb546468ee24ddfc9fe51f7a0fe32bfd97aaf7de4128013ef5966ea'
 
 /**
  * Source errors corrected after the positional files froze (docs/plan/12 §6, 08 §7.2), by id: each column that may
@@ -77,6 +80,20 @@ const SOURCE_CORRECTED: Record<string, { level: number; cols: Record<number, [un
   w0g8: { level: 5, cols: { 3: ['during, while', 'throughout, all through (~)'] } },
   w1bv: { level: 3, cols: { 2: ['금, 돈', '돈, 금속'], 3: ['gold, metal; money', 'money; metal'] } },
   w08o: { level: 5, cols: { 3: ['counter for people', '-ian, -ese (nationality); person (of a group or trade)'] } },
+  // 2026-11-17 (08 §7.2): irregular okurigana (JMdict marks these forms "irregular okurigana usage"); f unchanged (the
+  // regular spelling was already scored as the same JMdict entry's other form)
+  w0yx: { level: 4, cols: { 0: ['落る', '落ちる'] } },
+  w0r6: { level: 4, cols: { 0: ['楽む', '楽しむ'] } },
+  w0v6: { level: 4, cols: { 0: ['下る', '下がる'] } }, // 下る is くだる; さがる is 下がる
+  w2yx: { level: 2, cols: { 0: ['引受る', '引き受ける'] } },
+  // 唯 たった is no JMdict pair (たった is kana only): kana headword as w4db, reading column '', f 40 (唯's) → 46, o pinned
+  w1qm: { level: 3, cols: { 0: ['唯', 'たった'], 1: ['たった', ''], 5: [40, 46] } },
+  // 琴 きん is the Chinese qin; the gloss and ko are the koto, こと. f re-measured, o pinned (f and JMdict rank)
+  w3r7: { level: 2, cols: { 1: ['きん', 'こと'], 5: [24, 37] } },
+  // the gloss's "fairly, a good deal, much" and ko 상당히 are だいぶ (たいぶ is 'voluminous'); f unchanged
+  w5r3: { level: 1, cols: { 1: ['たいぶ', 'だいぶ'] } },
+  // the note of 褪せる: colour fades (いろが～), not the voice
+  w498: { level: 1, cols: { 0: ['あせる (こえが～)', 'あせる (いろが～)'] } },
 }
 
 function rng(seed: number) {
@@ -150,8 +167,10 @@ describe('the id registry (data/ids.json)', () => {
     // 96 headword+reading pairs are in two levels (四季 しき in N3 and N2, …): each level's entry is its own word,
     // with its own cards, as it always was; the one repeat within a level (やかん in N2) was always merged.
     // 97 since 2026-11-14: correcting N2 w3nu 蒸す ふす → むす made it the pair of N3 w14d 蒸す むす (source-errors.csv)
-    expect(shared).toHaveLength(97)
+    // 98 since 2026-11-17: correcting N2 w3r7 琴 きん → こと made it the pair of N3 w1bh 琴 こと (08 §7.2)
+    expect(shared).toHaveLength(98)
     expect(byKey.get('蒸す\tむす')).toEqual(['w14d', 'w3nu'])
+    expect(byKey.get('琴\tこと')).toEqual(['w1bh', 'w3r7'])
     for (const v of shared) expect(new Set(v.map((id) => reg.ids[id].l)).size).toBe(v.length)
     expect(ids.readSource(2).dropped).toEqual([{ w: 'やかん', r: 'やかん' }])
   })
@@ -175,12 +194,15 @@ describe('the id registry (data/ids.json)', () => {
 const TAGS_CORRECTED: Record<number, string[]> = {
   5: ['w08t', 'w0ed', 'w0g8'],
   4: ['w0xf'],
-  3: ['w1i9', 'w1m9', 'w2gy', 'w2ll', 'w2om'],
+  // w1qm: its corrected kana headword たった makes it K (was M, rt irr, derived from the wrong headword 唯)
+  3: ['w1i9', 'w1m9', 'w1qm', 'w2gy', 'w2ll', 'w2om'],
   // w3nu: its corrected reading 蒸す むす is N, rt kun (as N3 w14d 蒸す むす, R10); was M, rt irr from the wrong reading
-  2: ['w326', 'w36f', 'w3hc', 'w3nu', 'w3qa', 'w3qu', 'w3ry', 'w3sz', 'w40u'],
+  // w3r7: its corrected reading 琴 こと is N, rt kun (as N3 w1bh 琴 こと, R10); was J 금, rt on from the wrong reading
+  2: ['w326', 'w36f', 'w3hc', 'w3nu', 'w3qa', 'w3qu', 'w3r7', 'w3ry', 'w3sz', 'w40u'],
   // w4db: its corrected kana headword とりわけ makes it K (was M, rt irr, derived from the wrong headword 副)
   // w4ta: its corrected headword 摩る さする is N, rt kun (was M, rt irr from the wrong headword 摩する)
-  1: ['w4db', 'w4ta', 'w4x3', 'w4xx', 'w5at', 'w5fw', 'w5q2', 'w5sv'],
+  // w5r3: its corrected reading だいぶ changes the derived reading split a たい|ぶ → だい|ぶ (tags J 대부 on unchanged)
+  1: ['w4db', 'w4ta', 'w4x3', 'w4xx', 'w5at', 'w5fw', 'w5q2', 'w5r3', 'w5sv'],
 }
 
 describe('data/corrections.json (source columns the registry does not cover)', () => {

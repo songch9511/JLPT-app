@@ -867,7 +867,7 @@
 "w1qj":{"core":"スケジュール","hk":0,"auto":"L","sk":[],"rt":"","hint":"L"},
 "w1qk":{"core":"通勤","hk":1,"auto":"","sk":["통근"],"rt":"on","hint":"S"},
 "w1ql":{"core":"残り","hk":1,"auto":"","sk":["잔"],"rt":"kun","hint":"N"},
-"w1qm":{"core":"唯","hk":1,"auto":"","sk":["유"],"rt":"irr","hint":"M"},
+"w1qm":{"core":"たった","hk":0,"auto":"K","sk":[],"rt":"","hint":"K"},
 "w1qn":{"core":"幸運","hk":1,"auto":"","sk":["행운"],"rt":"on","hint":"S"},
 "w1qo":{"core":"澄む","hk":1,"auto":"","sk":["징"],"rt":"kun","hint":"N"},
 "w1qp":{"core":"鋭い","hk":1,"auto":"","sk":["예","태"],"rt":"kun","hint":"N"},

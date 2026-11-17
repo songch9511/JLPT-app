@@ -1,8 +1,10 @@
 {
-"about": "Introduction-order pins read by scripts/enrich/freq.py: the word is ordered as if its frequency were order_f; its shipped f stays the measured value. docs/plan/08 §2.4, §7.2.",
+"about": "Introduction-order pins read by scripts/enrich/freq.py: the word is ordered as if its frequency were order_f (and, when order_rank is given, its JMdict priority rank 1..3 were order_rank); its shipped f stays the measured value. docs/plan/08 §2.4, §7.2.",
 "pins": {
 "w4db": {"order_f": 46, "why": "2026-11-14: headword corrected 副 → とりわけ (source error, docs/plan/12 §6). f is now とりわけ's own (42, was 副's 46); the word keeps the place it had since the order was made (154 of N1) so that no other N1 word's position moves for learners who have started."},
 "w3nu": {"order_f": 27, "why": "2026-11-14: reading corrected ふす → むす (source error, docs/plan/12 §6, source-errors.csv). f is now 蒸す むす's own (34, was 27 measured for the wrong pair); the word keeps its place (1801 of N2) so that no other N2 word's position moves for learners who have started."},
-"w4ta": {"order_f": 10, "why": "2026-11-14: headword corrected 摩する → 摩る (source error, docs/plan/12 §6, source-errors.csv). f is now 摩る さする's own (32, was the floor 10: 摩する was not found); the word keeps its place (2698 of N1, last) so that no other N1 word's position moves for learners who have started."}
+"w4ta": {"order_f": 10, "why": "2026-11-14: headword corrected 摩する → 摩る (source error, docs/plan/12 §6, source-errors.csv). f is now 摩る さする's own (32, was the floor 10: 摩する was not found); the word keeps its place (2698 of N1, last) so that no other N1 word's position moves for learners who have started."},
+"w1qm": {"order_f": 40, "why": "2026-11-17: headword corrected 唯 たった → たった (kana headword; JMdict has no 唯 たった pair, たった 1007230 is kana only; docs/plan/08 §7.2). f is now たった's own (46, was 40 measured for 唯); the word keeps its place (1538 of N3) so that no other N3 word's position moves for learners who have started."},
+"w3r7": {"order_f": 24, "order_rank": 3, "why": "2026-11-17: reading corrected 琴 きん → こと (the gloss and ko are the koto, JMdict 1241450 こと; 琴 きん 2229960 is the Chinese qin; docs/plan/08 §7.2). f is now 琴 こと's own (37, was 24 measured for きん) and its JMdict priority rank 1 (ichi1; was 3, no tags); the word keeps the f and rank it was ordered by and so its place (1864 of N2) so that no other N2 word's position moves for learners who have started."}
 }
 }
