@@ -48,7 +48,8 @@ test.describe('kanji study (4-1 … 4-4)', () => {
     await expect(card.locator('.yomi-label')).toHaveText(['음독', '훈독'].slice(0, await card.locator('.yomi-label').count()))
     await expect(card.locator('.kw-reading').first()).toBeVisible()
     // nothing moved
-    expect((await card.locator('.flash-kanji').boundingBox())!.y).toBe(at.y)
+    // (within a pixel: the first measure can land in the last frame of the card's entrance)
+    expect(Math.abs((await card.locator('.flash-kanji').boundingBox())!.y - at.y)).toBeLessThan(1)
     // the words, a page at a time
     if (first[7].length > 3) {
       await expect(card.locator('.pager')).toContainText(`1 / ${Math.ceil(first[7].length / 3)}`)
