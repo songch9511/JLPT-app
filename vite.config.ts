@@ -82,6 +82,8 @@ export default defineConfig(({ mode }) => {
               registerType: 'autoUpdate',
               includeAssets: ['icon.svg', 'apple-touch-icon.png'],
               workbox: {
+                // no webp: the word pictures (public/img/words, ~15 MB for N5) are not precached; each is fetched
+                // when its card first shows it, and an offline card without it keeps its empty tile (src/pictures.ts)
                 globPatterns: ['**/*.{js,css,html,svg,png,json}'],
                 globIgnores: ['**/data/n[1-5].json'],
                 maximumFileSizeToCacheInBytes: 3_000_000,

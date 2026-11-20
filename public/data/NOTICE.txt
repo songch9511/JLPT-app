@@ -1,5 +1,5 @@
 JLPT 루마 — word data notice (public/data/words-n1.json … words-n5.json, and the frozen
-public/data/n1.json … n5.json of earlier versions)
+public/data/n1.json … n5.json of earlier versions; the example sentences and word pictures below)
 
 Each row of words-n{l}.json is [id, w, r, ko, en, o, f, k, sk, ff, rt, a, x] (the frozen files have the
 same row without id). id is this project's stable word id. The next four columns (word, reading, Korean
@@ -38,6 +38,9 @@ word-type labels). See docs/plan/08-word-data.md, "결정이 필요한 것" 1, i
 Example sentences (examples-n5.json): one example sentence per N5 word with its readings and a Korean
 translation, keyed by the word id. They were machine-written by this project and checked mechanically, not
 reviewed by a native speaker; see data/examples/README.md in the source repository.
+
+Word pictures (img/words/<word id>.webp): one illustration for some words, keyed by the word id. They are
+machine-generated illustrations of the app's own mascot, Ruma, made for this project (2026-11).
 
 Word list: open-anki-jlpt-decks (MIT licence, https://github.com/jamsinclair/open-anki-jlpt-decks),
 based on the lists at tanos.co.uk. JLPT does not publish an official vocabulary list.

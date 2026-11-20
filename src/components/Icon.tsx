@@ -11,6 +11,7 @@ import {
   CircleX,
   Flame,
   House,
+  ImageIcon,
   Info,
   RotateCcw,
   Search,
@@ -42,6 +43,7 @@ const ICONS = {
   again: RotateCcw,
   error: CircleX,
   success: CircleCheck,
+  image: ImageIcon,
 } satisfies Record<string, LucideIcon>
 
 export type IconName = keyof typeof ICONS

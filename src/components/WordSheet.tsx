@@ -12,7 +12,8 @@ import { FalseFriend } from './WordNotes'
 import { ExampleSentence } from './Example'
 import { LevelBadge } from './LevelBadge'
 import { useExample } from '../examples'
-import { wordKanji } from './StudyCard'
+import { WordPicture, wordKanji } from './StudyCard'
+import { hasPicture } from '../pictures'
 
 export type Detail = { word: Word } | { kanji: Kanji }
 
@@ -84,6 +85,8 @@ function WordDetails({ word, onClose, onKanji }: { word: Word; onClose: () => vo
         <Meta className="sheet-status grow" items={status({ cards }, word.id)} />
         <IconButton label="닫기" icon={<Icon name="close" />} onClick={onClose} />
       </div>
+      {/* the word's picture, if it has one (no empty tile for a word without) */}
+      {hasPicture(word.id) && <WordPicture word={word} on />}
       {/* the reading over the headword, as a textbook prints it; the round bookmark button at the right */}
       <div className="sheet-title">
         <div className="sheet-headword grow">
