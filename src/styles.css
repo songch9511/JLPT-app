@@ -795,12 +795,14 @@
   .word-pic.on img { opacity: 1; visibility: visible; transition: opacity var(--duration-medium) var(--ease-standard); }
   /* a card with a picture is set a little tighter (the mockups' V9 card): no gaps between the reading, the headword
      and the meaning, a smaller headword, less room above the example and the chips. The tile is the one part that
-     gives way: it is as tall as 16:9 allows and loses height (the picture cropped at its middle) where the card is
+     gives way: the full width at 16:9 where there is room, smaller (still 16:9, never cropped) where the card is
      shorter, before the card would have to scroll. The card's middle is a size container, so the steps below follow
      the room the card really has (safe areas, the browser's bars), not the screen's height. */
   .flash-scroll:has(> .has-pic) { container: card-face / size; }
   .flash-body.has-pic { flex: 0 1 auto; min-height: 0; gap: 0; padding: 0 0 var(--spacing-2); }
-  .has-pic > .word-pic { flex: 0 1 auto; min-height: 56px; margin-bottom: var(--spacing-3); }
+  /* the tile starts at the full width's 16:9 height (100cqw: the card's middle is the container) and, if it must give
+     way, shrinks as a whole: lower and narrower, always 16:9, centred; never below 72px high */
+  .has-pic > .word-pic { flex: 0 1 calc(100cqw * 9 / 16); width: auto; max-width: 100%; align-self: center; min-height: 72px; margin-bottom: var(--spacing-3); }
   .has-pic > .flash-word { font-size: clamp(48px, 19.5vw, 76px); }
   .flash .has-pic > .flash-word.mid { font-size: clamp(40px, 14vw, 60px); }
   .has-pic > .flash-example { margin-top: 0; padding-top: var(--spacing-4); }
@@ -815,7 +817,7 @@
   }
   /* the least (375×667, a phone's browser with its bars): every line as close as it reads well */
   @container card-face (max-height: 399px) {
-    .has-pic > .word-pic { min-height: 48px; margin-bottom: var(--spacing-2); }
+    .has-pic > .word-pic { margin-bottom: var(--spacing-2); }
     .has-pic > .flash-reading { min-height: 24px; line-height: 1.3; }
     .has-pic > .flash-word { font-size: clamp(40px, 13vw, 52px); line-height: 1.05; }
     .flash .has-pic > .flash-word.mid { font-size: clamp(32px, 10vw, 44px); }

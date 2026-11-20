@@ -231,16 +231,20 @@ const TALL = [...WORD_PICTURES]
 
 for (const [width, height] of [
   [390, 844],
+  [390, 763], // 390×844 less an iPhone's safe areas (47 + 34)
   [375, 667],
 ] as const)
-  test(`${width}×${height}: a card with its picture, the longest example and kanji chips fits without scrolling`, async ({ page }) => {
+  test(`${width}×${height}: a card with its picture, the longest example and kanji chips fits without scrolling; the picture stays whole, 16:9`, async ({ page }) => {
     await page.setViewportSize({ width, height })
     await study(page, TALL[0])
     await expect(page.locator('.flash-word')).toHaveText(TALL[1])
     await page.waitForTimeout(READ_MS)
+    // the empty tile has the picture's size and place
+    const empty = await box(page, '.word-pic')
     await page.getByRole('button', { name: /^모르겠어요/ }).click()
     await loaded(page)
     await expect(card(page).locator('.kanji-chip').first()).toBeVisible()
+    expect(await box(page, '.word-pic')).toEqual(empty)
     await page.waitForTimeout(300)
     await page.screenshot({ path: test.info().outputPath(`${width}x${height}.png`) })
     const m = await card(page).locator('.flash-scroll').evaluate((s) => {
@@ -250,11 +254,17 @@ for (const [width, height] of [
     })
     expect(m.overflow, 'the card does not scroll').toBeLessThanOrEqual(0)
     expect(m.outside, 'every part inside the card').toBe(0)
-    // the picture keeps the card's full width and a useful height; on the phone the mockups were drawn for, all of it
+    // the picture is never cropped: where the card is short the whole tile is smaller, still 16:9 and centred, never
+    // below 72px high; on the phone the mockups were drawn for it keeps (nearly) the card's full width
     const t = await box(page, '.word-pic')
-    expect(t.width).toBeCloseTo((await box(page, '.flash-body')).width, 0)
-    expect(t.height).toBeGreaterThanOrEqual(48)
-    if (height >= 844) expect(t.height).toBeGreaterThan((t.width * 9) / 16 * 0.85)
+    const img = await box(page, '.word-pic img')
+    const body = await box(page, '.flash-body')
+    expect(img).toEqual(t)
+    expect(t.width / t.height).toBeCloseTo(16 / 9, 1)
+    expect(Math.abs(t.width - (t.height * 16) / 9)).toBeLessThanOrEqual(1)
+    expect(t.x + t.width / 2).toBeCloseTo(body.x + body.width / 2, 0)
+    expect(t.height).toBeGreaterThanOrEqual(72 - 0.5)
+    if (height >= 844) expect(t.width).toBeGreaterThan(body.width * 0.85)
     // the grades stay on screen
     for (const b of await page.locator('.answer-bar').getByRole('button').all()) expect((await b.boundingBox())!.y + (await b.boundingBox())!.height).toBeLessThanOrEqual(height)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
