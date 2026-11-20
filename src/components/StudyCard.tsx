@@ -5,10 +5,12 @@
 // example's translation, the kanji chips; on a kanji card its 훈음, its readings, the words' readings and meanings) is
 // always laid out and only becomes visible (`.slot.on`). A closed slot is empty to the eye and to screen readers
 // (visibility) and keeps its room. Nothing on the card opens on a tap but the two toggles and the bookmark.
+// A word with a picture (src/pictures.ts) has one more slot at the top: its tile, empty until 의미 opens.
 import { useState, type MouseEvent, type ReactNode } from 'react'
 import { meaning, wordById, type Level, type Word } from '../data'
 import type { Example } from '../examples'
 import { alignReading, hunEum, kanjiInfo, kunParts, toHiragana, useKanji, type Kanji } from '../kanji'
+import { hasPicture, pictureUrl } from '../pictures'
 import { kanjiParts } from '../sound'
 import { ExampleSentence } from './Example'
 import { Icon } from './Icon'
@@ -40,6 +42,37 @@ export function Headword({ word }: { word: Word }) {
     <p lang="ja" className={`flash-word ${word.w.length > 6 ? 'long' : word.w.length > 3 ? 'mid' : ''}`}>
       {word.w}
     </p>
+  )
+}
+
+/**
+ * A word's picture in its tile (16:9, the card's full width). The tile is there whenever the word has a picture; the
+ * picture shows in it while `on` (의미 on the study card; always in the word sheet). The file is asked for the first
+ * time it is to be shown, then kept while the tile is on screen; it fades in once loaded, so nothing jumps. Until
+ * then, and if it cannot be loaded (offline on the web), the tile stays empty and quiet: no broken image, no message.
+ * The empty tile is hidden from screen readers; the picture is named by the word's meaning.
+ */
+export function WordPicture({ word, on }: { word: Word; on: boolean }) {
+  const [wanted, setWanted] = useState(on)
+  if (on && !wanted) setWanted(true)
+  const [file, setFile] = useState<'loading' | 'ok' | 'failed'>('loading')
+  const shown = on && file === 'ok'
+  return (
+    <div className={`word-pic ${shown ? 'on' : ''}`} aria-hidden={shown ? undefined : true}>
+      <Icon name="image" size={28} />
+      {wanted && file !== 'failed' && (
+        <img
+          src={pictureUrl(word.id)}
+          alt={meaning(word)}
+          decoding="async"
+          draggable={false}
+          // already in the browser's cache: it may be complete before React listens for `load`
+          ref={(img) => void (img?.complete && img.naturalWidth > 0 && setFile('ok'))}
+          onLoad={() => setFile('ok')}
+          onError={() => setFile('failed')}
+        />
+      )}
+    </div>
   )
 }
 
@@ -108,15 +141,18 @@ export function KanjiRow({ word, ko, ja }: { word: Word; ko: boolean; ja: boolea
 }
 
 /**
- * A word card's centre: the reading's slot above the headword, the meaning's slot under it (with the false-friend
- * warning, the one word-type note a card shows), the example and its translation's line, then the kanji chips.
- * `kana`: the reading, the headword's own furigana in the example, the kanji's Japanese readings; `meaningOpen`: the
- * meaning, the example's translation, the kanji's Korean readings. Spacing separates them; no lines inside the card.
+ * A word card's centre: the picture's tile when the word has one, the reading's slot above the headword, the
+ * meaning's slot under it (with the false-friend warning, the one word-type note a card shows), the example and its
+ * translation's line, then the kanji chips. `kana`: the reading, the headword's own furigana in the example, the
+ * kanji's Japanese readings; `meaningOpen`: the picture, the meaning, the example's translation, the kanji's Korean
+ * readings. Spacing separates them; no lines inside the card.
  */
 export function MeaningFace({ word, example, kana, meaningOpen }: { word: Word; example: Example | null; kana: boolean; meaningOpen: boolean }) {
+  const pic = hasPicture(word.id)
   return (
     <CardScroll>
-      <div className="flash-body">
+      <div className={`flash-body ${pic ? 'has-pic' : ''}`}>
+        {pic && <WordPicture key={word.id} word={word} on={meaningOpen} />}
         <Slot on={kana} className="flash-reading" lang="ja">
           {word.r || ' '}
         </Slot>
