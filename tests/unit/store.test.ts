@@ -9,7 +9,7 @@ describe('store: loading', () => {
     const s = store.getState()
     expect(s.onboarded).toBe(false)
     // a new learner studies the lower levels too (03 decision 2)
-    expect(s.settings).toEqual({ target: 5, dailyNew: 20, theme: 'system', includeLower: true, dailyKanji: 5 })
+    expect(s.settings).toEqual({ target: 5, dailyNew: 20, theme: 'system', includeLower: true, dailyKanji: 5, picture: 'meaning' })
     expect(s.cards).toEqual({})
     expect(s.marks).toEqual([])
     expect(s.xp).toBe(0)
@@ -28,7 +28,7 @@ describe('store: loading', () => {
     const { store, ls } = await boot({ now: NOW, legacy: saved })
     const s = store.getState()
     // a learner from before `includeLower` keeps studying the target level only, so the plan does not suddenly grow
-    expect(s.settings).toEqual({ target: 3, dailyNew: 10, theme: 'dark', includeLower: false, dailyKanji: 5 })
+    expect(s.settings).toEqual({ target: 3, dailyNew: 10, theme: 'dark', includeLower: false, dailyKanji: 5, picture: 'meaning' })
     expect(JSON.stringify(s)).not.toContain('sk-ant-old')
     // the migrated state is stored at once (without the key); the pre-migration copy stays exactly as it was
     expect(ls.getItem(KEY)).not.toContain('sk-ant-old')
@@ -205,7 +205,7 @@ describe('store: additive fields without a version bump', () => {
     const s = store.getState()
     // migrated to v4 on load (the fast-track, stable ids); nothing else about the state changes
     expect(s.v).toBe(4)
-    expect(s.settings).toEqual({ target: 1, dailyNew: 40, theme: 'light', includeLower: false, dailyKanji: 5 })
+    expect(s.settings).toEqual({ target: 1, dailyNew: 40, theme: 'light', includeLower: false, dailyKanji: 5, picture: 'meaning' })
     expect(s.log['2026-11-12']).toEqual({ c: 5, n: 5, r: 0, p: 0, xp: 50 })
     expect(s.cards[L('1-0')]).toEqual(saved.cards['1-0'])
     expect(s.marks).toEqual([L('1-0')])
@@ -242,7 +242,7 @@ describe('store: the exam date and the exam-day estimate are gone (2026-11-14)',
     for (const v of [2, 3, 4] as const) {
       const { store, ls, srs } = await boot({ now: NOW, ...(v === 4 ? { saved: withExam(4) } : { legacy: withExam(v) }) })
       const s = store.getState()
-      expect(s.settings).toEqual({ target: 4, dailyNew: 10, theme: 'light', includeLower: true, dailyKanji: 5 })
+      expect(s.settings).toEqual({ target: 4, dailyNew: 10, theme: 'light', includeLower: true, dailyKanji: 5, picture: 'meaning' })
       expect(s).not.toHaveProperty('bestE')
       expect(s.log['2026-11-12']).toEqual({ c: 3, n: 1, r: 2, p: 2, e: 1.8, ms: 24000 })
       expect(srs.buildQueue(s, new Date(NOW)).review).toBe(1)
@@ -301,7 +301,7 @@ describe('store: the pronunciation setting is gone (2026-11-17)', () => {
   it('a saved state of every version with `autoSpeak` loads without it, and the next save drops it', async () => {
     for (const v of [2, 3, 4] as const) {
       const { store, ls } = await boot({ now: NOW, ...(v === 4 ? { saved: withSpeak(4) } : { legacy: withSpeak(v) }) })
-      expect(store.getState().settings).toEqual({ target: 4, dailyNew: 10, theme: 'dark', includeLower: true, dailyKanji: 5 })
+      expect(store.getState().settings).toEqual({ target: 4, dailyNew: 10, theme: 'dark', includeLower: true, dailyKanji: 5, picture: 'meaning' })
       store.update((d) => void (d.xp = 31))
       expect(JSON.parse(ls.getItem(KEY)!).settings).not.toHaveProperty('autoSpeak')
     }
@@ -325,5 +325,47 @@ describe('store: the pronunciation setting is gone (2026-11-17)', () => {
       expect(store.getState().xp).toBe(30)
       expect(JSON.parse(JSON.stringify(backup.backupFile(store.getState()))).settings).not.toHaveProperty('autoSpeak')
     }
+  })
+})
+
+describe('store: the word picture setting (2026-11-21)', () => {
+  const saved = (picture?: unknown) => ({
+    v: 4,
+    onboarded: true,
+    settings: { target: 4, dailyNew: 10, dailyKanji: 5, theme: 'light', includeLower: true, ...(picture === undefined ? {} : { picture }) },
+    cards: { [L('4-0')]: card({ due: Date.parse(NOW) }) },
+    log: {},
+    marks: [],
+    xp: 30,
+  })
+
+  it('a saved state from before the setting gets the default (의미와 함께); a known value is kept, any other is replaced', async () => {
+    for (const [v, want] of [
+      [undefined, 'meaning'],
+      ['always', 'always'],
+      ['meaning', 'meaning'],
+      ['sometimes', 'meaning'],
+      [true, 'meaning'],
+      [null, 'meaning'],
+    ] as const) {
+      const { store, ls } = await boot({ now: NOW, saved: saved(v) })
+      expect(store.getState().settings.picture, String(v)).toBe(want)
+      store.update((d) => void (d.xp = 31))
+      expect(JSON.parse(ls.getItem(KEY)!).settings.picture).toBe(want)
+    }
+  })
+
+  it('a backup without it imports with the default, and the setting round-trips through a backup', async () => {
+    const { store } = await boot({ now: NOW })
+    const backup = await import('../../src/backup')
+    for (const f of [saved(), { format: 'jlpt-luma-backup', formatVersion: 3, ...saved() }, { format: 'jlpt-luma-backup', formatVersion: 3, ...saved('nope') }]) {
+      const read = backup.readBackup(JSON.parse(JSON.stringify(f)))
+      expect(read.ok).toBe(true)
+      if (!read.ok) continue
+      expect(read.state.settings.picture).toBe('meaning')
+    }
+    store.update((d) => void (d.settings = { ...d.settings, picture: 'always' }))
+    const again = backup.readBackup(JSON.parse(JSON.stringify(backup.backupFile(store.getState()))))
+    expect(again.ok && again.state.settings.picture).toBe('always')
   })
 })

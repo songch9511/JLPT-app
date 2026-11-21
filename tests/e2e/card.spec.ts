@@ -8,6 +8,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { answer, NOW, open, READ_MS, todayLog, user } from './fixtures'
 import { headwordSegments, type Example } from '../../src/examples'
 import { kanjiParts } from '../../src/sound'
+import { WORD_PICTURES } from '../../src/generated/content'
 
 type Row = [string, string, string, string, string, number, number, string?, string?, string?, string?, string?, string?]
 const N5 = JSON.parse(readFileSync(new URL('../../public/data/words-n5.json', import.meta.url), 'utf8')) as Row[]
@@ -15,6 +16,7 @@ const EX = JSON.parse(readFileSync(new URL('../../public/data/examples-n5.json',
 const ORDER = [...N5].sort((a, b) => a[5] - b[5])
 const T = NOW.getTime()
 const DAY = 86_400_000
+const HAS = new Set(WORD_PICTURES)
 const word = (r: Row) => ({ w: r[1], sk: r[8] ?? '', rt: r[10] ?? '', a: r[11] ?? '' })
 /** Review cards for every word before `id` in the introduction order, due well after today: `id` is the next new word. */
 const before = (id: string) =>
@@ -25,8 +27,10 @@ const before = (id: string) =>
     ]),
   )
 /** The first word met that has everything on the card: a reading, kanji paired with their readings, and an example
- * where the headword is found and other kanji carry furigana too. */
+ * where the headword is found and other kanji carry furigana too. Without a picture: a picture appears with 의미 and
+ * moves the other parts (pictures.spec.ts), which is not what this file is about. */
 const FULL = ORDER.find((r) => {
+  if (HAS.has(r[0])) return false
   const e = EX[r[0]]
   const head = e && headwordSegments(r[1], e.seg)
   return r[2] && r[7] !== 'S' && kanjiParts(word(r)).length > 0 && head.some(Boolean) && e.seg.some((g, i) => g[1] && !head[i])
