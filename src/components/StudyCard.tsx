@@ -5,8 +5,9 @@
 // example's translation, the kanji chips; on a kanji card its 훈음, its readings, the words' readings and meanings) is
 // always laid out and only becomes visible (`.slot.on`). A closed slot is empty to the eye and to screen readers
 // (visibility) and keeps its room. Nothing on the card opens on a tap but the two toggles and the bookmark.
-// A word with a picture (src/pictures.ts) has one more slot at the top: its tile, empty until 의미 opens.
-import { useState, type MouseEvent, type ReactNode } from 'react'
+// A word with a picture (src/pictures.ts) has one more part at the top, its picture, and that one is not a slot: it is
+// there only while the picture is shown (WordPicture).
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { meaning, wordById, type Level, type Word } from '../data'
 import type { Example } from '../examples'
 import { alignReading, hunEum, kanjiInfo, kunParts, toHiragana, useKanji, type Kanji } from '../kanji'
@@ -15,6 +16,7 @@ import { kanjiParts } from '../sound'
 import { ExampleSentence } from './Example'
 import { Icon } from './Icon'
 import { LevelBadge } from './LevelBadge'
+import { useStore } from '../store'
 import { IconButton, Meta } from './ui'
 import { FalseFriend } from './WordNotes'
 
@@ -45,33 +47,70 @@ export function Headword({ word }: { word: Word }) {
   )
 }
 
+/** Pictures this run has loaded: a card that comes back (the past card, 다시 보기) shows its picture at once. */
+const READY = new Set<string>()
+/** Pictures being loaded, one request each however many cards ask (and React's second mount in development). */
+const LOADING = new Map<string, Promise<HTMLImageElement>>()
+
+/** Load and decode a picture; it is then in the browser's image cache, and an <img> of it paints in the same frame. */
+function loadPicture(id: string): Promise<HTMLImageElement> {
+  let p = LOADING.get(id)
+  if (!p) {
+    const img = new Image()
+    img.src = pictureUrl(id)
+    p = img.decode().then(() => {
+      READY.add(id)
+      return img
+    })
+    // a failed one is asked for again by the next card that wants it (back online)
+    p.then(
+      () => LOADING.delete(id),
+      () => LOADING.delete(id),
+    )
+    LOADING.set(id, p)
+  }
+  return p
+}
+
 /**
- * A word's picture in its tile (16:9, the card's full width). The tile is there whenever the word has a picture; the
- * picture shows in it while `on` (의미 on the study card; always in the word sheet). The file is asked for the first
- * time it is to be shown, then kept while the tile is on screen; it fades in once loaded, so nothing jumps. Until
- * then, and if it cannot be loaded (offline on the web), the tile stays empty and quiet: no broken image, no message.
- * The empty tile is hidden from screen readers; the picture is named by the word's meaning.
+ * Whether the picture of a word (by id; null for none) is loaded and ready to show. It is asked for as soon as the
+ * card or sheet that may show it mounts, whether or not it is to be shown yet, so it is there the moment 의미 opens
+ * instead of popping in late; the loaded image is held while the card is on screen, so it stays in the browser's
+ * cache. A file that cannot be loaded (offline on the web) is never ready: its picture simply never appears.
  */
-export function WordPicture({ word, on }: { word: Word; on: boolean }) {
-  const [wanted, setWanted] = useState(on)
-  if (on && !wanted) setWanted(true)
-  const [file, setFile] = useState<'loading' | 'ok' | 'failed'>('loading')
-  const shown = on && file === 'ok'
+export function usePicture(id: string | null): boolean {
+  const [ready, setReady] = useState<string | null>(null)
+  const held = useRef<HTMLImageElement | null>(null)
+  useEffect(() => {
+    if (!id || READY.has(id)) return
+    let live = true
+    loadPicture(id).then(
+      (img) => {
+        if (!live) return
+        held.current = img
+        setReady(id)
+      },
+      () => {},
+    )
+    return () => {
+      live = false
+      held.current = null
+    }
+  }, [id])
+  return !!id && (ready === id || READY.has(id))
+}
+
+/**
+ * A word's picture (16:9, the card's full width), rendered only while it is shown: a word with no picture, a picture
+ * not to be shown yet (의미 closed, unless 단어 그림 is 항상) and a file not loaded leave nothing, not even an empty
+ * tile, so there is nothing to see, to skip or to hear. It fades in when it appears. It is named by the word's meaning
+ * while the meaning is open; shown before that (항상) it is left unnamed, so a screen reader does not read the meaning
+ * out before 의미 is tapped.
+ */
+export function WordPicture({ word, named }: { word: Word; named: boolean }) {
   return (
-    <div className={`word-pic ${shown ? 'on' : ''}`} aria-hidden={shown ? undefined : true}>
-      <Icon name="image" size={28} />
-      {wanted && file !== 'failed' && (
-        <img
-          src={pictureUrl(word.id)}
-          alt={meaning(word)}
-          decoding="async"
-          draggable={false}
-          // already in the browser's cache: it may be complete before React listens for `load`
-          ref={(img) => void (img?.complete && img.naturalWidth > 0 && setFile('ok'))}
-          onLoad={() => setFile('ok')}
-          onError={() => setFile('failed')}
-        />
-      )}
+    <div className="word-pic">
+      <img src={pictureUrl(word.id)} alt={named ? meaning(word) : ''} decoding="async" draggable={false} />
     </div>
   )
 }
@@ -141,18 +180,23 @@ export function KanjiRow({ word, ko, ja }: { word: Word; ko: boolean; ja: boolea
 }
 
 /**
- * A word card's centre: the picture's tile when the word has one, the reading's slot above the headword, the
+ * A word card's centre: the picture when the word has one and it is shown, the reading's slot above the headword, the
  * meaning's slot under it (with the false-friend warning, the one word-type note a card shows), the example and its
  * translation's line, then the kanji chips. `kana`: the reading, the headword's own furigana in the example, the
- * kanji's Japanese readings; `meaningOpen`: the picture, the meaning, the example's translation, the kanji's Korean
- * readings. Spacing separates them; no lines inside the card.
+ * kanji's Japanese readings; `meaningOpen`: the meaning, the example's translation, the kanji's Korean readings, and
+ * the picture unless 단어 그림 (settings.picture) is 항상, which shows it whatever is open. A word with a picture keeps
+ * its tighter type (`has-pic`) whether or not the picture is shown, so no text changes size when it appears; only the
+ * spacing tightens (`pic-on`) to make room for it.
  */
 export function MeaningFace({ word, example, kana, meaningOpen }: { word: Word; example: Example | null; kana: boolean; meaningOpen: boolean }) {
   const pic = hasPicture(word.id)
+  const always = useStore((s) => s.settings.picture === 'always')
+  const ready = usePicture(pic ? word.id : null)
+  const shown = ready && (always || meaningOpen)
   return (
     <CardScroll>
-      <div className={`flash-body ${pic ? 'has-pic' : ''}`}>
-        {pic && <WordPicture key={word.id} word={word} on={meaningOpen} />}
+      <div className={`flash-body ${pic ? 'has-pic' : ''} ${shown ? 'pic-on' : ''}`}>
+        {shown && <WordPicture word={word} named={meaningOpen} />}
         <Slot on={kana} className="flash-reading" lang="ja">
           {word.r || ' '}
         </Slot>

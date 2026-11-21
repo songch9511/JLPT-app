@@ -141,6 +141,18 @@ export function Settings() {
             onChange={(theme) => set({ theme })}
           />
         </Field>
+        {/* when a word's picture shows on the study card (StudyCard.tsx MeaningFace) */}
+        <Field label="단어 그림">
+          <Choice
+            label="단어 그림"
+            value={st.picture}
+            options={[
+              ['meaning', '의미와 함께'],
+              ['always', '항상'],
+            ]}
+            onChange={(picture) => set({ picture })}
+          />
+        </Field>
       </Group>
 
       {NativeSettings && platform.native && (

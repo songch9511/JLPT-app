@@ -63,6 +63,11 @@ export interface State {
     includeLower: boolean
     /** new kanji a day (DAILY_KANJI) */
     dailyKanji: number
+    /**
+     * When a word's picture shows on the study card and in 다시 보기 (PICTURE_MODES): `meaning` once 의미 is open, the
+     * way it always was; `always` from the moment the card appears. Added 2026-11-21; absent before (→ `meaning`).
+     */
+    picture: PictureMode
   }
   /** keys: stable word id (`w0k3`, src/ids.ts) or kanji card (`k強`, src/kanji.ts); only ids this version knows (see `orphans`) */
   cards: Record<string, SCard>
@@ -126,12 +131,16 @@ export const PREV_KEY = 'kasane.state.prev'
 
 export const STATE_VERSION = 4
 
+/** The word picture setting's values (State['settings'].picture). */
+export const PICTURE_MODES = ['meaning', 'always'] as const
+export type PictureMode = (typeof PICTURE_MODES)[number]
+
 function initial(): State {
   return {
     v: STATE_VERSION,
     onboarded: false,
     // new learners include the lower levels; states saved before this setting existed keep it off (normalize)
-    settings: { target: 5, dailyNew: 20, dailyKanji: 5, theme: 'system', includeLower: true },
+    settings: { target: 5, dailyNew: 20, dailyKanji: 5, theme: 'system', includeLower: true, picture: 'meaning' },
     cards: {},
     log: {},
     marks: [],
@@ -282,6 +291,8 @@ function normalize(s: State): State {
   // the fast-track setting went with the reading cards (2026-11-16)
   delete (settings as { fastTrack?: unknown }).fastTrack
   if (!(DAILY_KANJI as readonly number[]).includes(Number(settings.dailyKanji))) settings.dailyKanji = base.settings.dailyKanji
+  // a state or backup from before the picture setting, or with a value this version does not know
+  if (!(PICTURE_MODES as readonly unknown[]).includes(settings.picture)) settings.picture = base.settings.picture
   const { guide: _g, bestE: _b, ...rest } = { ...base, ...s, v: STATE_VERSION as typeof STATE_VERSION, settings } as State & { bestE?: unknown }
   const out: State = rest
   // first-seen days: only day keys are kept

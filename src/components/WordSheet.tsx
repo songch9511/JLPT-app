@@ -12,7 +12,7 @@ import { FalseFriend } from './WordNotes'
 import { ExampleSentence } from './Example'
 import { LevelBadge } from './LevelBadge'
 import { useExample } from '../examples'
-import { WordPicture, wordKanji } from './StudyCard'
+import { usePicture, WordPicture, wordKanji } from './StudyCard'
 import { hasPicture } from '../pictures'
 
 export type Detail = { word: Word } | { kanji: Kanji }
@@ -74,6 +74,7 @@ function WordDetails({ word, onClose, onKanji }: { word: Word; onClose: () => vo
   const marked = useStore((s) => s.marks.includes(word.id))
   const cards = useStore((s) => s.cards)
   const example = useExample(word.id)
+  const picture = usePicture(hasPicture(word.id) ? word.id : null)
   const all = useKanji()
   const parts = all ? wordKanji(word, (k) => all.get(k) ?? null) : []
   const type = word.k ? (SAME_TYPE[word.k] ?? TYPE_LABEL[word.k]) : ''
@@ -85,8 +86,8 @@ function WordDetails({ word, onClose, onKanji }: { word: Word; onClose: () => vo
         <Meta className="sheet-status grow" items={status({ cards }, word.id)} />
         <IconButton label="닫기" icon={<Icon name="close" />} onClick={onClose} />
       </div>
-      {/* the word's picture, if it has one (no empty tile for a word without) */}
-      {hasPicture(word.id) && <WordPicture word={word} on />}
+      {/* the word's picture, once loaded, if it has one (nothing in its place otherwise) */}
+      {picture && <WordPicture word={word} named />}
       {/* the reading over the headword, as a textbook prints it; the round bookmark button at the right */}
       <div className="sheet-title">
         <div className="sheet-headword grow">
