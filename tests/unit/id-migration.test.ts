@@ -89,7 +89,7 @@ describe('migrating a real learner’s saved state (v3, positional ids)', () => 
     // every setting as it was, except the exam date and goal the app no longer has (dropped, 2026-11-14)
     const { examDate: _e, goal: _g, fastTrack: _f, autoSpeak: _a, ...settings } = old.settings as Record<string, unknown>
     // …and the fast-track setting, gone with the reading cards, and the pronunciation setting (2026-11-17); 하루 새 한자 and 단어 그림 at their defaults
-    expect(s.settings).toEqual({ ...settings, dailyKanji: 5, picture: 'meaning' })
+    expect(s.settings).toEqual({ ...settings, dailyKanji: 5, pictureMode: 'always' })
     expect(s.onboarded).toBe(true)
     // …and the stamps' best exam-day estimate
     expect('bestE' in s).toBe(false)

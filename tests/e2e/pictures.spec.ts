@@ -1,6 +1,6 @@
-// Word pictures (docs/design-system.md §3 "학습 카드" › 그림, 2026-11-21): a word with a picture shows it at the top of
-// its card's centre, either once 의미 is open (설정 › 화면 › 단어 그림 "의미와 함께", the default; also when 모르겠어요
-// opens everything; 히라가나 alone does not) or from the moment the card appears ("항상"). While it is not shown there
+// Word pictures (docs/design-system.md §3 "학습 카드" › 그림, 2026-11-22): a word with a picture shows it at the top of
+// its card's centre, either from the moment the card appears (설정 › 화면 › 단어 그림 "항상", the default) or once 의미
+// is open ("의미와 함께"; also when 모르겠어요 opens everything; 히라가나 alone does not). While it is not shown there
 // is nothing in its place: no tile, no icon, no room kept, nothing for a screen reader; a file that cannot be loaded
 // never appears. Its file is asked for when the card mounts, so it is there the moment 의미 opens. No text on the card
 // changes size when it appears or goes. A word without one has no picture and the card is as it always was. The past
@@ -30,9 +30,10 @@ const PLAIN = ORDER.find((r) => !HAS.has(r[0]) && r[2] && EX[r[0]])!
 const known = { stability: 30, difficulty: 5, elapsed_days: 3, scheduled_days: 23, learning_steps: 0, reps: 3, lapses: 0, state: 2, last_review: T - 3 * DAY }
 /** Review cards for every word before `id` in the introduction order, due well after today: `id` is the next new word. */
 const before = (id: string) => Object.fromEntries(ORDER.slice(0, ORDER.findIndex((r) => r[0] === id)).map((r) => [r[0], { ...known, due: T + 20 * DAY }]))
-const studyState = (id: string, settings: Record<string, unknown> = {}) => ({ ...user({ dailyNew: 1, ...settings }), v: 4, cards: before(id) })
+/** `의미와 함께` unless a test says otherwise (most of this file is about the picture arriving with 의미); the app's default is 항상. */
+const studyState = (id: string, settings: Record<string, unknown> = {}) => ({ ...user({ dailyNew: 1, pictureMode: 'meaning', ...settings }), v: 4, cards: before(id) })
 const study = (page: Page, id: string, settings: Record<string, unknown> = {}) => open(page, { state: studyState(id, settings), hash: '/study' })
-const ALWAYS = { picture: 'always' }
+const ALWAYS = { pictureMode: 'always' }
 
 const card = (page: Page) => page.locator('.card-slot:not([inert]) .flash')
 const box = async (page: Page, sel: string) => (await card(page).locator(sel).first().boundingBox())!
@@ -86,7 +87,7 @@ const centred = async (page: Page) => {
 
 test.beforeAll(() => expect(HAS.has(CAT), `${CAT} has a picture`).toBe(true))
 
-test('의미와 함께 (the default): nothing in its place until 의미 opens (not with 히라가나 alone), then the picture; it goes again with 의미; the file is asked for once, when the card appears', async ({ page }) => {
+test('의미와 함께: nothing in its place until 의미 opens (not with 히라가나 alone), then the picture; it goes again with 의미; the file is asked for once, when the card appears', async ({ page }) => {
   const asked = pictureRequests(page)
   await study(page, CAT)
   await expect(page.locator('.flash-word')).toHaveText(cat[1])
@@ -205,7 +206,7 @@ for (const mode of ['meaning', 'always'] as const)
   test(`${mode === 'always' ? '항상' : '의미와 함께'}: a picture that cannot be loaded (offline on the web) never appears: no tile, no broken image, no message, and nothing moves`, async ({ page }) => {
     await page.route('**/img/words/*.webp', (r) => r.abort('internetdisconnected'))
     const asked = pictureRequests(page)
-    await study(page, CAT, { picture: mode })
+    await study(page, CAT, { pictureMode: mode })
     await expect(page.locator('.flash-word')).toHaveText(cat[1])
     await expect.poll(() => asked.length).toBe(1)
     await settled(page)
@@ -225,7 +226,7 @@ for (const mode of ['meaning', 'always'] as const)
 for (const mode of ['meaning', 'always'] as const)
   test(`${mode === 'always' ? '항상' : '의미와 함께'}: a word without a picture: nothing asked for, no section, and the card as it was`, async ({ page }) => {
     const asked = pictureRequests(page)
-    await study(page, PLAIN[0], { picture: mode })
+    await study(page, PLAIN[0], { pictureMode: mode })
     await expect(page.locator('.flash-word')).toHaveText(PLAIN[1])
     await page.getByRole('button', { name: '의미', exact: true }).click()
     await expect(page.locator('.flash-meaning')).toBeVisible()
@@ -255,7 +256,7 @@ test('the past card shows the picture with its meaning', async ({ page }) => {
 for (const mode of ['meaning', 'always'] as const)
   test(`다시 보기 follows the same rule (${mode === 'always' ? '항상: at once' : '의미와 함께: nothing, then the picture with 의미'})`, async ({ page }) => {
     // 猫 as a weak word (forgotten often), the one card of the weak words' 다시 보기
-    await open(page, { state: { ...user({ picture: mode }), v: 4, cards: { [CAT]: { ...known, lapses: 9, due: T + 20 * DAY } } }, hash: '/practice/weak' })
+    await open(page, { state: { ...user({ pictureMode: mode }), v: 4, cards: { [CAT]: { ...known, lapses: 9, due: T + 20 * DAY } } }, hash: '/practice/weak' })
     await expect(page.locator('.flash-word')).toHaveText(cat[1])
     if (mode === 'always') {
       await expect(card(page).locator('.word-pic img')).toBeVisible()
@@ -310,40 +311,49 @@ test('the word sheet offline: a picture that cannot be loaded leaves nothing abo
   await expect(sheet.locator('img')).toHaveCount(0)
 })
 
-test('설정 › 화면 › 단어 그림: 의미와 함께 by default (also for a state saved before the setting), and 항상 shows the picture on a closed card', async ({ page }) => {
-  // the fixture's learner was saved before the setting existed
-  await open(page, { state: studyState(CAT, { picture: undefined }), hash: '/settings' })
+test('설정 › 화면 › 단어 그림: 항상 by default (also for a state saved before the setting, or with the old one): the picture is on the closed card; 의미와 함께 hides it until 의미', async ({ page }) => {
+  // the fixture's learner was saved before the setting existed; the one-day-old `picture` setting does not carry over
+  await open(page, { state: studyState(CAT, { pictureMode: undefined, picture: 'meaning' }), hash: '/settings' })
   // in the 화면 group, under 테마: its name, then the choice
   const group = page.getByRole('region', { name: '화면', exact: true })
   const choice = group.getByRole('radiogroup', { name: '단어 그림' })
   await expect(choice).toBeVisible()
   await expect(group.locator('.field-name')).toHaveText(['테마', '단어 그림'])
   await expect(group.locator('.field-desc')).toHaveCount(0)
-  await expect(choice.getByRole('radio')).toHaveText(['의미와 함께', '항상'])
-  await expect(choice.getByRole('radio', { name: '의미와 함께' })).toHaveAttribute('aria-checked', 'true')
+  await expect(choice.getByRole('radio')).toHaveText(['항상', '의미와 함께'])
+  await expect(choice.getByRole('radio', { name: '항상' })).toHaveAttribute('aria-checked', 'true')
   await choice.scrollIntoViewIfNeeded()
   await page.screenshot({ path: test.info().outputPath('settings.png') })
 
-  await choice.getByRole('radio', { name: '항상' }).click()
-  await expect(choice.getByRole('radio', { name: '항상' })).toHaveAttribute('aria-checked', 'true')
-  expect((await saved(page)).settings.picture).toBe('always')
+  // the default: the picture on a closed card
   await page.evaluate(() => (location.hash = '/study'))
   await expect(page.locator('.flash-word')).toHaveText(cat[1])
   await expect(card(page).locator('.word-pic img')).toBeVisible()
   await loaded(page)
+  await expect(page.locator('.flash-meaning')).not.toBeVisible()
 
-  // and back: the closed card has nothing in the picture's place again
+  // 의미와 함께: the closed card has nothing in the picture's place, until 의미
   await page.evaluate(() => (location.hash = '/settings'))
   await page.getByRole('radiogroup', { name: '단어 그림' }).getByRole('radio', { name: '의미와 함께' }).click()
-  expect((await saved(page)).settings.picture).toBe('meaning')
+  await expect(page.getByRole('radiogroup', { name: '단어 그림' }).getByRole('radio', { name: '의미와 함께' })).toHaveAttribute('aria-checked', 'true')
+  const kept = (await saved(page)).settings
+  expect(kept.pictureMode).toBe('meaning')
+  expect('picture' in kept).toBe(false)
   await page.evaluate(() => (location.hash = '/study'))
   await expect(page.locator('.flash-word')).toHaveText(cat[1])
   await page.waitForTimeout(400)
   await none(card(page))
+  await meaningBtn(page).click()
+  await loaded(page)
+
+  // and back
+  await page.evaluate(() => (location.hash = '/settings'))
+  await page.getByRole('radiogroup', { name: '단어 그림' }).getByRole('radio', { name: '항상' }).click()
+  expect((await saved(page)).settings.pictureMode).toBe('always')
 })
 
 test('dark mode: the picture on the dark card, both settings', async ({ page }) => {
-  await study(page, CAT, { theme: 'dark', picture: 'always' })
+  await study(page, CAT, { theme: 'dark', pictureMode: 'always' })
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await loaded(page)
   expect(await axeViolations(page)).toEqual([])
