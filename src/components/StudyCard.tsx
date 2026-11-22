@@ -190,7 +190,7 @@ export function KanjiRow({ word, ko, ja }: { word: Word; ko: boolean; ja: boolea
  */
 export function MeaningFace({ word, example, kana, meaningOpen }: { word: Word; example: Example | null; kana: boolean; meaningOpen: boolean }) {
   const pic = hasPicture(word.id)
-  const always = useStore((s) => s.settings.picture === 'always')
+  const always = useStore((s) => s.settings.pictureMode === 'always')
   const ready = usePicture(pic ? word.id : null)
   const shown = ready && (always || meaningOpen)
   return (

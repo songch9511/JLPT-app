@@ -64,10 +64,12 @@ export interface State {
     /** new kanji a day (DAILY_KANJI) */
     dailyKanji: number
     /**
-     * When a word's picture shows on the study card and in 다시 보기 (PICTURE_MODES): `meaning` once 의미 is open, the
-     * way it always was; `always` from the moment the card appears. Added 2026-11-21; absent before (→ `meaning`).
+     * When a word's picture shows on the study card and in 다시 보기 (PICTURE_MODES): `always` from the moment the card
+     * appears (the default: the picture is there to hang the word on before its meaning is opened); `meaning` only
+     * once 의미 is open. Since 2026-11-22; absent before (→ `always`). The one-day-old `picture` setting it replaces
+     * defaulted to `meaning` and is dropped (RETIRED_SETTINGS), so everyone starts from the new default.
      */
-    picture: PictureMode
+    pictureMode: PictureMode
   }
   /** keys: stable word id (`w0k3`, src/ids.ts) or kanji card (`k強`, src/kanji.ts); only ids this version knows (see `orphans`) */
   cards: Record<string, SCard>
@@ -131,8 +133,8 @@ export const PREV_KEY = 'kasane.state.prev'
 
 export const STATE_VERSION = 4
 
-/** The word picture setting's values (State['settings'].picture). */
-export const PICTURE_MODES = ['meaning', 'always'] as const
+/** The word picture setting's values (State['settings'].pictureMode). */
+export const PICTURE_MODES = ['always', 'meaning'] as const
 export type PictureMode = (typeof PICTURE_MODES)[number]
 
 function initial(): State {
@@ -140,7 +142,7 @@ function initial(): State {
     v: STATE_VERSION,
     onboarded: false,
     // new learners include the lower levels; states saved before this setting existed keep it off (normalize)
-    settings: { target: 5, dailyNew: 20, dailyKanji: 5, theme: 'system', includeLower: true, picture: 'meaning' },
+    settings: { target: 5, dailyNew: 20, dailyKanji: 5, theme: 'system', includeLower: true, pictureMode: 'always' },
     cards: {},
     log: {},
     marks: [],
@@ -269,10 +271,11 @@ export function migrate(s: StoredState): State {
 /**
  * Fields of states saved before the exam date and the exam-day estimate were removed (2026-11-14, owner decision):
  * `settings.examDate`, `settings.goal`, `bestE` (the stamps' best estimate); and before the pronunciation feature was
- * removed (2026-11-17, owner decision): `settings.autoSpeak`. Ignored on load and gone from the next save; a backup
+ * removed (2026-11-17, owner decision): `settings.autoSpeak`; and the first word picture setting, `settings.picture`
+ * (2026-11-21, one day: replaced by `settings.pictureMode` with the other default). Ignored on load and gone from the next save; a backup
  * without them still imports in the versions that had them (they fill in their defaults).
  */
-const RETIRED_SETTINGS = ['examDate', 'goal', 'apiKey', 'autoSpeak'] as const
+const RETIRED_SETTINGS = ['examDate', 'goal', 'apiKey', 'autoSpeak', 'picture'] as const
 /**
  * First-run steps and tips that no longer exist: the exam-date question and its "아직 몰라요", the readiness tip, and
  * Ruma's spaced-repetition and reading-card tips (2026-11-16: Ruma no longer speaks).
@@ -292,7 +295,7 @@ function normalize(s: State): State {
   delete (settings as { fastTrack?: unknown }).fastTrack
   if (!(DAILY_KANJI as readonly number[]).includes(Number(settings.dailyKanji))) settings.dailyKanji = base.settings.dailyKanji
   // a state or backup from before the picture setting, or with a value this version does not know
-  if (!(PICTURE_MODES as readonly unknown[]).includes(settings.picture)) settings.picture = base.settings.picture
+  if (!(PICTURE_MODES as readonly unknown[]).includes(settings.pictureMode)) settings.pictureMode = base.settings.pictureMode
   const { guide: _g, bestE: _b, ...rest } = { ...base, ...s, v: STATE_VERSION as typeof STATE_VERSION, settings } as State & { bestE?: unknown }
   const out: State = rest
   // first-seen days: only day keys are kept

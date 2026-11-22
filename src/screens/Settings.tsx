@@ -145,12 +145,12 @@ export function Settings() {
         <Field label="단어 그림">
           <Choice
             label="단어 그림"
-            value={st.picture}
+            value={st.pictureMode}
             options={[
-              ['meaning', '의미와 함께'],
               ['always', '항상'],
+              ['meaning', '의미와 함께'],
             ]}
-            onChange={(picture) => set({ picture })}
+            onChange={(pictureMode) => set({ pictureMode })}
           />
         </Field>
       </Group>
